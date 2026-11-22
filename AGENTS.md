@@ -74,8 +74,8 @@ reviewed. Every PR description has a `Review:` line:
 
 ### What the reviewer may read
 
-Committed files at the review target only, taken with `git archive`, which
-leaves out everything git ignores. Never anything under `data/` or `output/`,
+Committed files at the review target only, taken with a local `git clone`,
+which leaves out everything git ignores. Never anything under `data/` or `output/`,
 `.env`, `*.local.yaml`, or count or recorded-trip records
 (`validation/README.md`). Reading a file sends it to the reviewer's model
 provider, so this applies to the main checkout too, not just the snapshot.
@@ -104,10 +104,17 @@ provider, so this applies to the main checkout too, not just the snapshot.
 
 ### When reviewing
 
-- Read-only. Snapshot the target outside the repository:
-  `mkdir -p /tmp/walkbike-review/<task>-r<round> && git archive <head SHA> |
-  tar -x -C /tmp/walkbike-review/<task>-r<round>`, run checks there
-  (`uv sync --locked`, `make check`), and delete it after the verdict. Never
+- Read-only. Snapshot the target outside the repository, with its own `.git`
+  (a test reads the commit, so `git archive` is not enough):
+
+  ```bash
+  D=/tmp/walkbike-review/<task>-r<round>
+  git clone --quiet --no-hardlinks --no-checkout <repository path> "$D"
+  git -C "$D" checkout --quiet --detach <head SHA>
+  ```
+
+  Run checks there (`uv sync --locked`, `make check`), and delete it after
+  the verdict. Never
   stash, reset or edit the implementer's tree; the handoff file is the only
   thing you write to.
 - Run the same probe on base and head before calling something a regression.
