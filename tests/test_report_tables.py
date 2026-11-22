@@ -20,7 +20,7 @@ from walkbike_routes.costs import presets
 from walkbike_routes.report import tables
 from walkbike_routes.report import text as words
 from walkbike_routes.report.map import build_maps
-from walkbike_routes.report.text import DRAFT, NOT_COUNTS, SYNTHETIC
+from walkbike_routes.report.text import DRAFT, NOT_COUNTS, ROUTE_COST_DOC, SYNTHETIC
 
 ROOT = Path(__file__).resolve().parents[1]
 DEMO = ROOT / "config" / "demo.yaml"
@@ -300,7 +300,10 @@ def test_main_runs_list_where_routes_meet_traffic(out: Path) -> None:
     terms = text.split("## Key terms", 1)[1].split("\n## ", 1)[0]
     assert [line.split(":**")[0] for line in terms.strip().splitlines()] == [
         "- **Risk points", "- **Expected trips", "- **Fix first", "- **Watch", "- **S1, C1",
+        "- **Route-cost minutes",
     ]  # fmt: skip
+    # The barrier lists' unit is defined, with a link to the full explanation.
+    assert f"generalized cost. [More]({ROUTE_COST_DOC})" in terms
     assert "**Fix first:** A place with 3 or more risk points, and at least 5 people" in terms
     assert text.index("## Key terms") < text.index("places to fix first")
 

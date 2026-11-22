@@ -171,6 +171,10 @@ def count(n: int, one: str, many: str | None = None) -> str:
 
 
 ROUTE_COST_SAVED = "Route-cost min saved"
+ROUTE_COST_DOC = (
+    "https://github.com/geoff-davis/walkbike-routes/blob/main/docs/routing-methods.md"
+    "#route-cost-minutes"
+)
 ROUTE_COST = (
     "Route cost is what the route model keeps low: travel time plus extra minutes for "
     "traffic stress, crossings and turns (often called generalized cost)"
@@ -180,7 +184,9 @@ UNCONNECTED = (
 )
 
 
-def key_terms(rules: ExposureRules, any_decayed: bool) -> list[tuple[str, str]]:
+def key_terms(
+    rules: ExposureRules, any_decayed: bool, route_cost: bool = False
+) -> list[tuple[str, str]]:
     """The few terms a reader needs before the lists, with the run's own rule."""
     rule = fix_first_rule(rules.fix_first).removeprefix("Fix first: ")
     terms = [
@@ -212,6 +218,17 @@ def key_terms(rules: ExposureRules, any_decayed: bool) -> list[tuple[str, str]]:
             "× length), highest first. The map uses the same labels.",
         ),
     ]
+    if route_cost:
+        terms.append(
+            (
+                "Route-cost minutes",
+                "What the route model keeps low when it picks a route: clock minutes plus "
+                "extra minutes for what people avoid, such as busy traffic, hills, crossings "
+                "and turns. A stressful street can cost more route-cost minutes than a longer "
+                "calm one. Barriers are ranked by the route-cost minutes they save. Also "
+                "called generalized cost.",
+            )
+        )
     return terms
 
 

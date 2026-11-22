@@ -522,7 +522,7 @@ def improvement_screen(
     treatment: Treatment | None = None,
     junction: JunctionCost | None = None,
 ) -> gpd.GeoDataFrame:
-    """Rank the places where ``treatment`` saves the most generalized minutes.
+    """Rank the places where ``treatment`` saves the most route-cost minutes (generalized cost).
 
     Places that save less than :data:`MIN_MINUTES_SAVED` weighted minutes
     (0.0 to one decimal) are left out, so fewer than ``candidates`` may be

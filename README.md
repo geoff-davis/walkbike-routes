@@ -51,8 +51,10 @@ Some homes are close by but cut off by a road nobody would choose to cross.
 The improvement screen tries each change on the routes: a protected bike
 lane, a sidewalk, a marked crosswalk, or a signal or crossing beacon. It
 then ranks the places where each change would most improve the most
-people's trips. Improvement is counted in generalized minutes, which add the
-extra effort of busy streets and crossings to clock time. It's a guide to
+people's trips. Improvement is counted in route-cost minutes: clock minutes
+plus extra minutes for what people avoid, such as busy streets and crossings
+(also called generalized cost; see
+[route-cost minutes](docs/routing-methods.md#route-cost-minutes)). It's a guide to
 where to look, not a design.
 
 ### Who can get there
