@@ -24,7 +24,7 @@ main{flex:1;display:flex;min-height:0}
 #panel h2{font-size:13px;margin:12px 0 4px}#panel h2:first-child{margin-top:0}
 #panel table{border-collapse:collapse;width:100%}#panel td,#panel th{text-align:left;vertical-align:top;padding:2px 6px 2px 0;border-bottom:1px solid #eeece8}
 #panel th{font-weight:600;color:var(--muted)}#panel .n{text-align:right;font-variant-numeric:tabular-nums}
-#panel .note{color:var(--muted)}#panel tr.on td{background:var(--hi)}
+.gl{border-bottom:1px dotted currentColor;cursor:help}#panel .note{color:var(--muted)}#panel tr.on td{background:var(--hi)}
 #panel tr[data-go]{cursor:pointer}#panel tr[data-go]:hover td{background:#f3f1ec}
 #panel details{margin-top:12px}#panel summary{cursor:pointer;font-weight:600}
 .figs{margin:2px 0 8px;border:1px solid var(--line);border-radius:6px}.fig{display:flex;gap:10px;align-items:baseline;padding:5px 10px;border-bottom:1px solid var(--line)}.fig:last-child{border-bottom:0}
@@ -65,9 +65,9 @@ body.printing .leaflet-control-attribution{display:none}
 <header>
 <h1>/*TITLE*/</h1>
 <label id="modewrap">Getting there by <select id="mode"></select></label>
-<label id="runwrap">Route model <select id="run"></select></label>
-<label id="flowwrap"><input type="checkbox" id="showflow" checked> Trips</label>
-<label id="cellswrap"><input type="checkbox" id="showcells" checked> Travel time</label>
+<label id="runwrap" title="The rules used to pick each route: how much extra each preset charges for busy streets, hills, crossings and turns">Route model <select id="run"></select></label>
+<label id="flowwrap" title="Line width: how many people would use each street (potential flow, not counts)"><input type="checkbox" id="showflow" checked> Trips</label>
+<label id="cellswrap" title="Shading: the median trip time from the homes in each area"><input type="checkbox" id="showcells" checked> Travel time</label>
 <label id="exposurewrap" title="Where routes meet traffic today: places to fix first, and to watch"><input type="checkbox" id="showexposure" checked> Fix first and watch</label>
 <label id="screenwrap" title="Barriers: where a change would open new routes"><input type="checkbox" id="showscreen"> Barriers</label>
 <label id="agreewrap" title="Streets busy under every route model, or under only some"><input type="checkbox" id="showagree"> Model agreement</label>
@@ -83,6 +83,12 @@ const L_=window.L,$=id=>document.getElementById(id);
 // The page for every destination together: summed trips and the joint lists, no catchment.
 const ALL=Array.isArray(D.combined),TO=ALL?"all destinations":D.name;
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+// Escaped text with each glossary term's first use defined on hover (text.GLOSSARY).
+const GL=D.glossary||{},GLK=Object.keys(GL).sort((a,b)=>b.length-a.length).map(t=>t.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"));
+const GLRE=GLK.length?new RegExp("(^|[^\\w-])("+GLK.join("|")+")(?![\\w-])","gi"):null;
+const gl=s=>{const t=esc(s);if(!GLRE)return t;const seen=new Set();
+  return t.replace(GLRE,(m,pre,w)=>{const k=w.toLowerCase();if(seen.has(k))return m;seen.add(k);return `${pre}<span class="gl" tabindex="0" title="${esc(GL[k])}">${w}</span>`;});};
+const tip=(label,t)=>`<span class="gl" tabindex="0" title="${esc(t)}">${esc(label)}</span>`;
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const modeColour=m=>css("--"+m)||"#444";
 // Figures read the same for every reader, and as the report prints them.
@@ -157,7 +163,7 @@ function draw(){
   for(const k in PLACE)delete PLACE[k];BADGES.length=0;
   cellLayer.clearLayers();flowLayer.clearLayers();agreeLayer.clearLayers();overlapLayer.clearLayers();screenLayer.clearLayers();exposureLayer.clearLayers();
   if($("showexposure").checked)for(const e of r.exposure){const first=e.tier==="fix first",c=first?TIER_COL["fix first"]:TIER_COL.watch,
-    pop=`<div class="pop"><h3>${esc(e.tag)}. ${esc(e.label)}</h3><div>${e.kind==="street"?"Along the street":"Crossing"}: ${esc(e.people)} ${esc(r.flow_words)}${e.kind==="street"?` at the busiest point, over ${esc(e.length)}`:""}</div><div><b>${esc(e.reason||e.tier)}</b></div><div>Why ${esc(e.points)} risk points: ${esc(e.factors)}</div>${e.from?`<div>From each destination: ${esc(e.from)}</div>`:""}</div>`;
+    pop=`<div class="pop"><h3>${esc(e.tag)}. ${esc(e.label)}</h3><div>${e.kind==="street"?"Along the street":"Crossing"}: ${esc(e.people)} ${esc(r.flow_words)}${e.kind==="street"?` at the busiest point, over ${esc(e.length)}`:""}</div><div><b>${gl(e.reason||e.tier)}</b></div><div>${gl(`Why ${e.points} risk points: ${e.factors}`)}</div>${e.from?`<div>From each destination: ${esc(e.from)}</div>`:""}</div>`;
     const drawn=[];
     for(const ln of e.lines)drawn.push(L_.polyline(ln,{pane:"exposure",color:c,weight:6,opacity:.8,lineCap:"round"}).bindPopup(pop).addTo(exposureLayer));
     for(const pt of e.spots)drawn.push(L_.circleMarker(pt,{pane:"exposure",radius:8,color:"#fff",weight:2,fillColor:c,fillOpacity:.95}).bindPopup(pop).addTo(exposureLayer));
@@ -224,18 +230,18 @@ function panel(r,bands){const s=r.summary,u=esc(r.unit),cap=capOf(r);
   if(ALL)h+=`<div class="note">Every destination's routes added up: ${esc(D.combined.join(", "))}. Each place's figure is the sum over them; its priority is judged on that sum, and each place says how many come from each.</div>`;
   else{h+="<table>";
   for(const b of bands)h+=`<tr><td>Within ${dec(b)} minutes</td><td class="n">${num(s["within_"+String(b).replace(/\.0$/,"")+"_min_weight"]??s["within_"+b+"_min_weight"])}</td></tr>`;
-  h+=`<tr><td>Connected by street or path, at any time</td><td class="n">${num(s.reachable_weight)}</td></tr>`;
-  if(s.mean_routes_per_origin!==null&&s.mean_routes_per_origin!==undefined)h+=`<tr><td>Routes shared per home, on average</td><td class="n">${dec(s.mean_routes_per_origin)}</td></tr>`;
-  if(s.expected_weight!==null&&s.expected_weight!==undefined)h+=`<tr><td>Expected trips if usual shares applied (${esc(s.decay_curve)})</td><td class="n">${num(s.expected_weight)}</td></tr>`;
+  h+=`<tr><td>${tip("Connected by street or path, at any time","Everyone with a street or path to the destination, however long the trip takes.")}</td><td class="n">${num(s.reachable_weight)}</td></tr>`;
+  if(s.mean_routes_per_origin!==null&&s.mean_routes_per_origin!==undefined)h+=`<tr><td>${tip("Routes shared per home, on average","Each home's trips are shared among a few likely routes rather than one: this is how many, on average.")}</td><td class="n">${dec(s.mean_routes_per_origin)}</td></tr>`;
+  if(s.expected_weight!==null&&s.expected_weight!==undefined)h+=`<tr><td>${tip(`Expected trips if usual shares applied (${s.decay_curve})`,"Trips the model expects: each home counts at the national share of trips of its length (the named distance-decay curve). Not a count.")}</td><td class="n">${num(s.expected_weight)}</td></tr>`;
   h+="</table>";
   const same=D.runs.filter(x=>x.mode===r.mode);
-  if(same.length>1){h+=`<h2>${esc(MODE[r.mode]||r.mode)} under each route model</h2><table><tr><th>Route model</th><th class="n">Can get there</th><th class="n">Median min</th></tr>`+
-    same.map(x=>`<tr${x.id===r.id?' class="on"':""}><td>${esc(x.preset)}</td><td class="n">${num(x.summary.within_cap_weight)}</td><td class="n">${dec(x.summary.median_minutes_within_cap)}</td></tr>`).join("")+"</table>";}}
+  if(same.length>1){h+=`<h2>${esc(MODE[r.mode]||r.mode)} under each route model</h2><table><tr><th>${tip("Route model",GL["route model"]||"")}</th><th class="n">Can get there</th><th class="n">Median min</th></tr>`+
+    same.map(x=>`<tr${x.id===r.id?' class="on"':""}><td>${tip(x.preset,x.title)}</td><td class="n">${num(x.summary.within_cap_weight)}</td><td class="n">${dec(x.summary.median_minutes_within_cap)}</td></tr>`).join("")+"</table>";}}
   if(r.exposure.length&&$("showexposure").checked){
     for(const [k,title] of [["street","Along streets"],["crossing","Crossings"]]){const rows=r.exposure.filter(x=>x.kind===k).sort((a,b)=>(b.tier==="fix first")-(a.tier==="fix first")||a.rank-b.rank);if(!rows.length)continue;
       const nf=(r.fix_first||{})[k]||0,more=rows.length-rows.filter(x=>x.tier==="fix first").length;
-      h+=`<h2>${title}: ${num(nf)} to fix first${more?`, and the top ${more} to watch`:""}</h2><table><tr><th>#</th><th>Place</th><th class="n">${esc(r.flow_heading)}</th><th class="n">Points</th></tr>`+
-      rows.map(x=>`<tr data-go="${esc(x.tag)}" title="Show on the map"><td>${tierMark(x)}</td><td>${esc(x.label)}<div class="note">${x.tier==="fix first"&&D.plain_rule?"":`<b>${esc(x.reason||x.tier)}</b> `}${esc(x.factors)}${x.from?`<br>From each destination: ${esc(x.from)}`:""}</div></td><td class="n">${esc(x.people)}</td><td class="n">${esc(x.points)}</td></tr>`).join("")+"</table>";}
+      h+=`<h2>${title}: ${num(nf)} to fix first${more?`, and the top ${more} to watch`:""}</h2><table><tr><th>#</th><th>Place</th><th class="n">${esc(r.flow_heading)}</th><th class="n">${tip("Points",GL["risk points"]||"")}</th></tr>`+
+      rows.map(x=>`<tr data-go="${esc(x.tag)}" title="Show on the map"><td>${tierMark(x)}</td><td>${esc(x.label)}<div class="note">${x.tier==="fix first"&&D.plain_rule?"":`<b>${gl(x.reason||x.tier)}</b> `}${gl(x.factors)}${x.from?`<br>From each destination: ${esc(x.from)}`:""}</div></td><td class="n">${esc(x.people)}</td><td class="n">${esc(x.points)}</td></tr>`).join("")+"</table>";}
     how+=`<p>${esc(D.exposure_note||"")}</p>`;}
   if(r.screen.length&&$("showscreen").checked){for(const t of treatments(r)){const rows=r.screen.filter(x=>x.treatment===t);
     const b=rows[0];

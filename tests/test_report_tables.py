@@ -55,7 +55,12 @@ def test_the_summary_figures_come_from_summary_csv(out: Path) -> None:
     summary = tables.read_summary(out)
     walk = summary[summary.preset.eq("broach-2016") & summary["mode"].eq("walk")].iloc[0]
     table = tables.summary_table(summary)
-    row = next(r for r in table.rows if r[:2] == ("Walking", "broach-2016"))
+    row = next(
+        r
+        for r in table.rows
+        if r[0] == "Walking"
+        and r[1] == tables.Noted("broach-2016", words.model_tip("walk", "broach-2016"))
+    )
     assert row[2] == f"{walk.total_weight:,.0f}"
     assert row[3] == f"{walk.within_cap_weight:,.0f} (≤ {walk.time_cap_min:g} min)"
     assert row[4] == f"{100 * walk.within_cap_weight / walk.total_weight:.0f}%"
@@ -463,3 +468,59 @@ def test_all_from_one_destination_is_just_its_name() -> None:
     labels = {"a": "Almond"}
     assert words.from_each(json.dumps({"a": 7.0}), labels) == "Almond"
     assert words.from_each(json.dumps({"b": 7.0}), labels) == "b"
+
+
+def test_every_column_and_route_model_is_defined_on_hover(out: Path) -> None:
+    _, page = tables.build_report(out)
+    doc = page.read_text()
+    bare = {h for h in re.findall(r"<th(?:\s[^>]*)?>(.*?)</th>", doc) if "data-tip=" not in h}
+    assert bare <= {"#"}, bare
+    # A route model's name, wherever it is a cell, says what the model is.
+    assert re.search(r'data-tip="Route model: [^"]+">broach-2016</span>', doc)
+    # Jargon in sentences is defined at its first use in each passage.
+    tip = html.escape(words.GLOSSARY["path-size logit"], quote=True)
+    assert f'<span tabindex="0" data-tip="{tip}">path-size logit</span>' in doc
+
+
+def test_jargon_is_defined_once_per_passage_and_only_as_a_whole_word() -> None:
+    got = tables._glossed("Traffic stress & traffic stress; a stopwatch, a watch-list, <watch>")
+    assert got.count("data-tip=") == 2  # the first "Traffic stress", and "watch"
+    assert got.startswith('<span tabindex="0" data-tip="Level of traffic stress')
+    assert ">Traffic stress</span> &amp; traffic stress;" in got
+    assert "a stopwatch, a watch-list, &lt;<span" in got
+    assert all(key == key.lower() for key in words.GLOSSARY)  # matching lowers the text
+
+
+def test_a_route_models_note_is_for_its_own_mode() -> None:
+    # Walking and cycling both ship a "shortest" model; each cell says which (TT1).
+    rows = pd.DataFrame(
+        {
+            "mode": ["walk", "bike"],
+            "preset": ["shortest", "shortest"],
+            "total_weight": [100.0, 100.0],
+            "within_cap_weight": [40.0, 60.0],
+            "time_cap_min": [20.0, 20.0],
+            "median_minutes_within_cap": [12.0, 9.0],
+            "expected_weight": [None, None],
+            "decay_curve": ["", ""],
+        }
+    )
+    walk, bike = (row[1] for row in tables.summary_table(rows).rows)
+    assert walk == tables.Noted(
+        "shortest", f"Route model: {presets.load('walk', 'shortest').title}."
+    )
+    assert bike == tables.Noted(
+        "shortest", f"Route model: {presets.load('bike', 'shortest').title}."
+    )
+    flows = pd.Series([3.0], index=["Main Street"])
+    table = tables.busiest_blocks({"shortest": flows, "broach-2011": flows}, mode="bike")[0]
+    assert isinstance(table, tables.Table)
+    assert table.tips[1] == bike.tip
+
+
+def test_glossary_notes_do_not_fix_what_a_study_can_set() -> None:
+    # The drop-off share and points are rules a study may change (TT2); some route
+    # models' values are set by hand, not taken from a study (TT3).
+    assert not re.search(r"\d", words.GLOSSARY["drop-off"])
+    assert "set by hand" in words.GLOSSARY["uncalibrated"]
+    assert "Not fitted to observed trips" in words.GLOSSARY["uncalibrated"]

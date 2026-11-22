@@ -6,8 +6,10 @@ here once: a place's people are "12" in the report's table and on the map.
 
 from __future__ import annotations
 
+import functools
 import json
 import math
+import re
 from collections.abc import Mapping
 
 from walkbike_routes.analysis.exposure_rules import (
@@ -232,8 +234,80 @@ def key_terms(
     return terms
 
 
-def tips(header: tuple[str, ...], flow: str = "") -> tuple[str, ...]:
-    """What each column of a table means, for the HTML report's hover notes; "" for none."""
+FLOW_MEANING = (
+    "How many people's routes use each street, if everyone within reach made the trip: "
+    "potential flow, not a count."
+)
+MODEL_RULES = (
+    "The rules used to pick each route: how much extra each preset charges for busy "
+    "streets, hills, crossings and turns. Each has its source in Method."
+)
+# Terms readers may not know, defined on hover wherever they appear in report
+# or map text (phrases match whole words, ignoring case; keys are lower case).
+GLOSSARY: dict[str, str] = {
+    "traffic stress": "Level of traffic stress (LTS): how stressful a street is to cycle "
+    "on, from 1 (calm enough for children) to 4 (only for confident adults), judged from "
+    "its speed limit, lanes, traffic and bike lanes.",
+    "risk points": "How exposed to traffic a place is: points for traffic, speed, lanes "
+    "to cross, a missing sidewalk or crosswalk, cycling stress and drop-off traffic, added "
+    "up. Not a crash rate.",
+    "drop-off": "Car trips to the destination, such as parents dropping children at "
+    "school. The streets busiest with these trips get extra points; Risk points used "
+    "gives the rule.",
+    "potential flow": "How many people would use a street if everyone within reach made "
+    "the trip by the route the model picks. Not a count of people seen there.",
+    "route-cost minutes": ROUTE_COST.replace(" (often called generalized cost)", "")
+    + ", in minutes. Also called generalized cost.",
+    "generalized cost": ROUTE_COST.replace(" (often called generalized cost)", "") + ".",
+    "route model": MODEL_RULES,
+    "route-choice model": MODEL_RULES,
+    "uncalibrated": "Not fitted to observed trips by the people or in the place studied. "
+    "The values may come from published studies or be set by hand; Method explains each "
+    "route model.",
+    "distance-decay": "How fast trips fall off with distance: the national share of "
+    "trips of each length, used to weight homes by how far away they are.",
+    "watch": "A place with risk points that does not meet the fix-first threshold.",
+    "flow": FLOW_MEANING,
+    "flows": FLOW_MEANING,
+    "path-size logit": "A way of sharing each home's trips among several near-best "
+    "routes, so routes that overlap a lot are not counted as separate choices.",
+    "catchment": "The homes counted for a destination: everyone within the time limit, "
+    "or every home connected to it.",
+    "decayed": "Weighted by the national share of trips of that length, so far-away "
+    "homes count for less.",
+    "turn-aware": "Counting the time lost at each turn as well as along each street.",
+    "osrm": "Open Source Routing Machine, a widely used routing engine whose car turn "
+    "delays these values follow.",
+    "trpmiles": "The survey's trip length in miles, measured along the routed path.",
+    "stress_scale": "How many times the published traffic and crossing penalties are "
+    "multiplied; 2 doubles them.",
+}
+GLOSS_PATTERN = re.compile(
+    r"(?<![\w-])("
+    + "|".join(re.escape(t) for t in sorted(GLOSSARY, key=len, reverse=True))
+    + r")(?![\w-])",
+    re.IGNORECASE,
+)
+
+
+@functools.cache
+def model_tip(mode: str, name: str) -> str:
+    """What a shipped route model is, for a hover note; "" if it is not shipped."""
+    from walkbike_routes.costs import presets  # here, so text stays light to import
+
+    try:
+        return f"Route model: {presets.load(mode, name).title}."
+    except presets.PresetError:
+        return ""
+
+
+def tips(
+    header: tuple[str, ...], flow: str = "", models: Mapping[str, str] | None = None
+) -> tuple[str, ...]:
+    """What each column of a table means, for the HTML report's hover notes; "" for none.
+
+    ``models`` gives the notes for columns named after route models.
+    """
     counted = flow.lower() or "people"
     known = {
         "On the map": "The place's label on the map: S for a street, C for a crossing, "
@@ -257,7 +331,23 @@ def tips(header: tuple[str, ...], flow: str = "") -> tuple[str, ...]:
         f"minutes. {ROUTE_COST}, so it can fall with no change in clock time. Places are "
         "ranked by it within each kind of change.",
         "Peak flow": "The flow on the street's busiest link.",
+        "Street": "A stretch of one street, named by the streets at each end.",
+        "Crossing": "Where routes cross a road: all its pieces together, named after the "
+        "road crossed and the nearest other street.",
+        "Why it has these points": "The factors behind the risk points, each with the "
+        "points it adds.",
+        "Place": "The street, crossing or junction where the change would go.",
+        "Route model": GLOSSARY["route model"],
+        "In study area": "Everyone of the counted age in the study area, whether or not "
+        "they can get there.",
+        "Factor": "What earns a place risk points.",
+        "Points": "The risk points the factor adds.",
+        "Mode": "How people travel: walking, cycling or driving.",
+        **(models or {}),
     }
+    for h in header:
+        if m := re.fullmatch(r"≤ (.+) min", h):
+            known[h] = f"Those whose trip takes {m.group(1)} minutes or less."
     if flow:
         known.setdefault(
             flow, f"The {counted} whose routes use the place, at its busiest point. Not a count."
