@@ -1,34 +1,60 @@
-# Install with `make hooks`. Commit runs the fast checks; push runs the tests.
+# Git hooks, run with prek (reads the pre-commit config format).
+# Install once per clone with `make hooks`. Commit runs the fast checks; push
+# runs the tests and the branch-freshness check.
+#
+# Python tools are local hooks that call the locked environment, so hooks,
+# `make check` and CI all run the version in uv.lock.
+
 default_install_hook_types: [pre-commit, pre-push]
+default_stages: [pre-commit]
+
 repos:
   - repo: local
     hooks:
+      # Refuse a push from a branch that is missing commits from origin/main.
+      - id: check-branch-fresh
+        name: check-branch-fresh
+        entry: scripts/check_branch_fresh.sh
+        language: system
+        stages: [pre-push]
+        always_run: true
+        pass_filenames: false
+
       - id: ruff-check
         name: ruff lint
         entry: uv run --locked ruff check --force-exclude
         language: system
         types_or: [python, pyi]
-        stages: [pre-commit]
+
       - id: ruff-format
         name: ruff format (check only)
         entry: uv run --locked ruff format --check --force-exclude
         language: system
         types_or: [python, pyi]
-        stages: [pre-commit]
+
+      # Checks the whole configured scope, not just staged files.
       - id: mypy
         name: mypy
         entry: uv run --locked mypy
         language: system
         pass_filenames: false
         files: ^(src/|tests/|pyproject\.toml$)
-        stages: [pre-commit]
+
+      # validation/ is type-checked on its own path, against the package.
+      - id: mypy-validation
+        name: mypy (validation)
+        entry: make validation-typecheck
+        language: system
+        pass_filenames: false
+        files: ^(src/|validation/|pyproject\.toml$)
+
       - id: uv-lock
         name: uv.lock matches pyproject.toml
         entry: uv lock --check
         language: system
         pass_filenames: false
         files: ^(pyproject\.toml|uv\.lock)$
-        stages: [pre-commit]
+
       - id: pytest
         name: pytest
         entry: uv run --locked pytest -q
@@ -36,3 +62,31 @@ repos:
         pass_filenames: false
         always_run: true
         stages: [pre-push]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-toml
+      # These declare pre-push in their own definitions, which overrides
+      # default_stages; pin them so they do not re-run on every push.
+      - id: end-of-file-fixer
+        stages: [pre-commit]
+        exclude: (\.geojson$|^src/walkbike_routes/report/vendor/)
+      - id: trailing-whitespace
+        stages: [pre-commit]
+        exclude: (\.geojson$|^src/walkbike_routes/report/vendor/)
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+        stages: [pre-commit]
+      - id: no-commit-to-branch
+        args: [--branch, main]
+
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.19.0
+    hooks:
+      - id: markdownlint-cli2
+        files: \.(md|markdown)$
+        exclude: ^CLAUDE\.md$  # a one-line @AGENTS.md import, not a document

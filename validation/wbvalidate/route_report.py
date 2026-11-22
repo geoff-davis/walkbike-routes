@@ -34,7 +34,6 @@ from shapely.geometry.base import BaseGeometry
 from walkbike_routes import config as settings
 from walkbike_routes import study as study_runs
 from walkbike_routes.costs import presets
-from walkbike_routes.report.map import SYNTHETIC
 from walkbike_routes.report.tables import (
     Block,
     Bullets,
@@ -46,6 +45,7 @@ from walkbike_routes.report.tables import (
     page,
     street_names,
 )
+from walkbike_routes.report.text import SYNTHETIC
 from wbvalidate import makeup, routes, traces
 from wbvalidate.routes import BUFFER_M, BUFFERS_M, ROUTED, RouteScore, column
 

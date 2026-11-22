@@ -20,10 +20,10 @@ MILE = decay.METRES_PER_MILE
 
 
 def _curve(**changes: Any) -> decay.DecayCurve:
-    values: dict[str, Any] = dict(
-        name="test", mode="walk", title="t", source="made up", trips=10, median_miles=0.5,
-        miles=(0.0, 1.0, 2.0), share=(1.0, 0.5, 0.0),
-    )  # fmt: skip
+    values: dict[str, Any] = {
+        "name": "test", "mode": "walk", "title": "t", "source": "made up", "trips": 10,
+        "median_miles": 0.5, "miles": (0.0, 1.0, 2.0), "share": (1.0, 0.5, 0.0),
+    }  # fmt: skip
     values.update(changes)
     return decay.DecayCurve(**values)
 
