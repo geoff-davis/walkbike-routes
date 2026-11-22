@@ -2,12 +2,19 @@
 
 The 3DEP image service samples its best available model (1 m lidar where it
 exists, 10 m elsewhere) at a list of points, so no rasters are downloaded.
+
+Each point's answer is kept in one table in the cache folder
+(:data:`POINTS_FILE`), keyed by its rounded coordinates, so a rerun asks only
+for points it has not seen.  A changed network (new map data, an override, a
+moved node) then costs a request for the changed points, not for every batch
+after the first change.
 """
 
 from __future__ import annotations
 
 import json
 import math
+from pathlib import Path
 
 import geopandas as gpd
 
@@ -16,6 +23,7 @@ from walkbike_routes.download.http import DownloadError, Fetcher
 SERVICE = "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer"
 BATCH = 400
 NO_DATA = -1e30  # the service's fill value lies far below any real ground
+POINTS_FILE = "3dep-points.json"
 
 
 def _answer_problem(answer: object) -> str | None:
@@ -35,9 +43,12 @@ def node_elevations(nodes: gpd.GeoDataFrame, fetcher: Fetcher) -> gpd.GeoDataFra
         (round(x, 7), round(y, 7))
         for x, y in zip(points.geometry.x, points.geometry.y, strict=True)
     ]
-    heights: list[float] = []
-    for start in range(0, len(coordinates), BATCH):
-        batch = coordinates[start : start + BATCH]
+    table_path = fetcher.cache / POINTS_FILE
+    known = _read_points(table_path)
+    # One request per key: the key, not the float pair, is a point's identity.
+    wanted = list({_key(c): c for c in coordinates if _key(c) not in known}.values())
+    for start in range(0, len(wanted), BATCH):
+        batch = wanted[start : start + BATCH]
         answer = fetcher.json(
             f"{SERVICE}/getSamples",
             data={
@@ -53,13 +64,43 @@ def node_elevations(nodes: gpd.GeoDataFrame, fetcher: Fetcher) -> gpd.GeoDataFra
             check=_answer_problem,
         )
         found = {int(s["locationId"]): s.get("value") for s in answer["samples"]}
-        for index in range(len(batch)):
-            heights.append(_height(found.get(index)))
+        for index, coordinate in enumerate(batch):
+            height = _height(found.get(index))
+            known[_key(coordinate)] = None if math.isnan(height) else height
+        _write_points(table_path, known)  # after each batch, so a stopped run resumes
     result = nodes.copy()
-    result["elevation_m"] = heights
+    result["elevation_m"] = [_stored(known[_key(c)]) for c in coordinates]
     if result.elevation_m.isna().all() and len(result):
         raise DownloadError("3DEP returned no elevations for any node")
     return result
+
+
+def _key(coordinate: tuple[float, float]) -> str:
+    """The table key; adding 0.0 turns a -0.0 from rounding into 0.0."""
+    x, y = (round(value, 7) + 0.0 for value in coordinate)
+    return f"{x:.7f},{y:.7f}"
+
+
+def _stored(value: float | None) -> float:
+    return math.nan if value is None else value
+
+
+def _read_points(path: Path) -> dict[str, float | None]:
+    """The saved point table, or an empty one when there is none or it is damaged."""
+    try:
+        saved = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(saved, dict):
+        return {}
+    return {str(k): (float(v) if isinstance(v, int | float) else None) for k, v in saved.items()}
+
+
+def _write_points(path: Path, known: dict[str, float | None]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    part = path.with_suffix(".part")
+    part.write_text(json.dumps(known))
+    part.replace(path)
 
 
 def _height(value: object) -> float:
