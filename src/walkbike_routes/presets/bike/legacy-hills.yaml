@@ -1,0 +1,30 @@
+name: legacy-hills
+mode: bike
+kind: lts_factors
+title: Los Altos low-stress cycling profile, slowed uphill (uncalibrated)
+source: >-
+  Hand-set judgments, not from a published source: distance
+  multiplied by 1, 1.25, 3 or 8 for traffic stress levels 1 to 4 (Mekuria,
+  Furth and Nixon 2012), plus waits at crossings. Not estimated from observed
+  route choice.
+  Signal waits across and along a main road (primary, trunk or secondary)
+  use the Highway Capacity Manual's average delay, (C - g)^2 / 2C, with an
+  assumed 120 s cycle: crossing the main road, about 25 s of side-street green
+  gives 40 s (rounded up); along it, about 60 s gives 15 s. The timings are
+  assumptions, not measured.
+  As bike/legacy, but riding speed changes with grade by Parkin, J. and
+  Rotheram, J. (2010), "Design speeds and acceleration characteristics of
+  bicycle traffic for use in planning, design and appraisal", Transport
+  Policy 17(5), 335-341, Table 2: 0.2379 m/s faster per 1% down and 0.4002
+  m/s slower per 1% up from 6.01 m/s on the flat, used as a ratio to the
+  flat speed and held within the 8.39% down to 9.34% up the data covered.
+objective: generalized_cost_s
+parameters:
+  speed_mph: 10.0
+  signal_wait_s: 20
+  signal_wait_cross_arterial_s: 40
+  signal_wait_along_arterial_s: 15
+  lts_cost_factors: [1.0, 1.25, 3.0, 8.0]
+  unknown_crossing_cost_s: 15
+  uncontrolled_crossing_cost_s: 30
+  grade_speeds: true

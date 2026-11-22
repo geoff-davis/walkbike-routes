@@ -1,0 +1,16 @@
+# Downloads, local layers and everything built from them stay off the repository.
+data/
+output/
+.env
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.coverage
+.coverage.*
+htmlcov/
+# A config's private local layers (x.yaml -> x.local.yaml), read on every run.
+*.local.yaml

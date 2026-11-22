@@ -1,0 +1,60 @@
+name: broach-2011-lanes
+mode: bike
+kind: broach_2011
+title: Portland cycling route choice, everyday trips, with bike lanes valued like bike boulevards (after Broach, Gliebe and Dill 2011)
+source: >-
+  Broach, J., Gliebe, J. and Dill, J. (2011), "Bicycle route choice model
+  developed using revealed preference GPS data", 90th Annual Meeting of the
+  Transportation Research Board, Table 2: a path-size logit estimated on
+  1,449 GPS-recorded trips by Portland, Oregon cyclists, 2007. Coefficients
+  as printed; commute terms are used only when trip is commute. The
+  published version (Transportation Research Part A 46(10), 1730-1740,
+  2012) was not available to check and may differ. Traffic volumes come
+  from counts where matched, else road class; the bridge terms are not used (see
+  walkbike_routes.network.broach and docs/assumptions.md). Speed and signal
+  waits, for travel time only, are as in bike/legacy. Not in the paper:
+  every bike lane and track also gets the model's bike boulevard term, an
+  assumption added after CyclePhilly riders were seen to choose quiet streets
+  with lanes, which the model values no more than quiet streets without
+  (see docs/assumptions.md). The coefficient is the paper's; nothing was
+  fitted. Not in the paper: a protected lane
+  (separated track) removes the whole busy-traffic term and counts as 0.72
+  times the same street with a painted lane that does the same, after Fosgerau, M., Łukawska, M., Paulsen, M. and Rasmussen, T. K.
+  (2023), "Bikeability and the induced demand for cycling", PNAS 120(16),
+  e2220515120, Table 4 (Copenhagen GPS trips: a protected lane on a large
+  road against a painted one, 0.772/1.080); see docs/assumptions.md.
+objective: generalized_cost_s
+parameters:
+  trip: noncommute
+  lane_term: bike_boulevard
+  speed_mph: 10.0
+  protected_factor: 0.72
+  signal_wait_s: 20
+  signal_wait_cross_arterial_s: 40
+  signal_wait_along_arterial_s: 15
+  coefficients:
+    ln_distance: -5.22
+    ln_distance_commute: -3.76
+    turns_per_mi: -0.371
+    upslope_2_4: -2.85
+    upslope_4_6: -7.11
+    upslope_6_plus: -13.0
+    signals_per_mi: -0.186
+    stop_signs_per_mi: -0.0483
+    left_turn_unsignalised_10_20k_per_mi: -0.782
+    left_turn_unsignalised_20k_plus_per_mi: -1.87
+    unsignalised_cross_10k_plus_right_turn_per_mi: -0.338
+    unsignalised_cross_5_10k_per_mi: -0.363
+    unsignalised_cross_10_20k_per_mi: -0.516
+    unsignalised_cross_20k_plus_per_mi: -2.51
+    bike_boulevard: 1.03
+    bike_path: 1.57
+    traffic_10_20k_no_lane: -1.05
+    traffic_10_20k_no_lane_commute: -1.77
+    traffic_20_30k_no_lane: -4.51
+    traffic_20_30k_no_lane_commute: -3.37
+    traffic_30k_plus_no_lane: -10.3
+    traffic_30k_plus_no_lane_commute: -8.59
+    bridge_bike_lane: 1.81
+    bridge_separated: 3.11
+    ln_path_size: 1.81

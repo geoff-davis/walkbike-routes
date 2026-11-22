@@ -1,0 +1,31 @@
+name: legacy-hills
+mode: walk
+kind: pedestrian_evidence
+title: Los Altos downtown walking profile, slowed on hills (uncalibrated)
+source: >-
+  Hand-set judgments, not from a published source.
+  Not estimated from observed route choice.
+  Signal waits across and along a main road (primary, trunk or secondary)
+  use the Highway Capacity Manual's average pedestrian delay, (C - g)^2 / 2C,
+  with an assumed 120 s cycle: crossing the main road, about 11 s of usable
+  walk time gives 50 s; along it, about 60 s gives 15 s. The timings are
+  assumptions, not measured.
+  As walk/legacy, but walking speed changes with grade by Tobler's hiking
+  function (Tobler, W. 1993, "Three presentations on geographical analysis
+  and modeling", National Center for Geographic Information and Analysis
+  Technical Report 93-1), fitted to Eduard Imhof's Swiss walking data, as a
+  ratio to its flat speed.
+objective: generalized_cost_s
+parameters:
+  speed_mph: 3.0
+  signal_wait_s: 30
+  signal_wait_cross_arterial_s: 50
+  signal_wait_along_arterial_s: 15
+  allow_unknown_local: true
+  allow_unknown_collector: false
+  allow_unknown_major: false
+  unknown_local_factor: 1.25
+  unknown_collector_factor: 2.0
+  unknown_other_factor: 2.0
+  unknown_major_factor: 5.0
+  grade_speeds: true

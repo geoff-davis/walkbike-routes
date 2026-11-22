@@ -1,0 +1,23 @@
+name: legacy
+mode: bike
+kind: lts_factors
+title: Los Altos low-stress, crossing-aware cycling profile (uncalibrated)
+source: >-
+  Hand-set judgments, not from a published source: distance
+  multiplied by 1, 1.25, 3 or 8 for traffic stress levels 1 to 4 (Mekuria,
+  Furth and Nixon 2012), plus waits at crossings. Not estimated from observed
+  route choice.
+  Signal waits across and along a main road (primary, trunk or secondary)
+  use the Highway Capacity Manual's average delay, (C - g)^2 / 2C, with an
+  assumed 120 s cycle: crossing the main road, about 25 s of side-street green
+  gives 40 s (rounded up); along it, about 60 s gives 15 s. The timings are
+  assumptions, not measured.
+objective: generalized_cost_s
+parameters:
+  speed_mph: 10.0
+  signal_wait_s: 20
+  signal_wait_cross_arterial_s: 40
+  signal_wait_along_arterial_s: 15
+  lts_cost_factors: [1.0, 1.25, 3.0, 8.0]
+  unknown_crossing_cost_s: 15
+  uncontrolled_crossing_cost_s: 30

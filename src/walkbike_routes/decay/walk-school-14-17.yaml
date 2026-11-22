@@ -1,0 +1,12 @@
+name: walk-school-14-17
+mode: walk
+title: Walking to school, ages 14 to 17
+source: Federal Highway Administration, 2017 National Household Travel Survey, version 1.2,
+  public trip file (https://nhts.ornl.gov). Weighted share of walking trips to school by students
+  aged 14 to 17 at least each distance long, by the survey's routed trip distance (TRPMILES),
+  loop trips excluded. Built by scripts/nhts_decay_curves.py.
+trips: 361
+median_miles: 0.558
+miles: [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3, 4, 5, 7.5, 10, 15, 20]
+share: [1.0, 0.8739, 0.5617, 0.41, 0.259, 0.1181, 0.0855, 0.0405, 0.0332, 0.0002, 0.0, 0.0,
+  0.0, 0.0, 0.0, 0.0]

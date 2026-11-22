@@ -1,0 +1,896 @@
+{
+  "access_points": [
+    {
+      "access_point_id": "fixture_bicycle_access",
+      "access_role": "synthetic bicycle threshold",
+      "confidence": "high",
+      "destination_id": "fixture_destination",
+      "direction": "both",
+      "geometry": [
+        590200,
+        4137000
+      ],
+      "mode": "bicycle",
+      "node_id": "G",
+      "review_status": "synthetic_reviewed",
+      "source": "synthetic fixture definition"
+    },
+    {
+      "access_point_id": "fixture_pedestrian_access",
+      "access_role": "synthetic pedestrian threshold",
+      "confidence": "high",
+      "destination_id": "fixture_destination",
+      "direction": "both",
+      "geometry": [
+        590200,
+        4137080
+      ],
+      "mode": "pedestrian",
+      "node_id": "NG",
+      "review_status": "synthetic_reviewed",
+      "source": "synthetic fixture definition"
+    },
+    {
+      "access_point_id": "fixture_motor_access",
+      "access_role": "synthetic motor threshold",
+      "confidence": "high",
+      "destination_id": "fixture_destination",
+      "direction": "to_destination",
+      "geometry": [
+        590000,
+        4137100
+      ],
+      "mode": "car",
+      "node_id": "CAR_G",
+      "review_status": "synthetic_reviewed",
+      "source": "synthetic fixture definition"
+    }
+  ],
+  "car_controls": [
+    {
+      "control_cluster_id": "signal_fixture_1",
+      "control_type": "signal",
+      "node_id": "CAR_C"
+    }
+  ],
+  "car_gates": [
+    {
+      "direction": "to_school",
+      "gate_id": "fixture_car_gate",
+      "geometry": [
+        590000,
+        4137100
+      ],
+      "node_id": "CAR_G",
+      "school_id": "fixture_school"
+    }
+  ],
+  "car_origins": [
+    {
+      "car_attached_node_id": "CAR_O",
+      "car_network_attached": true,
+      "car_snap_distance_m": 0.0,
+      "geometry": [
+        589900,
+        4137000
+      ],
+      "origin_id": "fixture_car_origin",
+      "resident_age_proxy": 5.0
+    }
+  ],
+  "collision_parties": [
+    {
+      "CASE_ID": "fixture_bike",
+      "PARTY_TYPE": "1"
+    },
+    {
+      "CASE_ID": "fixture_bike",
+      "PARTY_TYPE": "4"
+    },
+    {
+      "CASE_ID": "fixture_ped",
+      "PARTY_TYPE": "1"
+    },
+    {
+      "CASE_ID": "fixture_ped",
+      "PARTY_TYPE": "2"
+    },
+    {
+      "CASE_ID": "fixture_far",
+      "PARTY_TYPE": "1"
+    },
+    {
+      "CASE_ID": "fixture_far",
+      "PARTY_TYPE": "3"
+    }
+  ],
+  "collisions": [
+    {
+      "CASE_ID": "fixture_bike",
+      "COLLISION_SEVERITY": "3",
+      "INTERSECTION": "Y",
+      "MVIW": "fixture",
+      "NUMBER_INJURED": 1,
+      "NUMBER_KILLED": 0,
+      "PRIMARY_RD": "FIXTURE ROAD",
+      "SECONDARY_RD": "SCHOOL WAY",
+      "TYPE_OF_COLLISION": "fixture",
+      "bike_involved": true,
+      "collision_date": "2025-02-03",
+      "geometry": [
+        590010,
+        4137105
+      ],
+      "geometry_is_approximate": false,
+      "geometry_provenance": "synthetic exact fixture",
+      "intersection_match_gap_m": null,
+      "original_safetrec_geocode_available": true,
+      "ped_involved": false,
+      "provisional_batch": true,
+      "year": 2025
+    },
+    {
+      "CASE_ID": "fixture_ped",
+      "COLLISION_SEVERITY": "2",
+      "INTERSECTION": "Y",
+      "MVIW": "fixture",
+      "NUMBER_INJURED": 1,
+      "NUMBER_KILLED": 0,
+      "PRIMARY_RD": "FIXTURE ROAD",
+      "SECONDARY_RD": "SCHOOL WAY",
+      "TYPE_OF_COLLISION": "fixture",
+      "bike_involved": false,
+      "collision_date": "2024-04-05",
+      "geometry": [
+        590010,
+        4137105
+      ],
+      "geometry_is_approximate": true,
+      "geometry_provenance": "synthetic approximate fixture",
+      "intersection_match_gap_m": 0.0,
+      "original_safetrec_geocode_available": false,
+      "ped_involved": true,
+      "provisional_batch": true,
+      "year": 2024
+    },
+    {
+      "CASE_ID": "fixture_far",
+      "COLLISION_SEVERITY": "4",
+      "INTERSECTION": "Y",
+      "MVIW": "fixture",
+      "NUMBER_INJURED": 0,
+      "NUMBER_KILLED": 0,
+      "PRIMARY_RD": "DISTANT ROAD",
+      "SECONDARY_RD": "FAR WAY",
+      "TYPE_OF_COLLISION": "fixture",
+      "bike_involved": false,
+      "collision_date": "2023-01-02",
+      "geometry": [
+        591000,
+        4137100
+      ],
+      "geometry_is_approximate": false,
+      "geometry_provenance": "synthetic exact fixture",
+      "intersection_match_gap_m": null,
+      "original_safetrec_geocode_available": true,
+      "ped_involved": false,
+      "provisional_batch": false,
+      "year": 2023
+    }
+  ],
+  "crossings": [
+    {
+      "crosses_maple": true,
+      "crossing_id": "west_reviewed_crossing",
+      "geometry": [
+        590000,
+        4137000
+      ],
+      "legal_crossing_state": "possible_intersection_crossing",
+      "node_id": "W",
+      "supported_crossing_state": "supported_reviewed"
+    },
+    {
+      "crosses_maple": true,
+      "crossing_id": "center_possible_crossing",
+      "geometry": [
+        590100,
+        4137000
+      ],
+      "legal_crossing_state": "possible_intersection_crossing",
+      "node_id": "M",
+      "supported_crossing_state": "unknown"
+    },
+    {
+      "crosses_maple": false,
+      "crossing_id": "center_side_street_marking",
+      "geometry": [
+        590100,
+        4137000
+      ],
+      "legal_crossing_state": "possible_intersection_crossing",
+      "node_id": "M",
+      "supported_crossing_state": "supported_reviewed"
+    }
+  ],
+  "crs": "EPSG:26910",
+  "description": "Synthetic mini district for clean-checkout integration tests; coordinates and attributes are not observed Los Altos data.",
+  "destinations": [
+    {
+      "destination_id": "fixture_destination",
+      "destination_type": "explicit_access_points",
+      "geometry": [
+        590200,
+        4137040
+      ],
+      "label": "Fixture Destination",
+      "review_status": "synthetic_reviewed",
+      "source": "synthetic fixture definition"
+    }
+  ],
+  "edges": [
+    {
+      "bike_allowed": true,
+      "bike_facility": "bike lane",
+      "edge_id": "maple_w_m",
+      "geometry": [
+        [
+          590000,
+          4137000
+        ],
+        [
+          590100,
+          4137000
+        ]
+      ],
+      "highway": "tertiary",
+      "lanes": 2,
+      "length_m": 100,
+      "name": "Maple Avenue",
+      "oneway": "",
+      "ped_allowed": true,
+      "prototype02_gap_edge": false,
+      "sidewalk_state": "absent_manual",
+      "speed_mph": 30,
+      "traffic_band": "moderate",
+      "traffic_volume_type": "observed fixture band",
+      "u": "W",
+      "v": "M"
+    },
+    {
+      "bike_allowed": true,
+      "bike_facility": "bike lane",
+      "edge_id": "maple_m_g_gap",
+      "geometry": [
+        [
+          590100,
+          4137000
+        ],
+        [
+          590200,
+          4137000
+        ]
+      ],
+      "highway": "tertiary",
+      "lanes": 2,
+      "length_m": 100,
+      "name": "Maple Avenue",
+      "oneway": "",
+      "ped_allowed": true,
+      "prototype02_gap_edge": true,
+      "sidewalk_state": "absent_manual",
+      "speed_mph": 30,
+      "traffic_band": "moderate",
+      "traffic_volume_type": "observed fixture band",
+      "u": "M",
+      "v": "G"
+    },
+    {
+      "bike_allowed": true,
+      "bike_facility": "none",
+      "edge_id": "west_north_connector",
+      "geometry": [
+        [
+          590000,
+          4137000
+        ],
+        [
+          590000,
+          4137080
+        ]
+      ],
+      "highway": "path",
+      "lanes": 2,
+      "length_m": 80,
+      "name": "West Path",
+      "oneway": "",
+      "ped_allowed": true,
+      "prototype02_gap_edge": false,
+      "sidewalk_state": "present_manual",
+      "speed_mph": 20,
+      "traffic_band": "low",
+      "traffic_volume_type": "observed fixture band",
+      "u": "W",
+      "v": "NW"
+    },
+    {
+      "bike_allowed": true,
+      "bike_facility": "none",
+      "edge_id": "north_w_m",
+      "geometry": [
+        [
+          590000,
+          4137080
+        ],
+        [
+          590100,
+          4137080
+        ]
+      ],
+      "highway": "residential",
+      "lanes": 2,
+      "length_m": 100,
+      "name": "Quiet North Street",
+      "oneway": "",
+      "ped_allowed": true,
+      "prototype02_gap_edge": false,
+      "sidewalk_state": "present_manual",
+      "speed_mph": 20,
+      "traffic_band": "low",
+      "traffic_volume_type": "observed fixture band",
+      "u": "NW",
+      "v": "NM"
+    },
+    {
+      "bike_allowed": true,
+      "bike_facility": "none",
+      "edge_id": "north_m_g",
+      "geometry": [
+        [
+          590100,
+          4137080
+        ],
+        [
+          590200,
+          4137080
+        ]
+      ],
+      "highway": "residential",
+      "lanes": 2,
+      "length_m": 100,
+      "name": "Quiet North Street",
+      "oneway": "",
+      "ped_allowed": true,
+      "prototype02_gap_edge": false,
+      "sidewalk_state": "present_manual",
+      "speed_mph": 20,
+      "traffic_band": "low",
+      "traffic_volume_type": "observed fixture band",
+      "u": "NM",
+      "v": "NG"
+    },
+    {
+      "bike_allowed": true,
+      "bike_facility": "none",
+      "edge_id": "gate_north_connector",
+      "geometry": [
+        [
+          590200,
+          4137000
+        ],
+        [
+          590200,
+          4137080
+        ]
+      ],
+      "highway": "path",
+      "lanes": 2,
+      "length_m": 80,
+      "name": "School Path",
+      "oneway": "",
+      "ped_allowed": true,
+      "prototype02_gap_edge": false,
+      "sidewalk_state": "present_manual",
+      "speed_mph": 20,
+      "traffic_band": "low",
+      "traffic_volume_type": "observed fixture band",
+      "u": "G",
+      "v": "NG"
+    },
+    {
+      "bike_allowed": true,
+      "bike_facility": "none",
+      "edge_id": "west_south_connector",
+      "geometry": [
+        [
+          590000,
+          4137000
+        ],
+        [
+          590000,
+          4136920
+        ]
+      ],
+      "highway": "path",
+      "lanes": 2,
+      "length_m": 80,
+      "name": "West South Path",
+      "oneway": "",
+      "ped_allowed": true,
+      "prototype02_gap_edge": false,
+      "sidewalk_state": "present_manual",
+      "speed_mph": 20,
+      "traffic_band": "low",
+      "traffic_volume_type": "observed fixture band",
+      "u": "W",
+      "v": "SW"
+    },
+    {
+      "bike_allowed": true,
+      "bike_facility": "none",
+      "edge_id": "south_w_m",
+      "geometry": [
+        [
+          590000,
+          4136920
+        ],
+        [
+          590100,
+          4136920
+        ]
+      ],
+      "highway": "residential",
+      "lanes": 2,
+      "length_m": 100,
+      "name": "Quiet South Street",
+      "oneway": "",
+      "ped_allowed": true,
+      "prototype02_gap_edge": false,
+      "sidewalk_state": "present_manual",
+      "speed_mph": 20,
+      "traffic_band": "low",
+      "traffic_volume_type": "observed fixture band",
+      "u": "SW",
+      "v": "SM"
+    },
+    {
+      "bike_allowed": true,
+      "bike_facility": "none",
+      "edge_id": "south_m_g",
+      "geometry": [
+        [
+          590100,
+          4136920
+        ],
+        [
+          590200,
+          4136920
+        ]
+      ],
+      "highway": "residential",
+      "lanes": 2,
+      "length_m": 100,
+      "name": "Quiet South Street",
+      "oneway": "",
+      "ped_allowed": true,
+      "prototype02_gap_edge": false,
+      "sidewalk_state": "present_manual",
+      "speed_mph": 20,
+      "traffic_band": "low",
+      "traffic_volume_type": "observed fixture band",
+      "u": "SM",
+      "v": "SG"
+    },
+    {
+      "bike_allowed": true,
+      "bike_facility": "none",
+      "edge_id": "gate_south_connector",
+      "geometry": [
+        [
+          590200,
+          4137000
+        ],
+        [
+          590200,
+          4136920
+        ]
+      ],
+      "highway": "path",
+      "lanes": 2,
+      "length_m": 80,
+      "name": "Rear School Path",
+      "oneway": "",
+      "ped_allowed": true,
+      "prototype02_gap_edge": false,
+      "sidewalk_state": "present_manual",
+      "speed_mph": 20,
+      "traffic_band": "low",
+      "traffic_volume_type": "observed fixture band",
+      "u": "G",
+      "v": "SG"
+    }
+  ],
+  "expected": {
+    "bike_base_edge_ids": [
+      "west_north_connector",
+      "north_w_m",
+      "north_m_g",
+      "gate_north_connector"
+    ],
+    "bike_base_length_m": 360.0,
+    "bike_improved_edge_ids": [
+      "maple_w_m",
+      "maple_m_g_gap"
+    ],
+    "bike_improved_length_m": 200.0,
+    "car_central_edge_ids": [
+      "car_bypass_1",
+      "car_bypass_2"
+    ],
+    "car_central_time_s": 33.0,
+    "car_edge_time_only_edge_ids": [
+      "car_short_1",
+      "car_short_2"
+    ],
+    "lts_best": {
+      "maple_m_g_gap": 2,
+      "north_w_m": 1
+    },
+    "near_school_collision_ids": [
+      "fixture_bike",
+      "fixture_ped"
+    ],
+    "population_capacity_weights_block_a": [
+      3.0,
+      9.0
+    ],
+    "population_equal_weights_block_a": [
+      6.0,
+      6.0
+    ],
+    "population_fallback_weight_block_b": 8.0,
+    "population_total": 20.0,
+    "walk_south_to_north_gate_length_m": 372.0
+  },
+  "fixture_id": "synthetic_school_network_v1",
+  "generic_origins": [
+    {
+      "demand_weight": 5.0,
+      "geometry": [
+        589900,
+        4137000
+      ],
+      "origin_id": "fixture_origin",
+      "source": "synthetic fixture definition",
+      "weight_unit": "synthetic_people_proxy"
+    }
+  ],
+  "motor_edges": [
+    {
+      "edge_id": "car_short_1",
+      "edge_running_time_s": 10,
+      "geometry": [
+        [
+          589900,
+          4137000
+        ],
+        [
+          590000,
+          4137000
+        ]
+      ],
+      "junction_tag": "",
+      "length_m": 100.0,
+      "name": "Car Short 1",
+      "oneway": "yes",
+      "osm_way_id": "way_car_short_1",
+      "u": "CAR_O",
+      "v": "CAR_C"
+    },
+    {
+      "edge_id": "car_short_2",
+      "edge_running_time_s": 10,
+      "geometry": [
+        [
+          590000,
+          4137000
+        ],
+        [
+          590000,
+          4137100
+        ]
+      ],
+      "junction_tag": "",
+      "length_m": 100.0,
+      "name": "Car Short 2",
+      "oneway": "yes",
+      "osm_way_id": "way_car_short_2",
+      "u": "CAR_C",
+      "v": "CAR_G"
+    },
+    {
+      "edge_id": "car_bypass_1",
+      "edge_running_time_s": 15,
+      "geometry": [
+        [
+          589900,
+          4137000
+        ],
+        [
+          589900,
+          4137100
+        ]
+      ],
+      "junction_tag": "",
+      "length_m": 100.0,
+      "name": "Car Bypass 1",
+      "oneway": "yes",
+      "osm_way_id": "way_car_bypass_1",
+      "u": "CAR_O",
+      "v": "CAR_B"
+    },
+    {
+      "edge_id": "car_bypass_2",
+      "edge_running_time_s": 15,
+      "geometry": [
+        [
+          589900,
+          4137100
+        ],
+        [
+          590000,
+          4137100
+        ]
+      ],
+      "junction_tag": "",
+      "length_m": 100.0,
+      "name": "Car Bypass 2",
+      "oneway": "yes",
+      "osm_way_id": "way_car_bypass_2",
+      "u": "CAR_B",
+      "v": "CAR_G"
+    }
+  ],
+  "nodes": [
+    {
+      "geometry": [
+        590000,
+        4137000
+      ],
+      "node_id": "W"
+    },
+    {
+      "geometry": [
+        590100,
+        4137000
+      ],
+      "node_id": "M"
+    },
+    {
+      "geometry": [
+        590200,
+        4137000
+      ],
+      "node_id": "G"
+    },
+    {
+      "geometry": [
+        590000,
+        4137080
+      ],
+      "node_id": "NW"
+    },
+    {
+      "geometry": [
+        590100,
+        4137080
+      ],
+      "node_id": "NM"
+    },
+    {
+      "geometry": [
+        590200,
+        4137080
+      ],
+      "node_id": "NG"
+    },
+    {
+      "geometry": [
+        590000,
+        4136920
+      ],
+      "node_id": "SW"
+    },
+    {
+      "geometry": [
+        590100,
+        4136920
+      ],
+      "node_id": "SM"
+    },
+    {
+      "geometry": [
+        590200,
+        4136920
+      ],
+      "node_id": "SG"
+    },
+    {
+      "geometry": [
+        589900,
+        4137000
+      ],
+      "node_id": "CAR_O"
+    },
+    {
+      "geometry": [
+        590000,
+        4137000
+      ],
+      "node_id": "CAR_C"
+    },
+    {
+      "geometry": [
+        589900,
+        4137100
+      ],
+      "node_id": "CAR_B"
+    },
+    {
+      "geometry": [
+        590000,
+        4137100
+      ],
+      "node_id": "CAR_G"
+    }
+  ],
+  "origin_attachments": [
+    {
+      "attached_node_id": "W",
+      "attachment_policy": "synthetic fixture attachment",
+      "mode": "bicycle",
+      "network_attached": true,
+      "origin_id": "fixture_origin",
+      "snap_distance_m": 0.0
+    },
+    {
+      "attached_node_id": "SW",
+      "attachment_policy": "synthetic fixture attachment",
+      "mode": "pedestrian",
+      "network_attached": true,
+      "origin_id": "fixture_origin",
+      "snap_distance_m": 0.0
+    },
+    {
+      "attached_node_id": "CAR_O",
+      "attachment_policy": "synthetic fixture attachment",
+      "mode": "car",
+      "network_attached": true,
+      "origin_id": "fixture_origin",
+      "snap_distance_m": 0.0
+    }
+  ],
+  "population": {
+    "attendance_boundary": {
+      "geometry": [
+        [
+          589950,
+          4136880
+        ],
+        [
+          590250,
+          4136880
+        ],
+        [
+          590250,
+          4137120
+        ],
+        [
+          589950,
+          4137120
+        ],
+        [
+          589950,
+          4136880
+        ]
+      ],
+      "school_id": "maple"
+    },
+    "blocks": [
+      {
+        "GEOID20": "fixture_block_a",
+        "elementary_tk_6_age_4_11_proxy_2020": 12.0,
+        "geometry": [
+          [
+            589960,
+            4136890
+          ],
+          [
+            590080,
+            4136890
+          ],
+          [
+            590080,
+            4137110
+          ],
+          [
+            589960,
+            4137110
+          ],
+          [
+            589960,
+            4136890
+          ]
+        ],
+        "internal_point": [
+          590020,
+          4137000
+        ]
+      },
+      {
+        "GEOID20": "fixture_block_b",
+        "elementary_tk_6_age_4_11_proxy_2020": 8.0,
+        "geometry": [
+          [
+            590090,
+            4136890
+          ],
+          [
+            590190,
+            4136890
+          ],
+          [
+            590190,
+            4137110
+          ],
+          [
+            590090,
+            4137110
+          ],
+          [
+            590090,
+            4136890
+          ]
+        ],
+        "internal_point": [
+          590150,
+          4137000
+        ]
+      }
+    ],
+    "residential_candidates": [
+      {
+        "GEOID20": "fixture_block_a",
+        "candidate_id": "home_a1",
+        "candidate_source": "synthetic residence",
+        "capacity_proxy": 1.0,
+        "geometry": [
+          589990,
+          4136970
+        ]
+      },
+      {
+        "GEOID20": "fixture_block_a",
+        "candidate_id": "home_a2",
+        "candidate_source": "synthetic residence",
+        "capacity_proxy": 3.0,
+        "geometry": [
+          590050,
+          4137030
+        ]
+      }
+    ]
+  },
+  "schema_version": 2,
+  "school_centers": [
+    {
+      "center_source": "synthetic fixture point",
+      "geometry": [
+        590000,
+        4137100
+      ],
+      "school_id": "fixture_school",
+      "school_name": "Fixture School"
+    }
+  ]
+}

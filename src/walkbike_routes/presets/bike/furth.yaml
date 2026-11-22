@@ -1,0 +1,29 @@
+name: furth
+mode: bike
+kind: lts_factors
+title: Low-stress cycling profile on Furth's LTS criteria v2.2, slowed uphill (uncalibrated)
+source: >-
+  As bike/legacy-hills, but traffic stress levels come from Furth, P. G.
+  (2022), "Level of Traffic Stress Criteria for Road Segments, version 2.2"
+  (https://peterfurth.sites.northeastern.edu/files/2014/05/LTS-Tables-v2.2.pdf):
+  mixed traffic by lanes, daily traffic and speed; bike lanes by lanes,
+  width, parking and speed. Where a street's traffic count, centre line,
+  parking or widths are not known, stated defaults are used (see
+  walkbike_routes.network.furth); they lean to the more stressful reading.
+  Distance is multiplied by 1, 1.25, 3 or 8 for levels 1 to 4, a hand-set
+  judgment, not
+  estimated from observed route choice. Signal waits as bike/legacy-hills
+  (Highway Capacity Manual average delay, assumed 120 s cycle). Riding speed
+  changes with grade by Parkin, J. and Rotheram, J. (2010), Transport Policy
+  17(5), 335-341, Table 2.
+objective: generalized_cost_s
+parameters:
+  speed_mph: 10.0
+  signal_wait_s: 20
+  signal_wait_cross_arterial_s: 40
+  signal_wait_along_arterial_s: 15
+  lts_cost_factors: [1.0, 1.25, 3.0, 8.0]
+  unknown_crossing_cost_s: 15
+  uncontrolled_crossing_cost_s: 30
+  grade_speeds: true
+  lts_criteria: furth

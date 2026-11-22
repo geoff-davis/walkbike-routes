@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>/*TITLE*/ · route access map</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root{--bg:#f6f5f2;--fg:#1d2126;--muted:#5d646c;--line:#d5d3cd;--panel:#ffffff;--warn-bg:#fff3d6;--warn-fg:#5c4300;
+--walk:#7a3fb8;--bike:#c8342a;--car:#2563c9;--hi:#ffe066;--first:#111111;--watch:#f0a500}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--fg);display:flex;flex-direction:column;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.warn{background:var(--warn-bg);color:var(--warn-fg);padding:6px 16px;font-weight:600;font-size:13px}.warn:empty{display:none}
+header{padding:8px 16px;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;border-bottom:1px solid var(--line);background:var(--panel)}
+h1{font-size:16px;margin:0 8px 0 0}
+label{display:inline-flex;gap:5px;align-items:center;color:var(--muted);font-size:13px}
+select{font:inherit;padding:2px 4px;max-width:22em}
+button{font:inherit;padding:3px 10px;border:1px solid var(--line);border-radius:5px;background:var(--panel);cursor:pointer}button:hover{background:var(--bg)}
+main{flex:1;display:flex;min-height:0}
+#banner{padding:6px 16px 7px 12px;border-bottom:1px solid var(--line);background:var(--panel);border-left:6px solid #444}#btitle{font-size:20px;font-weight:700;line-height:1.25}#bsub{font-size:13px;color:#5d646c}
+#map{flex:1;min-height:300px;background:#e6e3dc}
+.sl span{position:absolute;white-space:nowrap;font-size:11px;color:#4a4f55;text-shadow:0 0 2px #fff,0 0 2px #fff,0 0 3px #fff;pointer-events:none}
+.rk{background:none;border:none;font-size:11px;font-weight:700;color:#fff;text-align:center;line-height:16px}
+.rk span{display:inline-block;min-width:16px;height:16px;border-radius:8px;background:#222;padding:0 4px;white-space:nowrap}
+#panel{width:340px;overflow:auto;border-left:1px solid var(--line);background:var(--panel);padding:10px 14px;font-size:12.5px}
+#panel h2{font-size:13px;margin:12px 0 4px}#panel h2:first-child{margin-top:0}
+#panel table{border-collapse:collapse;width:100%}#panel td,#panel th{text-align:left;vertical-align:top;padding:2px 6px 2px 0;border-bottom:1px solid #eeece8}
+#panel th{font-weight:600;color:var(--muted)}#panel .n{text-align:right;font-variant-numeric:tabular-nums}
+#panel .note{color:var(--muted)}#panel tr.on td{background:var(--hi)}
+#panel tr[data-go]{cursor:pointer}#panel tr[data-go]:hover td{background:#f3f1ec}
+#panel details{margin-top:12px}#panel summary{cursor:pointer;font-weight:600}
+.figs{margin:2px 0 8px;border:1px solid var(--line);border-radius:6px}.fig{display:flex;gap:10px;align-items:baseline;padding:5px 10px;border-bottom:1px solid var(--line)}.fig:last-child{border-bottom:0}
+.fig b{font-size:20px;line-height:1.2;min-width:3.2em;text-align:right;font-variant-numeric:tabular-nums}.fig span{color:var(--muted);line-height:1.3}
+.tm{display:inline-block;border-radius:8px;padding:0 5px;font-size:11px;font-weight:700;white-space:nowrap}
+#ptitle,#pkey{display:none}
+.leaflet-control-layers{font-size:12px}
+.leaflet-tile-pane{filter:grayscale(1) contrast(.85) brightness(1.08)}
+.legend{background:var(--panel);padding:8px 10px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.3);font-size:12px;line-height:1.5;max-width:250px}
+.legend b{display:block;margin-top:4px}.legend b:first-child{margin-top:0}
+.legend summary{cursor:pointer;font-weight:700;list-style-position:inside}.legend details[open] summary{margin-bottom:4px}
+.legend .kb{max-height:calc(100vh - 260px);overflow-y:auto}
+.sw{display:inline-block;width:18px;height:4px;border-radius:2px;vertical-align:middle;margin-right:6px}
+.sq{display:inline-block;width:12px;height:12px;vertical-align:middle;margin-right:6px;border:1px solid rgba(0,0,0,.15)}
+.pop h3{margin:0 0 4px;font-size:14px}.pop table{border-collapse:collapse;margin-top:4px}.pop td{padding:1px 8px 1px 0;font-size:12.5px}.pop .n{text-align:right;font-variant-numeric:tabular-nums}
+@media (max-width:760px){main{flex-direction:column}#map{min-height:60vh}#panel{width:auto;border-left:0;border-top:1px solid var(--line);max-height:40vh}}
+body.printing main{display:block}
+body.printing #map{width:10.2in;height:5.5in;flex:none;border:1px solid #999}
+body.printing .leaflet-control-attribution{display:none}
+@media print{
+  @page{size:landscape;margin:.35in}
+  html,body{height:auto;display:block;background:#fff}
+  header,.leaflet-control-layers,.leaflet-control-zoom{display:none!important}
+  #ptitle{display:block;margin:0 0 6px;font-size:12px}#ptitle h1{font-size:15px;margin:0 0 2px}
+  .warn{padding:4px 8px}
+  main{display:block}
+  #map{width:10.2in;height:5.5in;flex:none}
+  #panel{width:auto;max-height:none;overflow:visible;border:0;padding:8px 0 0;font-size:11px;columns:2;column-gap:24px}
+  #panel tr{break-inside:avoid}#panel h2{break-after:avoid}
+  .leaflet-popup-pane,.leaflet-control-container .legend{display:none!important}
+  #pkey{display:block;columns:4;column-gap:14px;font-size:10px;line-height:1.3;margin-top:5px}
+  #pkey b{display:block;margin-top:3px;break-after:avoid}
+  #pkey .sw{width:14px;margin-right:4px}
+}
+</style></head><body>
+<div class="warn">/*WARN*/</div>
+<div id="ptitle"><h1>/*TITLE*/</h1><div id="pfilters"></div><div class="note">/*NOTCOUNTS*/ Data: /*CREDITS*/.</div></div>
+<header>
+<h1>/*TITLE*/</h1>
+<label id="modewrap">Getting there by <select id="mode"></select></label>
+<label id="runwrap">Route model <select id="run"></select></label>
+<label id="flowwrap"><input type="checkbox" id="showflow" checked> Trips</label>
+<label id="cellswrap"><input type="checkbox" id="showcells" checked> Travel time</label>
+<label id="exposurewrap" title="Where routes meet traffic today: places to fix first, and to watch"><input type="checkbox" id="showexposure" checked> Fix first and watch</label>
+<label id="screenwrap" title="Barriers: where a change would open new routes"><input type="checkbox" id="showscreen"> Barriers</label>
+<label id="agreewrap" title="Streets busy under every route model, or under only some"><input type="checkbox" id="showagree"> Model agreement</label>
+<label id="overlapwrap" title="Streets with both car and walk or bike trips"><input type="checkbox" id="showoverlap"> Car overlap</label>
+<label id="outlinewrap"><input type="checkbox" id="showoutline" checked> <span id="outlinelab">attendance area</span></label>
+<button id="print" type="button">Print this view</button>
+</header>
+<div id="banner"><div id="btitle"></div><div id="bsub"></div></div>
+<main><div id="map"></div><div id="pkey"></div><aside id="panel"></aside></main>
+<script>
+const D=/*DATA*/;const CREDITS=/*CREDITLIST*/;/*TILES*/
+const L_=window.L,$=id=>document.getElementById(id);
+// The page for every destination together: summed trips and the joint lists, no catchment.
+const ALL=Array.isArray(D.combined),TO=ALL?"all destinations":D.name;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const modeColour=m=>css("--"+m)||"#444";
+// Figures read the same for every reader, and as the report prints them.
+const num=v=>v===null||v===undefined?"–":Number(v).toLocaleString("en-US",{maximumFractionDigits:0});
+const dec=v=>v===null||v===undefined?"–":Number(v).toLocaleString("en-US",{maximumFractionDigits:1});
+const MODE=/*MODES*/;
+// A run with no time limit has none, however its summary says so.
+const capOf=r=>{const c=r.summary.time_cap_min;return c===null||c===undefined||!isFinite(c)?null:Number(c);};
+// Travel-time bands, from the summary's within_<n>_min_weight columns.
+const bandsOf=s=>Object.keys(s).map(k=>/^within_([0-9.]+)_min_weight$/.exec(k)).filter(Boolean).map(m=>+m[1]).sort((a,b)=>a-b);
+const SEQ=["#14574a","#2f8a6c","#6db98e","#b9dfb0","#ecefc8","#f6e2b5"],LATE="#e2c9b8",NEVER="#bdbdbd";
+const VERB={walk:"walked",bike:"cycled",car:"drove"},CAN={walk:"walk",bike:"cycle",car:"drive"};
+// Two choices: the mode, then one of that mode's route models (its main one first).
+const modeSel=$("mode"),runSel=$("run");
+for(const m of [...new Set(D.runs.map(r=>r.mode))]){const o=document.createElement("option");o.value=m;o.textContent=MODE[m]||m;modeSel.appendChild(o);}
+function fillRuns(){runSel.replaceChildren();
+  for(const r of D.runs.filter(r=>r.mode===modeSel.value)){const o=document.createElement("option");o.value=r.id;o.textContent=r.preset+(r.main?" (main)":"");o.title=r.title;runSel.appendChild(o);}}
+fillRuns();
+// The address may hold a view to return to; anything else in it is ignored.
+const hv=location.hash.slice(1).split(","),hn=hv.slice(0,3).map(Number);
+const hok=hv.length>=3&&hv.slice(0,3).every(x=>x.trim()!=="")&&hn.every(isFinite)&&Math.abs(hn[0])<=90&&Math.abs(hn[1])<=180&&hn[2]>=0&&hn[2]<=22;
+let hr=null;try{hr=hv[3]?D.runs.find(r=>r.id===decodeURIComponent(hv[3]))||null:null;}catch(e){hr=null;}
+if(hr){modeSel.value=hr.mode;fillRuns();runSel.value=hr.id;}
+modeSel.addEventListener("change",()=>{fillRuns();draw();});
+const map=L_.map("map");
+if(hok)map.setView([hn[0],hn[1]],hn[2]);else map.fitBounds(D.bounds);
+const run=()=>D.runs.find(r=>r.id===runSel.value)||D.runs[0];
+function remember(){const c=map.getCenter();history.replaceState(null,"","#"+c.lat.toFixed(5)+","+c.lng.toFixed(5)+","+map.getZoom()+","+encodeURIComponent(run().id));}
+map.on("moveend",remember);
+// The study's own streets as a background.
+const STREETS=D.streets,LABELS=D.labels;
+const SW={P:[.8,"#b9cfa6"],S:[1,"#ffffff"],L:[2.6,"#ffffff"],T:[3.6,"#fff7da"],M:[5,"#fde9a8"]},cv=L_.canvas({padding:.4,tolerance:4});
+const lines=Object.keys(SW).map(k=>[k,L_.polyline(STREETS[k],{renderer:cv,color:SW[k][1],interactive:false,lineCap:"round",dashArray:k==="P"?"3 4":null})]);
+const labs=L_.layerGroup(),builtin=L_.layerGroup([...lines.map(x=>x[1]),labs]).addTo(map);
+map.attributionControl.addAttribution(CREDITS.map(esc).join(" | "));
+const osm=TILES?L_.tileLayer(TILES,{maxZoom:19,attribution:""}):null;
+if(osm)L_.control.layers({"Built-in streets":builtin,"OpenStreetMap tiles (need the internet)":osm},null,{position:"topright",collapsed:false}).addTo(map);
+L_.control.scale({position:"bottomleft"}).addTo(map);
+function base(){const z=map.getZoom(),f=Math.max(.35,Math.min(6,Math.pow(2,z-16)));
+  for(const [k,l] of lines)l.setStyle({weight:Math.max(.6,SW[k][0]*f)});
+  labs.clearLayers();if(z<16||!map.hasLayer(builtin))return;const b=map.getBounds().pad(.05);
+  for(const [nm,la,lo,ang,k] of LABELS){if(!b.contains([la,lo])||(z<17&&(k==="S"||k==="L")))continue;if(z<18&&k==="S")continue;
+    L_.marker([la,lo],{interactive:false,icon:L_.divIcon({className:"sl",iconSize:[0,0],html:`<span style="transform:translate(-50%,-50%) rotate(${ang}deg)">${esc(nm)}</span>`})}).addTo(labs);}}
+map.on("zoomend moveend",base);base();
+// Back on the built-in streets, which return on top: redraw the layers above them.
+map.on("baselayerchange",()=>{base();draw();});
+// Panes, bottom to top: travel-time squares, the destination, flows, screen sections.
+// One canvas holds the streets, squares and flows: a printed canvas hides whatever lies
+// under it, so nothing goes below it.  On it, bottom to top: travel-time squares,
+// streets, flows, then agreement and overlap, read against the flows.  The
+// destination and the screen's sections are drawn above it.
+for(const [p,z] of [["dest",430],["exposure",450],["screen",460]])map.createPane(p).style.zIndex=z;
+const cellR=cv,flowR=cv,overR=cv;
+const cellLayer=L_.layerGroup().addTo(map),agreeLayer=L_.layerGroup().addTo(map),overlapLayer=L_.layerGroup().addTo(map),flowLayer=L_.layerGroup().addTo(map),screenLayer=L_.layerGroup().addTo(map),exposureLayer=L_.layerGroup().addTo(map);
+// Outlines such as an attendance area: drawn under the destination, toggled as one.
+const OUTLINE_COL="#6b5300",outlineLayer=L_.layerGroup().addTo(map);
+for(const o of D.outlines)for(const ring of o.rings)L_.polygon(ring,{pane:"dest",color:OUTLINE_COL,weight:3,opacity:.85,fill:false,dashArray:o.served?null:"10 6",interactive:false}).addTo(outlineLayer);
+$("outlinelab").textContent=D.outlines.map(o=>o.name).join(", ")||"outlines";
+const destStyle={pane:"dest",color:"#111",weight:2.5,fill:false,dashArray:"6 4",interactive:false};
+for(const o of D.places||[D.outline]){if(o.point)L_.circleMarker(o.point,{...destStyle,radius:9,dashArray:null,fill:true,fillColor:"#fff",fillOpacity:.9}).addTo(map);
+else L_.polygon(o.rings,destStyle).addTo(map);}
+for(const e of D.entrances)L_.circleMarker(e,{pane:"dest",radius:4,color:"#111",weight:1.5,fillColor:"#ffe066",fillOpacity:1,interactive:false}).addTo(map);
+const FLOW=D.runs.map(r=>new Map(r.flow));
+function edgePopup(i){const rows=D.runs.map((r,k)=>`<tr${r.id===run().id?' style="font-weight:700"':""}><td>${esc(MODE[r.mode]||r.mode)}, ${esc(r.preset)}</td><td class="n">${dec(FLOW[k].get(i)||0)}</td></tr>`).join("");
+  return `<div class="pop"><h3>${esc(D.edges.n[i]||"Unnamed street or path")}</h3><div>Potential flow, ${esc(run().unit)}</div><table>${rows}</table></div>`;}
+// Colours for the bands up to the time limit; over it, its own colour.
+const shownBands=(bands,cap)=>bands.filter(b=>cap===null||b<=cap);
+function band(min,bands,cap){if(min===null)return NEVER;if(cap!==null&&min>cap)return LATE;
+  for(let i=0;i<bands.length;i++)if(min<=bands[i])return SEQ[Math.min(i,SEQ.length-1)];return SEQ[Math.min(bands.length,SEQ.length-1)];}
+function draw(){
+  const r=run(),col=modeColour(r.mode),cap=capOf(r),bands=shownBands(bandsOf(r.summary),cap);
+  for(const k in PLACE)delete PLACE[k];BADGES.length=0;
+  cellLayer.clearLayers();flowLayer.clearLayers();agreeLayer.clearLayers();overlapLayer.clearLayers();screenLayer.clearLayers();exposureLayer.clearLayers();
+  if($("showexposure").checked)for(const e of r.exposure){const first=e.tier==="fix first",c=first?TIER_COL["fix first"]:TIER_COL.watch,
+    pop=`<div class="pop"><h3>${esc(e.tag)}. ${esc(e.label)}</h3><div>${e.kind==="street"?"Along the street":"Crossing"}: ${esc(e.people)} ${esc(r.flow_words)}${e.kind==="street"?` at the busiest point, over ${esc(e.length)}`:""}</div><div><b>${esc(e.reason||e.tier)}</b></div><div>Why ${esc(e.points)} risk points: ${esc(e.factors)}</div>${e.from?`<div>From each destination: ${esc(e.from)}</div>`:""}</div>`;
+    const drawn=[];
+    for(const ln of e.lines)drawn.push(L_.polyline(ln,{pane:"exposure",color:c,weight:6,opacity:.8,lineCap:"round"}).bindPopup(pop).addTo(exposureLayer));
+    for(const pt of e.spots)drawn.push(L_.circleMarker(pt,{pane:"exposure",radius:8,color:"#fff",weight:2,fillColor:c,fillOpacity:.95}).bindPopup(pop).addTo(exposureLayer));
+    const at=e.spots.length?e.spots[0]:e.lines.length?e.lines[0][Math.floor(e.lines[0].length/2)]:null;
+    // The tier is in the badge's mark as well as its colour: "!" is fix first.
+    if(at)BADGES.push([e,at,pop]);
+    if(drawn.length)PLACE[e.tag]={layer:drawn[0],at:at,box:L_.latLngBounds([...e.lines.flat(),...e.spots])};}
+  // With a time limit, only squares whose median home is within it are shaded, as
+  // only those homes' trips are drawn.
+  if($("showcells").checked)for(const [c,min,w] of r.cells){if(cap!==null&&(min===null||min>cap))continue;const s=D.cells[c];
+    L_.rectangle([[s[0],s[1]],[s[2],s[3]]],{renderer:cellR,stroke:false,fillColor:band(min,bands,cap),fillOpacity:.6})
+      .bindPopup(`<div class="pop"><b>${min===null?"Most homes here cannot get there":"Median "+dec(min)+" min"}</b><div>${num(w)} ${esc(r.unit)}</div></div>`).addTo(cellLayer).bringToBack();}
+  if($("showflow").checked){let top=0;for(const [,f] of r.flow)top=Math.max(top,f);
+    for(const [i,f] of r.flow)L_.polyline(D.edges.g[i],{renderer:flowR,color:col,weight:1+11*Math.sqrt(f/(top||1)),opacity:.85,lineCap:"round"}).bindPopup(()=>edgePopup(i)).addTo(flowLayer);}
+  const ag=D.agreement[r.mode];
+  if(ag&&$("showagree").checked){
+    for(const i of ag.some)L_.polyline(D.edges.g[i],{renderer:overR,color:"#e08a1e",weight:7,opacity:.75,dashArray:"2 6",lineCap:"butt"}).bindPopup(()=>edgePopup(i)).addTo(agreeLayer);
+    for(const i of ag.every)L_.polyline(D.edges.g[i],{renderer:overR,color:"#111",weight:7,opacity:.55}).bindPopup(()=>edgePopup(i)).addTo(agreeLayer);}
+  if($("showoverlap").checked){const T={"top 1%":"#6b0f1a","top 5%":"#b5332e","top 10%":"#e8865a"};
+    for(const [i,t] of D.overlap)L_.polyline(D.edges.g[i],{renderer:overR,color:T[t]||"#999",weight:8,opacity:.7}).bindPopup(()=>edgePopup(i)).addTo(overlapLayer);}
+  if($("showscreen").checked)for(const s of r.screen){const c=treatColour(s.treatment),pop=`<div class="pop"><h3>${s.rank}. ${esc(s.label)}</h3><div>${esc(s.treatment)}; helps ${esc(s.helped_text)} ${esc(r.flow_words)}; ${dec(s.minutes)} weighted route-cost minutes saved</div>${s.part?`<div class="note">${esc(s.part)}</div>`:""}</div>`;
+    for(const ln of s.lines)L_.polyline(ln,{pane:"screen",color:c,weight:4,opacity:.9,dashArray:"1 6",lineCap:"round"}).bindPopup(pop).addTo(screenLayer);
+    for(const pt of s.points)L_.circleMarker(pt,{pane:"screen",radius:7,color:c,weight:3,fill:false}).bindPopup(pop).addTo(screenLayer);
+    const mid=s.lines.length?s.lines[0][Math.floor(s.lines[0].length/2)]:s.points[0];if(!mid)continue;
+    L_.marker(mid,{pane:"screen",keyboard:false,icon:L_.divIcon({className:"rk",iconSize:[24,16],html:`<span style="background:${c}">${s.rank}</span>`})}).bindPopup(pop).addTo(screenLayer);}
+  if($("showoutline").checked)outlineLayer.addTo(map);else outlineLayer.remove();
+  $("outlinewrap").style.display=D.outlines.length?"":"none";$("cellswrap").style.display=ALL?"none":"";
+  // A menu with one choice is not a choice.
+  $("modewrap").style.display=modeSel.options.length>1?"":"none";$("runwrap").style.display=runSel.options.length>1?"":"none";
+  $("agreewrap").style.display=ag?"":"none";$("screenwrap").style.display=r.screen.length?"":"none";$("exposurewrap").style.display=r.exposure.length?"":"none";$("overlapwrap").style.display=D.overlap.length?"":"none";
+  badges();heading(r,col);panel(r,bandsOf(r.summary));legend(r,bands);remember();
+}
+// Name tags: zoomed out, only each list's top ten, so they do not bury the map.
+const BADGES=[],BADGE_TOP=10,BADGE_ZOOM=15,badgeLayer=L_.layerGroup().addTo(map);
+function badges(){badgeLayer.clearLayers();const near=map.getZoom()>=BADGE_ZOOM;
+  for(const [e,at,pop] of BADGES)if(near||e.rank<=BADGE_TOP)L_.marker(at,{pane:"exposure",keyboard:false,icon:L_.divIcon({className:"rk",iconSize:[36,16],iconAnchor:[-6,8],html:tierMark(e)})}).bindPopup(pop).addTo(badgeLayer);}
+map.on("zoomend",badges);
+// Each treatment in the screen has its own colour; the list is ranked within each.
+const TREAT={"protected bike lane":"#111","sidewalk":"#111","marked crosswalk":"#6a3d9a","signal or crossing beacon":"#b2182b"};
+function treatColour(t){return TREAT[t]||"#444";}
+// Outside the modes' colours, so a place never reads as a flow: fix first is black, watch amber.
+const TIER_COL={"fix first":css("--first")||"#111111",watch:css("--watch")||"#f0a500"},PLACE={};
+const tierMark=e=>{const first=e.tier==="fix first";return `<span class="tm" style="background:${first?TIER_COL["fix first"]:TIER_COL.watch};color:${first?"#fff":"#1d2126"}">${esc(e.tag)}${first?" !":""}</span>`;};
+function treatments(r){return [...new Set(r.screen.map(x=>x.treatment))];}
+function heading(r,col){const cap=capOf(r),m=MODE[r.mode]||r.mode;
+  $("banner").style.borderLeftColor=col;
+  $("btitle").textContent=`${m} to ${TO}`;
+  if(ALL){$("bsub").textContent=`${r.title} · every destination's routes added up: ${D.combined.join(", ")}`;
+    $("flowwrap").title="Trips to every destination, added up";return;}
+  $("bsub").textContent=`${r.title} · `+(cap!==null?`trips from homes within ${dec(cap)} minutes`:"trips from every home, there and back");
+  const decayed=r.summary.decay_curve&&r.summary.decay_curve!=="none";
+  $("flowwrap").title=decayed?`Trips from homes within ${dec(cap)} min (nearer homes count more)`
+    :cap!==null?`Trips, if everyone within ${dec(cap)} min ${VERB[r.mode]||"went"}`:`Trips, if everyone ${VERB[r.mode]||"went"}`;
+  $("cellswrap").title=cap!==null?`Time to get there, for areas within ${dec(cap)} min`:"Time to get there from each area";}
+// The three figures a reader wants first.
+function figures(r){const s=r.summary,cap=capOf(r),f=[],first=r.fix_first||{street:0,crossing:0},n=first.street+first.crossing;
+  if(!ALL&&s.within_cap_weight!==null&&s.within_cap_weight!==undefined){const share=s.total_weight?` (${Math.round(100*s.within_cap_weight/s.total_weight)}%)`:"";
+    f.push([num(s.within_cap_weight),`of ${num(s.total_weight)} ${esc(r.unit)} can ${CAN[r.mode]||"get"} there${cap!==null?` within ${dec(cap)} min`:""}${share}`]);
+    if(s.median_minutes_within_cap!==null&&s.median_minutes_within_cap!==undefined)f.push([dec(s.median_minutes_within_cap),cap!==null?"minutes, the median trip within the limit":"minutes, the median trip"]);}
+  if(r.exposure.length||n)f.push([num(n),`to fix first: ${num(first.street)} ${first.street===1?"street":"streets"}, ${num(first.crossing)} ${first.crossing===1?"crossing":"crossings"}`]);
+  return f.length?`<div class="figs">${f.map(([a,b])=>`<div class="fig"><b>${a}</b><span>${b}</span></div>`).join("")}</div>`:"";}
+function panel(r,bands){const s=r.summary,u=esc(r.unit),cap=capOf(r);
+  let h=`<h2>${esc(MODE[r.mode]||r.mode)} to ${esc(TO)}</h2>`+figures(r),how="";
+  if(ALL)h+=`<div class="note">Every destination's routes added up: ${esc(D.combined.join(", "))}. Each place's figure is the sum over them; its priority is judged on that sum, and each place says how many come from each.</div>`;
+  else{h+="<table>";
+  for(const b of bands)h+=`<tr><td>Within ${dec(b)} minutes</td><td class="n">${num(s["within_"+String(b).replace(/\.0$/,"")+"_min_weight"]??s["within_"+b+"_min_weight"])}</td></tr>`;
+  h+=`<tr><td>Connected by street or path, at any time</td><td class="n">${num(s.reachable_weight)}</td></tr>`;
+  if(s.mean_routes_per_origin!==null&&s.mean_routes_per_origin!==undefined)h+=`<tr><td>Routes shared per home, on average</td><td class="n">${dec(s.mean_routes_per_origin)}</td></tr>`;
+  if(s.expected_weight!==null&&s.expected_weight!==undefined)h+=`<tr><td>Expected trips if usual shares applied (${esc(s.decay_curve)})</td><td class="n">${num(s.expected_weight)}</td></tr>`;
+  h+="</table>";
+  const same=D.runs.filter(x=>x.mode===r.mode);
+  if(same.length>1){h+=`<h2>${esc(MODE[r.mode]||r.mode)} under each route model</h2><table><tr><th>Route model</th><th class="n">Can get there</th><th class="n">Median min</th></tr>`+
+    same.map(x=>`<tr${x.id===r.id?' class="on"':""}><td>${esc(x.preset)}</td><td class="n">${num(x.summary.within_cap_weight)}</td><td class="n">${dec(x.summary.median_minutes_within_cap)}</td></tr>`).join("")+"</table>";}}
+  if(r.exposure.length&&$("showexposure").checked){
+    for(const [k,title] of [["street","Along streets"],["crossing","Crossings"]]){const rows=r.exposure.filter(x=>x.kind===k).sort((a,b)=>(b.tier==="fix first")-(a.tier==="fix first")||a.rank-b.rank);if(!rows.length)continue;
+      const nf=(r.fix_first||{})[k]||0,more=rows.length-rows.filter(x=>x.tier==="fix first").length;
+      h+=`<h2>${title}: ${num(nf)} to fix first${more?`, and the top ${more} to watch`:""}</h2><table><tr><th>#</th><th>Place</th><th class="n">${esc(r.flow_heading)}</th><th class="n">Points</th></tr>`+
+      rows.map(x=>`<tr data-go="${esc(x.tag)}" title="Show on the map"><td>${tierMark(x)}</td><td>${esc(x.label)}<div class="note">${x.tier==="fix first"&&D.plain_rule?"":`<b>${esc(x.reason||x.tier)}</b> `}${esc(x.factors)}${x.from?`<br>From each destination: ${esc(x.from)}`:""}</div></td><td class="n">${esc(x.people)}</td><td class="n">${esc(x.points)}</td></tr>`).join("")+"</table>";}
+    how+=`<p>${esc(D.exposure_note||"")}</p>`;}
+  if(r.screen.length&&$("showscreen").checked){for(const t of treatments(r)){const rows=r.screen.filter(x=>x.treatment===t);
+    const b=rows[0];
+    h+=`<h2>Barriers: where a ${esc(t)} would open new routes, top ${rows.length}</h2>${b.helped!==null&&b.counted!==null?`<div class="note">The best helps ${esc(b.helped_text)} of the ${esc(b.counted_text)} ${esc(r.flow_words)} counted${b.share!==null?` (${b.share}%)`:""}.</div>`:""}<table><tr><th class="n">#</th><th>Place</th><th class="n">${esc(r.flow_heading)} helped</th><th class="n" title="The drop in route cost, added up over everyone helped, in minutes. Route cost is travel time plus extra minutes for traffic stress, crossings and turns (often called generalized cost).">Route-cost min saved</th></tr>`+
+    rows.map(x=>`<tr><td class="n">${x.rank}</td><td>${esc(x.label)}${x.part?`<div class="note">${esc(x.part)}</div>`:""}</td><td class="n">${esc(x.helped_text)}</td><td class="n">${dec(x.minutes)}</td></tr>`).join("")+"</table>";}
+    how+=`<p>Barriers: route-cost minutes saved by each change on its own, added up over everyone helped: the route model's cost (often called generalized cost), in minutes, which counts stress and crossings as well as clock time. Helped: those whose route gets cheaper, many of whom would only switch to the place once it is treated. Each change is ranked on its own; a street is listed once, with the best of its three busiest sections; places that save nothing are left out. A screen of where to look, not a design.</p>`;}
+  if(r.source)how+=`<p>Route model: ${esc(r.title)}. ${esc(r.source)}</p>`;
+  const decayed=s.decay_curve&&s.decay_curve!=="none";
+  if(ALL)how=`<p>Line width: potential flow, the ${u} who would use each street on the way to any of the destinations, added up as each destination's map counts them. It shows where trips would go, not how many happen; these are not counts.</p>`+how;
+  else how=`<p>Line width: potential flow, the ${u} who would use each street, ${decayed?`each home counted at the share of trips this long nationally (curve ${esc(s.decay_curve)})`:r.mode==="car"?"counting everyone, there and back":"counting everyone within the time limit"}. It shows where trips would go, not how many happen; these are not counts. Squares: median travel time from the homes in each 150 m square${cap!==null?`, shaded only where it is within the ${dec(cap)}-minute limit`:""}.</p>`+how;
+  h+=`<details id="how"${HOW_OPEN||saved?" open":""}><summary>How this map is made</summary><div class="note">${how}</div></details>`;
+  $("panel").innerHTML=h;
+  $("how").addEventListener("toggle",e=>{if(!saved)HOW_OPEN=e.target.open;});}
+let HOW_OPEN=false;
+// A row of the lists shows its place on the map.
+$("panel").addEventListener("click",ev=>{const row=ev.target.closest("tr[data-go]"),p=row&&PLACE[row.dataset.go];if(!p)return;
+  map.fitBounds(p.box.pad(.6),{maxZoom:17});p.layer.openPopup(p.at||p.box.getCenter());});
+const lg=L_.control({position:"bottomright"});
+function legend(r,bands){const d=lg.getContainer().querySelector(".kb"),col=modeColour(r.mode);let h="";
+  if($("showflow").checked)h+=`<b>Trips (potential, not counts)</b><div><span class="sw" style="background:${col};height:2px"></span>few</div><div><span class="sw" style="background:${col};height:9px"></span>many</div>`;
+  if(!ALL&&$("showcells").checked){h+="<b>Median travel time from homes</b>";let lo=0;bands.forEach((b,i)=>{h+=`<div><span class="sq" style="background:${SEQ[Math.min(i,SEQ.length-1)]}"></span>${lo?dec(lo)+"–":"up to "}${dec(b)} min</div>`;lo=b;});
+    const cap=capOf(r);if(cap!==null&&cap>(bands[bands.length-1]||0))h+=`<div><span class="sq" style="background:${SEQ[Math.min(bands.length,SEQ.length-1)]}"></span>${dec(lo)}–${dec(cap)} min</div>`;
+    if(cap!==null)h+=`<div class="note" style="color:#5d646c">Not shaded: areas over ${dec(cap)} min, and where no homes are counted.</div>`;
+    else{if(bands.length)h+=`<div><span class="sq" style="background:${SEQ[Math.min(bands.length,SEQ.length-1)]}"></span>over ${dec(lo)} min</div>`;h+=`<div><span class="sq" style="background:${NEVER}"></span>cannot get there</div><div class="note" style="color:#5d646c">Not shaded: where no homes are counted.</div>`;}}
+  if(D.agreement[r.mode]&&$("showagree").checked)h+=`<b>Busy (top 10% of streets by trips)</b><div><span class="sw" style="background:#111;opacity:.55;height:7px"></span>under every route model</div><div><span class="sw" style="background:#e08a1e;height:7px"></span>under only some</div>`;
+  if(D.overlap.length&&$("showoverlap").checked)h+=`<b>Car and walk/bike overlap</b><div><span class="sw" style="background:#6b0f1a;height:7px"></span>top 1%</div><div><span class="sw" style="background:#b5332e;height:7px"></span>top 5%</div><div><span class="sw" style="background:#e8865a;height:7px"></span>top 10%</div><div class="note" style="color:#5d646c">Where to look, not a measure of risk.</div>`;
+  if(r.exposure.length&&$("showexposure").checked)h+=`<b>Where routes meet traffic today</b><div><span class="sw" style="background:${TIER_COL["fix first"]};height:7px"></span>fix first, marked “!”</div><div><span class="sw" style="background:${TIER_COL.watch};height:7px"></span>watch</div><div class="note" style="color:#5d646c">S: along a street. C: a crossing. Numbered by rank; zoom in to see every number.</div>`;
+  if(r.screen.length&&$("showscreen").checked){h+=`<b>Barriers: where a change would open new routes</b>`;
+    for(const t of treatments(r)){const c=treatColour(t),at=r.screen.some(x=>x.treatment===t&&x.points.length);
+      h+=`<div><span class="sw" style="${at?`border:3px solid ${c};border-radius:50%;width:8px;height:8px;background:none`:`background:repeating-linear-gradient(90deg,${c} 0 2px,transparent 2px 6px)`}"></span>${esc(t)}, numbered by rank</div>`;}}
+  if(D.outlines.length&&$("showoutline").checked){h+="<b>Outlines</b>";for(const o of D.outlines)h+=`<div><span class="sw" style="background:${o.served?OUTLINE_COL:`repeating-linear-gradient(90deg,${OUTLINE_COL} 0 8px,transparent 8px 12px)`};height:3px"></span>${esc(o.name)}</div>`;
+    if(D.outlines.some(o=>o.served))h+=`<div class="note" style="color:#5d646c">Solid: only homes inside count.</div>`;
+    if(D.outlines.some(o=>!o.served))h+=`<div class="note" style="color:#5d646c">Dashed: shown only; homes outside still count.</div>`;}
+  // The swatch is the mark drawn: a ring for a point, a dashed line for an area.
+  const drawnAs=D.places||[D.outline];
+  h+=`<b>${drawnAs.length>1?"Destinations":"Destination"}</b>`;
+  drawnAs.forEach(o=>{h+=`<div><span class="${o.point?"sq":"sw"}" style="${o.point?"background:#fff;border:2px solid #111;border-radius:50%":"background:repeating-linear-gradient(90deg,#111 0 6px,transparent 6px 10px)"}"></span>${esc(o.name??D.name)}</div>`;});
+  if(D.entrances.length)h+=`<div><span class="sq" style="background:#ffe066;border-radius:50%"></span>entrance</div>`;
+  d.innerHTML=h;}
+lg.onAdd=()=>{const d=L_.DomUtil.create("div","legend");
+  // Open on a tall screen; on a small one the key would cover the map, so it starts closed.
+  d.innerHTML=`<details${innerHeight>=800?" open":""}><summary>Key</summary><div class="kb"></div></details>`;
+  L_.DomEvent.disableClickPropagation(d);L_.DomEvent.disableScrollPropagation(d);return d;};
+lg.addTo(map);
+["run","showflow","showcells","showagree","showexposure","showscreen","showoverlap","showoutline"].forEach(i=>$(i).addEventListener("change",draw));
+function filters(){const r=run(),t=[`${MODE[r.mode]||r.mode}, preset ${r.preset}: ${r.title}`];
+  for(const [id,txt] of [["showcells","time to get there"],["showexposure","places to fix first and to watch"],["showscreen","barriers: where a change would open new routes"],["showagree","busy under every route model or some"],["showoverlap","car and walk/bike overlap"],["showoutline","outlines"]])if($(id).checked&&$(id).parentElement.style.display!=="none")t.push(txt);
+  return t.join(" · ")+` · zoom ${map.getZoom()} · background: ${osm&&map.hasLayer(osm)?"OpenStreetMap tiles":"built-in streets"} · printed ${new Date().toLocaleDateString()}`;}
+let saved=null;
+function toPrint(){if(saved)return;saved=[map.getCenter(),map.getZoom()];$("pfilters").textContent=filters();$("pkey").innerHTML=lg.getContainer().querySelector(".kb").innerHTML;
+  document.body.classList.add("printing");map.invalidateSize({animate:false});map.setView(saved[0],saved[1],{animate:false});draw();paintNow();}
+// Canvases repaint on the next animation frame, which a print may not wait for:
+// paint them now (Leaflet 1.9 renderer internals; the vendored copy is fixed).
+function paintNow(){if(cv._map&&cv._reset&&cv._redraw){cv._reset();cv._redraw();}}
+function fromPrint(){if(!saved)return;document.body.classList.remove("printing");map.invalidateSize({animate:false});map.setView(saved[0],saved[1],{animate:false});saved=null;draw();}
+$("print").addEventListener("click",()=>{toPrint();setTimeout(()=>window.print(),400);}); // time for the map to redraw at page size
+addEventListener("beforeprint",toPrint);addEventListener("afterprint",fromPrint);
+draw();
+// A link from the report names a place: open it.
+try{const hp=hv[4]&&PLACE[decodeURIComponent(hv[4])];if(hp)hp.layer.openPopup(hp.at||hp.box.getCenter());}catch(e){}
+</script></body></html>

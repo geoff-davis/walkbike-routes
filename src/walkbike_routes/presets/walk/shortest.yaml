@@ -1,0 +1,22 @@
+name: shortest
+mode: walk
+kind: pedestrian_evidence
+title: Shortest distance on foot, ignoring sidewalks and traffic
+source: >-
+  A baseline for comparison, not a model of how people walk: every walkable
+  link counts at its length, whatever its sidewalk evidence. Signal waits as
+  in walk/legacy, which set travel times but not the route.
+objective: physical_length_m
+parameters:
+  speed_mph: 3.0
+  signal_wait_s: 30
+  signal_wait_cross_arterial_s: 50
+  signal_wait_along_arterial_s: 15
+  allow_unknown_local: true
+  allow_unknown_collector: true
+  allow_unknown_major: true
+  allow_problematic: true
+  unknown_local_factor: 1.0
+  unknown_collector_factor: 1.0
+  unknown_other_factor: 1.0
+  unknown_major_factor: 1.0

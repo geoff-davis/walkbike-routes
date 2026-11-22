@@ -1,0 +1,49 @@
+name: broach-2016-sidewalks
+mode: walk
+kind: broach_walk_2016
+title: Portland walking route choice (Broach 2016), with a Toronto sidewalk term on busier roads (uncalibrated)
+source: >-
+  Partly an assumption. As walk/broach-2016, plus a sidewalk term: links
+  on collectors and major roads without sidewalk evidence count as 1.5
+  times their length. The 1.5 is from Lue, G. (2017), "Estimating a Toronto
+  Pedestrian Route Choice Model using Smartphone GPS Data", MASc thesis,
+  University of Toronto, Table 5.7: a path-size logit on 776 GPS-recorded
+  walk trips by 71 Toronto adults (2014), in which length with sidewalks on
+  both sides was perceived as 33% shorter than other length (0.00665 /
+  0.02), so other length counts as 1 / 0.67 = 1.5 times. Toronto's model
+  does not split this by road class; leaving local streets, paths and
+  crossings at 1 is a judgment for suburbs where most residential streets
+  have no sidewalk and people walk in the road. No street is ruled out.
+  The base model:
+  Broach, J. (2016), "Travel mode choice framework incorporating realistic
+  bike and walk routes", PhD dissertation, Portland State University, Table
+  10 (variables defined in Table 9): a path-size logit estimated on 1,167
+  GPS-recorded walk trip stages by 283 Portland, Oregon adults, 2010-2013.
+  Coefficients as printed, per metre of route or per count. Neighborhood
+  commercial frontage is not known here and is left out; the traveling
+  together term applies only with together: true. The model's expanded path
+  size is approximated by the ordinary path size. The model has no sidewalk
+  or signal-delay term (see walkbike_routes.network.broach_walk and
+  docs/assumptions.md). Walking speed, signal waits and slowing on hills,
+  for travel time only, are as in walk/legacy-hills.
+objective: generalized_cost_s
+parameters:
+  together: false
+  unknown_collector_factor: 1.5
+  unknown_major_factor: 1.5
+  speed_mph: 3.0
+  signal_wait_s: 30
+  signal_wait_cross_arterial_s: 50
+  signal_wait_along_arterial_s: 15
+  grade_speeds: true
+  coefficients:
+    distance_m: -0.015
+    distance_together_m: -0.013
+    turns: -0.809
+    steep_upslope_m: -0.015
+    substandard_m: -0.008
+    busy_m: -0.002
+    commercial_m: 0.004
+    unsignalised_arterial_crossings: -1.090
+    unmarked_collector_crossings: -0.419
+    ln_path_size: 0.128

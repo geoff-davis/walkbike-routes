@@ -1,0 +1,71 @@
+# Hand corrections to OpenStreetMap for the Los Altos studies.
+#
+# Each entry says what is wrong with OSM for this study, how we know, and
+# what to do about it. An entry that no longer matches OSM is an error, so
+# when OSM is fixed upstream the run stops and the entry can be retired.
+#
+# Corrections considered and NOT needed here:
+#
+# - Almond Avenue bike lanes: OSM now maps
+#   lanes along Almond. One detail cannot be expressed: the south side has no
+#   lane on the last block before San Antonio Road, but streets here are one
+#   link for both sides.
+# - The San Antonio Road crosswalk north of Almond: OSM already has it on the
+#   north leg (way 1377818446); the old fix only corrected labels and drawing.
+# - Los Altos High's two Jardin Drive gates and Egan's Portola Avenue
+#   entrances: these are where trips end, so they are a school's
+#   access_points in the study config (los_altos_schools.yaml), not network
+#   corrections.
+
+- id: almond_edith_rear_path
+  reason: >-
+    The footpath from the east end of Edith Avenue to Almond School's rear
+    gate is mapped as a footway, so cycling is not allowed on it, but
+    students ride it to school. This opens it to every trip, not only
+    trips to Almond.
+  source: Local knowledge (2026-08)
+  change:
+    ways: [220817221, 1424858390]
+    set:
+      bike_allowed: true
+
+- id: main_street_downtown_speed
+  reason: >-
+    The City of Los Altos centerline layer gives downtown Main Street 35 mph
+    (20 mph on a few short pieces), and OSM gives no speed. No speed limit
+    sign is posted, and an unsigned street in a business district has
+    California's 25 mph prima facie limit (Vehicle Code 22352). At 35 mph,
+    Main Street counted as a stress-3 street, which put it at the top of
+    the downtown bike improvement screen.
+  source: Street View check of posted signs (2026-11-20)
+  change:
+    ways: [8933513, 8933515, 52975635, 123204049, 123204050, 123204053, 265090374,
+           417211966, 417211970, 417909004, 417909005, 516242273, 516242816,
+           521503971, 687207217, 687438773]
+    set:
+      speed_mph: 25
+
+- id: cuesta_drive_lane_west
+  reason: >-
+    Cuesta Drive has a painted bike lane from Shelby Lane east to Springer
+    Road, where OSM and the VTA bikeway layer begin it. Both show no lane on
+    this stretch. The lane does not continue west of Shelby Lane, so these
+    are single pieces, not whole ways.
+  source: Street View and local knowledge (2026-11-20)
+  change:
+    links: [w30125105-2, w30125105-3, w30125105-4, w30125105-5, w30125105-6,
+            w30125105-7, w30125105-8, w30125105-9, w385243493-0]
+    set:
+      bike_facility: lane
+
+- id: san_antonio_edith_slow_signal
+  reason: >-
+    The San Antonio Road, Edith Avenue and Main Street signal is slow, and
+    right turns on red are not allowed there; OSM says neither. The extra
+    wait, beyond an ordinary signal's, is an estimate, not timed.
+  source: Local knowledge (2026-11-20)
+  signal:
+    near: [-122.1141, 37.38135]
+    set:
+      right_on_red: false
+      extra_wait_s: 40

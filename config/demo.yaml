@@ -1,0 +1,25 @@
+# The made-up demo town (walkbike_routes.demo): no downloads, nothing real.
+study: Demo town
+synthetic: true
+area:
+  source: demo
+destinations:
+  - id: school
+    name: Demo Elementary
+    kind: point
+    purpose: school  # picks the walking-to-school decay curve for these ages
+    min_age: 5
+    max_age: 11
+  - id: downtown
+    name: Downtown
+    kind: area
+modes: [walk, bike, car]
+presets:
+  walk: [broach-2016]
+  bike: [broach-2011]
+  car: [central]
+time_caps_min:
+  walk: 20
+  bike: 20
+demand:
+  weight: residents  # everyone, for Downtown; the school counts its own ages

@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "features": [{"type": "Feature", "properties": {"name": "Philadelphia core, a rectangle drawn for the count validation"}, "geometry": {"type": "Polygon", "coordinates": [[[-75.205, 39.915], [-75.135, 39.915], [-75.135, 39.970], [-75.205, 39.970], [-75.205, 39.915]]]}}]}

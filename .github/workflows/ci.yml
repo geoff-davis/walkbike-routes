@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.14"]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7.0.1
+        timeout-minutes: 5
+        env:
+          # Abort stalled HTTP transfers so checkout's fetch retries can run.
+          GIT_HTTP_LOW_SPEED_LIMIT: "1"
+          GIT_HTTP_LOW_SPEED_TIME: "60"
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+
+      - name: Sync locked environment
+        run: uv sync --locked
+
+      - name: Lint
+        run: uv run --locked ruff check --output-format=github src tests
+
+      - name: Check formatting
+        run: uv run --locked ruff format --check src tests
+
+      - name: Type check
+        run: uv run --locked mypy
+
+      - name: Test
+        run: uv run --locked pytest -q --cov
+
+      - name: Demo town end to end
+        run: uv run --locked walkbike-routes run --config config/demo.yaml --out output/demo

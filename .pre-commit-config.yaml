@@ -1,0 +1,38 @@
+# Install with `make hooks`. Commit runs the fast checks; push runs the tests.
+default_install_hook_types: [pre-commit, pre-push]
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff lint
+        entry: uv run --locked ruff check --force-exclude
+        language: system
+        types_or: [python, pyi]
+        stages: [pre-commit]
+      - id: ruff-format
+        name: ruff format (check only)
+        entry: uv run --locked ruff format --check --force-exclude
+        language: system
+        types_or: [python, pyi]
+        stages: [pre-commit]
+      - id: mypy
+        name: mypy
+        entry: uv run --locked mypy
+        language: system
+        pass_filenames: false
+        files: ^(src/|tests/|pyproject\.toml$)
+        stages: [pre-commit]
+      - id: uv-lock
+        name: uv.lock matches pyproject.toml
+        entry: uv lock --check
+        language: system
+        pass_filenames: false
+        files: ^(pyproject\.toml|uv\.lock)$
+        stages: [pre-commit]
+      - id: pytest
+        name: pytest
+        entry: uv run --locked pytest -q
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]

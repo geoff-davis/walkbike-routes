@@ -1,0 +1,46 @@
+# Two Claremont, California schools, from public data only (OpenStreetMap,
+# Census, Overture, USGS, HPMS). This is the study behind the README's
+# pictures. It's a demonstration, not a study of these schools: nobody has
+# checked the entrances on the ground or reviewed the results locally.
+#
+# Claremont High's entrances are the gates mapped in OpenStreetMap (as of
+# November 2026) on or within 40 m outside the school's outline, leaving out
+# any tagged private or no access. El Roble's mapped gates are all on its
+# south side and most are tagged locked, so none are used: its trips end at
+# the street nearest the school's mapped centre.
+study: Claremont
+area:
+  source: place
+  place: Claremont, California
+  buffer_m: 3000
+destinations:
+  - id: el-roble
+    name: El Roble Intermediate School
+    kind: point
+    purpose: school
+    location: [-117.730642, 34.100500]  # centre of the school's OSM outline
+    min_age: 12  # grades 7 and 8
+    max_age: 13
+  - id: claremont-high
+    name: Claremont High School
+    kind: point
+    purpose: school
+    location: [-117.722018, 34.112150]  # centre of the school's OSM outline
+    min_age: 14  # grades 9 to 12
+    max_age: 17
+    access_points:
+      - [-117.722190, 34.114313]  # north side, west gate
+      - [-117.721542, 34.114305]  # north side, east gate
+      - [-117.720052, 34.112119]  # east side, Indian Hill Boulevard
+      - [-117.720489, 34.110704]  # south-east corner
+      - [-117.724792, 34.113931]  # west side
+modes: [walk, bike, car]
+presets:
+  walk: [broach-2016-child, broach-2016]
+  bike: [broach-2011-child, broach-2011]
+  car: [central]
+time_caps_min:
+  walk: 20
+  bike: 20
+demand:
+  weight: residents

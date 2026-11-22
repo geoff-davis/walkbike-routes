@@ -1,0 +1,16 @@
+name: edge-time-only
+mode: car
+kind: motor_delays
+title: Running time only, no intersection delays
+source: >-
+  Planning-level values set by hand, not estimated from observed delays. The
+  central turn values approximate the OSRM car profile, whose angle penalty is
+  capped at 7.5 s with 20 s more for a U-turn. Running speed is 80% of the
+  posted or default speed.
+objective: travel_time_s
+parameters:
+  signal_s: 0
+  stop_s: 0
+  right_turn_s: 0
+  left_turn_s: 0
+  u_turn_s: 0

@@ -1,0 +1,13 @@
+name: bike-everyday
+mode: bike
+title: Cycling for everyday errands, ages 16 and over
+source: Federal Highway Administration, 2017 National Household Travel Survey, version 1.2,
+  public trip file (https://nhts.ornl.gov). Weighted share of cycling trips by people 16 and
+  over to shop, buy services or meals, run errands, for recreation or to visit friends at
+  least each distance long, by the survey's routed trip distance (TRPMILES), loop trips excluded.
+  Built by scripts/nhts_decay_curves.py.
+trips: 1589
+median_miles: 1.084
+miles: [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3, 4, 5, 7.5, 10, 15, 20]
+share: [1.0, 0.9625, 0.781, 0.6688, 0.5605, 0.4445, 0.348, 0.2434, 0.1977, 0.1565, 0.1046,
+  0.0777, 0.0566, 0.0352, 0.0248, 0.024]

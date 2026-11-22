@@ -1,0 +1,19 @@
+{
+  "bike/broach-2011": "Cycling: Broach, Gliebe and Dill (bike/broach-2011, bike/broach-2011-commute, bike/broach-2011-lanes)",
+  "bike/broach-2011-child": "Children (walk/child, bike/child, walk/broach-2016-child, bike/broach-2011-child)",
+  "bike/broach-2011-commute": "Cycling: Broach, Gliebe and Dill (bike/broach-2011, bike/broach-2011-commute, bike/broach-2011-lanes)",
+  "bike/broach-2011-lanes": "Cycling: Broach, Gliebe and Dill (bike/broach-2011, bike/broach-2011-commute, bike/broach-2011-lanes)",
+  "bike/child": "Children (walk/child, bike/child, walk/broach-2016-child, bike/broach-2011-child)",
+  "bike/furth": "Cycling on Furth's criteria (bike/furth)",
+  "bike/legacy": "Cycling (bike/legacy, bike/shortest, bike/legacy-hills)",
+  "bike/legacy-hills": "Cycling (bike/legacy, bike/shortest, bike/legacy-hills)",
+  "bike/shortest": "Cycling (bike/legacy, bike/shortest, bike/legacy-hills)",
+  "car/*": "Driving (car/*)",
+  "walk/broach-2016": "Walking: Broach (walk/broach-2016, walk/broach-2016-sidewalks)",
+  "walk/broach-2016-child": "Children (walk/child, bike/child, walk/broach-2016-child, bike/broach-2011-child)",
+  "walk/broach-2016-sidewalks": "Walking: Broach (walk/broach-2016, walk/broach-2016-sidewalks)",
+  "walk/child": "Children (walk/child, bike/child, walk/broach-2016-child, bike/broach-2011-child)",
+  "walk/legacy": "Walking (walk/legacy, walk/legacy-hills, walk/shortest)",
+  "walk/legacy-hills": "Walking (walk/legacy, walk/legacy-hills, walk/shortest)",
+  "walk/shortest": "Walking (walk/legacy, walk/legacy-hills, walk/shortest)"
+}

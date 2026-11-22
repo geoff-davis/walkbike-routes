@@ -1,0 +1,35 @@
+# Central Philadelphia (Center City, University City, South Philadelphia),
+# for the checks in validation/ (see validation/README.md):
+#
+#   walkbike-routes run --config validation/config/philadelphia_core.yaml \
+#       --out output/philadelphia_core --no-map
+#   python validation/run.py routes --config validation/config/philadelphia_core.yaml \
+#       --out output/philadelphia_core --traces cyclephilly
+#   python validation/run.py counts --out output/philadelphia_core --counts dvrpc \
+#       --within validation/config/philadelphia_core.geojson
+#
+# The area is a rectangle we drew, about 6 by 6 km. The 3 km buffer keeps
+# trips from just outside it, and only trips and count sites inside it are
+# compared, so every one is at least 3 km from the network's edge. A full run
+# takes hours: see network_flows below.
+study: Philadelphia core
+area:
+  source: boundary_file
+  boundary_file: philadelphia_core.geojson
+  buffer_m: 3000
+destinations: []
+modes: [walk, bike]
+presets:
+  walk: [legacy, broach-2016, shortest]
+  bike: [legacy, furth, broach-2011, broach-2011-lanes, shortest]
+time_caps_min:
+  walk: 30
+  bike: 30
+demand:
+  weight: residents
+network_flows:
+  # About 2 minutes per cluster and preset on this network (128k links,
+  # 214k homes). Each worker takes 9 to 14 GB of memory (the most for
+  # presets with turn costs), so keep workers x 14 GB well inside free memory.
+  destinations: 40
+  workers: 2

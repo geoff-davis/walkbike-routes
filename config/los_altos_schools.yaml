@@ -1,0 +1,68 @@
+# Three Los Altos schools, from public data only (OpenStreetMap, Census,
+# Overture, USGS): Almond Elementary, Egan Junior High and Los Altos High.
+# Entrances are each campus's gates, reviewed against maps and local
+# knowledge; each school has the age group that attends it.
+#
+# Every home within reach counts toward every school. To count only a
+# school's attendance area and draw it on the map, add `outline:` (here or in
+# the private los_altos_schools.local.yaml, under `outlines:`); with
+# `limits: false` it is only drawn. Attendance boundaries are not distributed here.
+study: Los Altos schools
+area:
+  source: place
+  place: Los Altos, California
+  buffer_m: 3000
+destinations:
+  - id: almond
+    name: Almond Elementary School
+    kind: point
+    purpose: school
+    location: [-122.101000, 37.384700]
+    min_age: 4   # TK to grade 6
+    max_age: 11
+    access_points:
+      - [-122.101463, 37.384955]  # west drive gate, Almond Avenue
+      - [-122.101150, 37.384862]  # Almond Avenue walk-in gate
+      - [-122.100723, 37.384959]  # east drive gate, Almond Avenue
+      - [-122.100657, 37.384226]  # rear path from Edith Avenue
+    car_access_points:
+      - [-122.101463, 37.384955]  # west drive: arrivals
+  - id: egan
+    name: Egan Junior High School
+    kind: point
+    purpose: school
+    location: [-122.116600, 37.396600]
+    min_age: 12  # grades 7 and 8
+    max_age: 13
+    access_points:
+      - [-122.118233, 37.396803]  # Portola Avenue, west
+      - [-122.115954, 37.396783]  # Portola Avenue, central
+      - [-122.115100, 37.396770]  # Portola Avenue, east
+    car_access_points:
+      - [-122.118233, 37.396803]  # west and central are the inbound drives
+      - [-122.115954, 37.396783]
+  - id: lahs
+    name: Los Altos High School
+    kind: point
+    purpose: school
+    location: [-122.109000, 37.386800]
+    min_age: 14  # grades 9 to 12
+    max_age: 17
+    access_points:
+      - [-122.110639, 37.388643]  # Jardin Drive, by the tennis courts
+      - [-122.107389, 37.388649]  # Jardin Drive at Casita Way
+      - [-122.110630, 37.385073]  # Almond Avenue, west
+      - [-122.109473, 37.385074]  # Almond Avenue, central
+      - [-122.107386, 37.385073]  # Almond Avenue at Gordon Way
+modes: [walk, bike, car]
+presets:
+  walk: [broach-2016-child, broach-2016, broach-2016-sidewalks, shortest]
+  bike: [broach-2011-child, broach-2011, shortest]
+  car: [central]
+time_caps_min:
+  walk: 20
+  bike: 20
+time_bands_min: [5, 10, 15, 20]
+demand:
+  weight: residents
+overrides: overrides/los_altos.yaml  # reviewed corrections to OSM

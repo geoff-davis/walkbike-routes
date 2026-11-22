@@ -1,0 +1,35 @@
+name: broach-2016
+mode: walk
+kind: broach_walk_2016
+title: Portland walking route choice (Broach 2016)
+source: >-
+  Broach, J. (2016), "Travel mode choice framework incorporating realistic
+  bike and walk routes", PhD dissertation, Portland State University, Table
+  10 (variables defined in Table 9): a path-size logit estimated on 1,167
+  GPS-recorded walk trip stages by 283 Portland, Oregon adults, 2010-2013.
+  Coefficients as printed, per metre of route or per count. Neighborhood
+  commercial frontage is not known here and is left out; the traveling
+  together term applies only with together: true. The model's expanded path
+  size is approximated by the ordinary path size. The model has no sidewalk
+  or signal-delay term (see walkbike_routes.network.broach_walk and
+  docs/assumptions.md). Walking speed, signal waits and slowing on hills,
+  for travel time only, are as in walk/legacy-hills.
+objective: generalized_cost_s
+parameters:
+  together: false
+  speed_mph: 3.0
+  signal_wait_s: 30
+  signal_wait_cross_arterial_s: 50
+  signal_wait_along_arterial_s: 15
+  grade_speeds: true
+  coefficients:
+    distance_m: -0.015
+    distance_together_m: -0.013
+    turns: -0.809
+    steep_upslope_m: -0.015
+    substandard_m: -0.008
+    busy_m: -0.002
+    commercial_m: 0.004
+    unsignalised_arterial_crossings: -1.090
+    unmarked_collector_crossings: -0.419
+    ln_path_size: 0.128

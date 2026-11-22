@@ -1,0 +1,12 @@
+name: walk-school-5-10
+mode: walk
+title: Walking to school, ages 5 to 10
+source: Federal Highway Administration, 2017 National Household Travel Survey, version 1.2,
+  public trip file (https://nhts.ornl.gov). Weighted share of walking trips to school by students
+  aged 5 to 10 at least each distance long, by the survey's routed trip distance (TRPMILES),
+  loop trips excluded. Built by scripts/nhts_decay_curves.py.
+trips: 600
+median_miles: 0.39
+miles: [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3, 4, 5, 7.5, 10, 15, 20]
+share: [1.0, 0.7455, 0.4076, 0.2383, 0.126, 0.1001, 0.0579, 0.0332, 0.0055, 0.0023, 0.0014,
+  0.0014, 0.0014, 0.0014, 0.0014, 0.0014]

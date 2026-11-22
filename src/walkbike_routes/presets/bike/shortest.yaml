@@ -1,0 +1,15 @@
+name: shortest
+mode: bike
+kind: lts_factors
+title: Shortest distance by bike, ignoring traffic stress
+source: >-
+  A baseline for comparison, not a model of how people ride: every link a
+  bike may use counts at its length, whatever its traffic stress. Signal
+  waits as in bike/legacy, which set travel times but not the route.
+objective: physical_length_m
+parameters:
+  speed_mph: 10.0
+  signal_wait_s: 20
+  signal_wait_cross_arterial_s: 40
+  signal_wait_along_arterial_s: 15
+  lts_cost_factors: [1.0, 1.0, 1.0, 1.0]

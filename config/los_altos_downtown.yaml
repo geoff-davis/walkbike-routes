@@ -1,0 +1,35 @@
+# Downtown Los Altos, California, from public data only (OpenStreetMap,
+# Census, Overture, USGS). The destination is the downtown grid, entered at
+# its eight Main Street and State Street intersections.
+study: Downtown Los Altos
+area:
+  source: place
+  place: Los Altos, California
+  buffer_m: 4000  # a 15-minute bike ride reaches past the city limits
+destinations:
+  - id: downtown
+    name: Downtown Los Altos
+    kind: point
+    location: [-122.116350, 37.379687]
+    access_points:
+      - [-122.114786, 37.380450]  # Main Street and State Street
+      - [-122.117745, 37.377833]  # Main Street and 1st Street
+      - [-122.116726, 37.378342]  # Main Street and 2nd Street
+      - [-122.115700, 37.378858]  # Main Street and 3rd Street
+      - [-122.118400, 37.378663]  # State Street and 1st Street
+      - [-122.117374, 37.379179]  # State Street and 2nd Street
+      - [-122.116350, 37.379687]  # State Street and 3rd Street
+      - [-122.115332, 37.380197]  # State Street and 4th Street
+modes: [walk, bike]
+presets:
+  # broach-2016-sidewalks first: the plain walking model has no sidewalk
+  # term, so only this one gives a walking improvement screen.
+  walk: [broach-2016-sidewalks, broach-2016, shortest]
+  bike: [broach-2011, broach-2011-lanes, shortest]
+time_caps_min:
+  walk: 15
+  bike: 15
+time_bands_min: [5, 10]
+demand:
+  weight: residents
+overrides: overrides/los_altos.yaml  # reviewed corrections to OSM
