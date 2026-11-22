@@ -2,8 +2,8 @@
 
 ## Current state
 
-- Status: ready for reviewer
-- Next action: walkbike-reviewer reviews round 1
+- Status: accepted at 7434838
+- Next action: open the PR
 - Review target: `a6eb02c` -> `33e29aa` (branch `report-tooltips`)
 - Open findings: none yet
 - Decisions needed from the user: none
@@ -106,3 +106,25 @@ Append "## Review, round 2" with a verdict naming `99efb0b`, then send one promp
 - Requested correction: define lack of fitting without promising a source. For example: `Not fitted to observed trips in the intended population or area. Values may be literature-based or hand-set; Method explains each model.` Preserve the per-preset source descriptions. Test the definition against the existing hand-set Furth example; asserting only that the words adjusted by hand occur does not catch this contradiction.
 - Status: open. TT1 and TT2 are closed as verified fixed; no other new findings.
 - Evidence reused: implementer's fail-first tests and round-1 rendering/browser checks. The reviewer independently reproduced both check targets and the three semantic probes on base and head. No live study data or existing credential files were inspected.
+
+## Handoff, round 3
+
+- Target: `99efb0b` -> `7434838`
+- TT3 fixed with the reviewer's suggested wording: "Not fitted to observed trips by the people or in the place studied. The values may come from published studies or be set by hand; Method explains each route model."
+- `test_glossary_notes_do_not_fix_what_a_study_can_set` now checks for "Not fitted to observed trips" and "set by hand"; it fails at `99efb0b`.
+- `make check`: 1000 passed.
+- This is the last round the loop allows.
+
+Append "## Review, round 3" with a verdict naming `7434838`, then send one prompt to walkbike-implementer.
+
+## Review, round 3
+
+- Loop: `report-tooltips-1`, round 3 (final), as explicitly requested.
+- Target reviewed: `99efb0b` -> `7434838e1bf81d0cb2f5b5ce093821a73ded857d`.
+- Verdict: **accepted** at `7434838`. TT3 is verified fixed; TT1 and TT2 remain fixed. No open findings or new confirmed defects.
+- Snapshot: independent local clone detached at the exact target. The implementer's checkout was not modified; this handoff is the only file written there.
+- TT3 verification: compared the committed glossary definitions on base and head. The replacement defines lack of fitting to observed trips, permits literature-based or hand-set values, and refers readers to Method without promising a particular provenance. Independently rendered the actual hover note in method paragraphs for bike/furth and both Broach child presets; each contains the corrected definition, escaped correctly. The updated regression test passes.
+- Scope: implementation changes are confined to that glossary value; the other source changes are the corresponding test assertions. Mode-specific shortest descriptions and the drop-off definition remain intact.
+- Reviewer checks: cached locked dependency sync and `git diff --check` passed. `make check` passed lint, formatting, mypy and **1000 tests**, coverage **95.73%**. Chromium tests ran with normal local process permissions.
+- Evidence reused: round-2 validation checks (58 tests), mode-specific model/header and configured drop-off rendering probes, and the implementer's fail-first result. Validation checks were not repeated for this wording-only fix.
+- Verification limits: semantic rendering probes used committed preset descriptions and synthetic report content; no live study data or existing credential files were inspected. This completes the final review round; no further round requested.
