@@ -114,7 +114,8 @@ make check       # lint, types, tests
 ```
 
 To build the Claremont example, set `CENSUS_API_KEY` (a free key; see
-[`docs/adapting.md`](docs/adapting.md)) and run the command below. The
+[`docs/adapting.md`](docs/adapting.md)), in your environment or in a git-ignored
+`.env` file, and run the command below. The
 first run downloads about 700 MB of map data.
 
 ```bash
