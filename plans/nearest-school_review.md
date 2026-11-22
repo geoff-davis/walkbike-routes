@@ -2,8 +2,8 @@
 
 ## Current state
 
-- Status: ready for reviewer
-- Next action: walkbike-reviewer reviews round 1
+- Status: accepted at 6743e43
+- Next action: open the PR
 - Review target: `2a25ea2` -> `205d424` (branch `nearest-school`)
 - Open findings: none yet
 - Decisions needed from the user: none
@@ -62,3 +62,26 @@ Append "## Review, round 1" with a verdict naming `205d424`, then send one promp
 - Status: open.
 
 - Verification limits: source inspection covered the config exclusions and group validation, but no existing private `.local.yaml`, real counts, recorded trips or downloaded city data were read. No additional findings are asserted.
+
+## Handoff, round 2
+
+- Target: `205d424` -> `6743e43`
+- NS1 fixed: `route_lengths()` adds `snap_distance_m` to `physical_length_m`. Test `test_the_walk_onto_the_network_counts_toward_nearest` covers your 1,000 m street case: a home 10 m from A, with B listed first, goes to A.
+- NS2 fixed: `choose_nearest()` uses street distance only for rows that have some, and straight-line distance for the rest. Test `test_homes_no_street_reaches_go_to_the_nearest_in_a_straight_line` mixes a partly reachable home and a cut-off one.
+- Both tests fail at `205d424`, where the helpers do not exist.
+- `make check`: 1004 passed, 95.70%. `make validation-check`: 58 passed.
+
+Append "## Review, round 2" with a verdict naming `6743e43`, then send one prompt to walkbike-implementer.
+
+## Review, round 2
+
+- Loop: `nearest-school-1`, round 2; Standard tier retained.
+- Target reviewed: `205d424` -> `6743e43fc6be4f01063ec9219d135ceb70f97070`.
+- Verdict: **accepted** at `6743e43`. NS1 and NS2 are verified fixed; no open findings or new confirmed defects.
+- Snapshot: independent local clone detached at the exact target, with a separate `205d424` clone for identical geometric probes. The implementer's checkout was not modified; this handoff is the only file written there.
+- NS1 verification: reran the actual nearest-group routing on the 1000 m A-B street with a home at x=10 and far B listed first. The base reports 0 m to both and assigns B; the head reports 990 m to B and 10 m to A and assigns A. This independently verifies integration of the added snap distance, beyond the helper-level regression test.
+- NS2 verification: reran the actual disconnected-component network from round 1. The base raises `ValueError: Encountered all NA values`; the head assigns the home to the straight-line-nearest member and preserves partition coverage. A mixed table probe also confirms that a home with any reachable member uses street distance even when an unreachable member is closer in a straight line, while a fully cut-off home uses fallback.
+- Reviewer checks: cached locked dependency sync and `git diff --check` passed. `make check` passed lint, formatting, mypy and **1004 tests**, coverage **95.70%**. `make validation-check` passed lint, formatting, mypy and **58 tests**. Chromium tests ran with normal local process permissions.
+- Fix assessment: whole-route lengths include the home-to-node walk, and street minima are computed only for rows with a known street distance, avoiding the all-missing reduction. The shared assignment remains independent of the study's requested mode and route-choice preset.
+- Evidence reused: implementer's new helper tests and reported check results. The reviewer independently reproduced both check targets and both base/head network probes.
+- Verification limits: network probes used made-up projected coordinates and canonical layers; no downloaded city data, private local configuration, counts or recorded trips were inspected. No further review round requested.
