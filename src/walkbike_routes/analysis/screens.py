@@ -27,8 +27,9 @@ most of that flow are then each tried alone, and the screen reports the time
 saved by the people whose best route improves.  A whole street and its own
 sections overlap, so the ranking lists each place once: a candidate sharing
 links with a better one is folded into it, and the best of a whole street's
-busiest sections is given beside it.  Savings are generalized
-minutes (time plus the preset's stress and crossing costs), not clock minutes.
+busiest sections is given beside it.  Savings are route-cost minutes
+(generalized cost: time plus the preset's stress and crossing costs), not
+clock minutes.
 This is a screen for where to look, not a design or cost estimate.
 """
 
