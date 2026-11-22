@@ -90,7 +90,9 @@ to look, then go and look.
   not yet been checked against observed routes.
 
 [`docs/assumptions.md`](docs/assumptions.md) lists every assumption and its
-source. To set it up for your own town, see
+source. [`docs/routing-methods.md`](docs/routing-methods.md) describes each
+route-choice method, what was changed from its paper and how far it has been
+checked. To set it up for your own town, see
 [`docs/adapting.md`](docs/adapting.md).
 
 The pictures above come from
@@ -146,6 +148,8 @@ names:
   `bike: [furth]` rates traffic stress by Furth's criteria tables, v2.2;
   `walk: [shortest]` and `bike: [shortest]` take the shortest route, as a
   baseline to compare the others with; see
+  [`docs/routing-methods.md`](docs/routing-methods.md) for each method's
+  source, changes and validation, and
   [`docs/assumptions.md`](docs/assumptions.md);
 - the time limits for walking and cycling;
 - who the trips start from: residents in an age range, or households.
