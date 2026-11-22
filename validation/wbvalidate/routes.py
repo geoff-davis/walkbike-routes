@@ -3,8 +3,10 @@
 Counts mix route choice with demand: a street can be busy because the model
 sends riders there, or because many trips start near it.  Recorded trips
 take demand out.  For each trip (:mod:`wbvalidate.traces`),
-its first and last points are attached to the network as homes are, and
-each preset's cheapest route between them is compared with the trace:
+its first and last points are attached to the network as homes are (to the
+nearest street in the main connected piece, however far: how far each end
+moved is kept, :data:`FAR_M`), and each preset's cheapest route between them
+is compared with the trace:
 
 - **observed covered**: the share of the trace's length within the buffer
   of the modelled route;
@@ -52,8 +54,9 @@ BUFFER_M = 20.0
 BUFFERS_M = (10.0, 20.0, 30.0)
 BASELINE = "shortest"
 CLOSE = 0.8  # an overlap at least this high counts as the same route
+FAR_M = 50.0  # an end moved farther than this to reach the network is reported
 ROUTED = "routed"
-OFF_NETWORK = "an end is too far from the network"
+NOT_JOINED = "an end did not join the network"
 NO_ROUTE = "no route between the ends"
 SAME_NODE = "both ends at one node"
 START, END = "start", "end"
@@ -163,7 +166,8 @@ def route_trips(
     edges: gpd.GeoDataFrame,
     buffers_m: tuple[float, ...] = BUFFERS_M,
 ) -> pd.DataFrame:
-    """One row per trip: the route status, the modelled length and edges, and the overlaps.
+    """One row per trip: the route status, how far each end moved to reach the
+    network, the modelled length and edges, and the overlaps.
 
     ``trips`` has ``trip_id`` and the joined trace as its geometry, in the
     network's CRS; ``built`` is the preset's network with the trip ends
@@ -172,15 +176,20 @@ def route_trips(
     attached = built.attachments[built.attachments.network_attached.astype(bool)]
     node = dict(zip(attached.origin_id.astype(str), attached.attached_node_id.astype(str),
                     strict=True))  # fmt: skip
+    moved = dict(zip(attached.origin_id.astype(str), attached.snap_distance_m.astype(float),
+                     strict=True))  # fmt: skip
     shapes = dict(zip(edges.physical_edge_id.astype(str), edges.geometry, strict=True))
     rows = []
     for trip, trace in zip(trips.trip_id.astype(str), trips.geometry, strict=True):
         row: dict[str, object] = {"trip_id": trip, "preset": preset.name, "route_m": math.nan,
                                   "edges": ()}  # fmt: skip
         start, end = node.get(f"{trip}|{START}"), node.get(f"{trip}|{END}")
+        # How far each end moved along and to its street to reach the network.
+        row["start_moved_m"] = moved.get(f"{trip}|{START}", math.nan)
+        row["end_moved_m"] = moved.get(f"{trip}|{END}", math.nan)
         found = None
-        if start is None or end is None:
-            row["route_status"] = OFF_NETWORK
+        if start is None or end is None:  # only on a network with no usable street
+            row["route_status"] = NOT_JOINED
         elif start == end:
             row["route_status"] = SAME_NODE
         else:
