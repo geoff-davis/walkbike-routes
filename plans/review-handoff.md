@@ -18,7 +18,7 @@ Updated in place each round.
 ## Loop
 
 - Loop ID and round: `<task>-1`, round 1 of at most 3
-- Implementer: `walkbike-implementer` (Claude), pane `<id>`
+- Implementer (the reviewer replies here): `walkbike-implementer[-N]` (Claude), pane `<id>`
 - Reviewer: `walkbike-reviewer` (Codex), pane `<id>`
 - Authorized scope: review requests and replies only
 - Expires (UTC): `<start + 60 min>`

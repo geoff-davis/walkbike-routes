@@ -47,13 +47,22 @@ The user authorizes direct review requests and replies through Herdr; no
 manual relay is needed. This covers message delivery only. A review verdict
 does not authorize a commit, push, merge, tag or publish.
 
-Live agent names, in the walkbike-routes Herdr workspace:
-`walkbike-implementer` (Claude) and `walkbike-reviewer` (Codex). Before every
-send, verify `HERDR_ENV=1` and check `herdr agent list` that the peer is the
-Codex in this workspace with a walkbike-routes working directory. Names are
-cleared when an agent exits; rename with `herdr agent rename <pane> <name>`.
-Never send to another workspace's reviewer, and if identity is ambiguous,
-stop and ask.
+Live agent names, in the walkbike-routes Herdr workspace: one Codex,
+`walkbike-reviewer`, and any number of Claude panes, `walkbike-implementer`,
+`walkbike-implementer-2`, `walkbike-implementer-3` and so on, each in its own
+worktree. Names must be unique among live agents and are cleared when an
+agent exits.
+
+- A Claude pane finds itself in `herdr agent list` (the entry whose
+  `agent_session.value` is its own session ID, or ask the user for the pane)
+  and, if unnamed, takes the lowest free `walkbike-implementer[-N]` with
+  `herdr agent rename <pane> <name>`.
+- Before every send, verify `HERDR_ENV=1` and check `herdr agent list` that
+  the peer is in this workspace with a walkbike-routes working directory.
+  Never send to another workspace's agents. If identity is ambiguous, stop
+  and ask.
+- The reviewer replies to the implementer named in the handoff's Loop
+  section, never to a default name or the focused pane.
 
 **When.** Once per PR-sized slice: after the local commit, before the push.
 Several small commits may share one review. Exempt, decided by path
@@ -79,8 +88,11 @@ provider, so this applies to the main checkout too, not just the snapshot.
   ([template](plans/review-handoff.md)) before prompting: base and head SHAs,
   tier, acceptance criteria, evidence (each fix with its regression test shown
   failing on the base), settled decisions, known limitations.
+- Record your own name and pane in the handoff's Loop section.
 - `herdr agent prompt walkbike-reviewer "<absolute handoff path, target, loop
   and round>"`, without `--wait`, and only when the reviewer is idle or done.
+  The one reviewer serves every implementer, one review at a time: if it is
+  working, wait for it to finish rather than queueing a second prompt.
 - Poll the handoff file in the background about once a minute until it holds
   a verdict naming this loop, this round and the exact target, or until the
   loop's UTC expiry. An older verdict does not count. Agent states are hints:
@@ -104,7 +116,8 @@ provider, so this applies to the main checkout too, not just the snapshot.
 - A finding blocks only if it defeats the acceptance criteria or introduces a
   regression.
 - Append the round and a verdict naming the exact target to the handoff file,
-  then send one prompt to `walkbike-implementer`.
+  then send one prompt to the implementer named in its Loop section. A
+  request that arrives mid-review waits until the current verdict is sent.
 
 ### Tiers and limits
 
