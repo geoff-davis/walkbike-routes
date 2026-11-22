@@ -10,6 +10,7 @@ import yaml
 
 from walkbike_routes import __main__ as cli
 from walkbike_routes import config
+from walkbike_routes.study_nearest import choose_nearest, route_lengths
 
 DEMO = Path(__file__).resolve().parents[1] / "config" / "demo.yaml"
 
@@ -51,3 +52,40 @@ def test_a_nearest_group_needs_two_destinations(tmp_path: Path) -> None:
     (tmp_path / "study.yaml").write_text(yaml.safe_dump(raw))
     with pytest.raises(config.ConfigError, match="nearest group 'town' has only one"):
         config.load(tmp_path / "study.yaml")
+
+
+def _routes(snaps: dict[str, float | None]) -> pd.DataFrame:
+    """Routes to one destination: each home's walk onto the network; None: unreachable."""
+    return pd.DataFrame(
+        {
+            "origin_id": list(snaps),
+            "route_reachable": [s is not None for s in snaps.values()],
+            "physical_length_m": [0.0 if s is not None else float("nan") for s in snaps.values()],
+            "snap_distance_m": [s if s is not None else float("nan") for s in snaps.values()],
+        }
+    )
+
+
+def test_the_walk_onto_the_network_counts_toward_nearest() -> None:
+    # A home 10 m along a 1,000 m street from A to B, with a destination at each
+    # end: both routes start at an end node with no network length, so only the
+    # walk along the street tells them apart (NS1). B is listed first.
+    street = pd.DataFrame(
+        {"B": route_lengths(_routes({"h": 990.0})), "A": route_lengths(_routes({"h": 10.0}))}
+    )
+    straight = pd.DataFrame({"B": [990.0], "A": [10.0]}, index=["h"])
+    assert list(street.loc["h"]) == [990.0, 10.0]
+    assert choose_nearest(street, straight).tolist() == ["A"]
+
+
+def test_homes_no_street_reaches_go_to_the_nearest_in_a_straight_line() -> None:
+    # One home reaches only B by street; another reaches neither (NS2).
+    street = pd.DataFrame(
+        {
+            "A": route_lengths(_routes({"near": None, "cut off": None})),
+            "B": route_lengths(_routes({"near": 500.0, "cut off": None})),
+        },
+        index=["near", "cut off"],
+    )
+    straight = pd.DataFrame({"A": [100.0, 50.0], "B": [400.0, 80.0]}, index=["near", "cut off"])
+    assert choose_nearest(street, straight).to_dict() == {"near": "B", "cut off": "A"}

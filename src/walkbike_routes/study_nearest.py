@@ -55,9 +55,8 @@ def nearest_origins(
             {i: _straight_lengths(context, destinations[i], every) for i in members},
             index=every.origin_id.astype(str),
         )
-        # Street distance where any is known; otherwise straight-line distance.
+        choice = choose_nearest(table, straight)
         by_street = table.notna().any(axis=1)
-        choice = table.idxmin(axis=1).where(by_street, straight.idxmin(axis=1))
         log.info(
             "nearest group %s: %d homes split by street distance, %d by straight line",
             group, int(by_street.sum()), int((~by_street).sum()),
@@ -87,9 +86,31 @@ def _street_lengths(
         thresholds_min=(60.0,), time_limit_min=None,
         snap_speed_mps=float(preset.parameters["speed_mph"]) * MPS_PER_MPH,
     )  # fmt: skip
-    routes = result.routes
+    return route_lengths(result.routes)
+
+
+def route_lengths(routes: pd.DataFrame) -> pd.Series:
+    """Each origin's shortest whole route, in metres: the network plus the walk onto it.
+
+    ``snap_distance_m`` is the part from the home to the node the route starts
+    at (along its street, and out to it), which ``physical_length_m`` leaves out.
+    """
     reached = routes[routes.route_reachable.astype(bool)]
-    return reached.groupby(reached.origin_id.astype(str)).physical_length_m.min()
+    whole = reached.physical_length_m.astype(float) + reached.snap_distance_m.astype(float)
+    return whole.groupby(reached.origin_id.astype(str).to_numpy()).min()
+
+
+def choose_nearest(street: pd.DataFrame, straight: pd.DataFrame) -> pd.Series:
+    """Each origin's nearest member: by street where any is known, else in a straight line.
+
+    Both tables have a row per origin and a column per member; ``street`` has
+    NaN where a member cannot be reached.
+    """
+    by_street = street.notna().any(axis=1)
+    choice = straight.idxmin(axis=1)
+    if by_street.any():
+        choice[by_street] = street[by_street].idxmin(axis=1)
+    return choice
 
 
 def _straight_lengths(
