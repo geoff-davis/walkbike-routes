@@ -8,8 +8,10 @@ then share. It assumes you have run the demo (`make demo`) and opened
 
 Home locations and populations come from the 2020 Census. Its API needs a
 free key: sign up at <https://api.census.gov/data/key_signup.html> and set
-`CENSUS_API_KEY` in your environment. Keep the key out of the repository and
-out of shared logs.
+`CENSUS_API_KEY` in your environment, or put `CENSUS_API_KEY=<key>` in a
+`.env` file in the folder you run from: `walkbike-routes run` reads it, and a
+variable already set in the environment wins. `.env` is git-ignored. Keep the
+key out of the repository and out of shared logs.
 
 OpenStreetMap, Overture building footprints, USGS elevation and HPMS traffic
 counts need no key. Downloads are cached under `data/raw/<study>` (or the

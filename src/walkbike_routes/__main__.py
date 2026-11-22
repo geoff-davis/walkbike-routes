@@ -15,6 +15,7 @@ import dataclasses
 import hashlib
 import json
 import logging
+import os
 import re
 import sys
 from collections.abc import Sequence
@@ -39,6 +40,33 @@ from walkbike_routes.report.map import build_maps
 from walkbike_routes.report.tables import build_report
 
 LAYERS = ("nodes", "links", "homes", "destinations", "access_points")
+
+
+def load_env_file(path: Path = Path(".env")) -> list[str]:
+    """Set environment variables from ``path`` (``NAME=value`` lines) and return their names.
+
+    A variable already set in the environment wins.  Blank lines and ``#``
+    comments are skipped, ``export`` before a name is allowed, and matching
+    quotes around a value are removed.  Values are never logged; a bad line
+    is reported by its number only, since it may hold a key.
+    """
+    if not path.is_file():
+        return []
+    names: list[str] = []
+    for number, raw in enumerate(path.read_text().splitlines(), start=1):
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        name, sep, value = line.removeprefix("export ").partition("=")
+        name, value = name.strip(), value.strip()
+        if not sep or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
+            raise settings.ConfigError(f"{path}: line {number} is not NAME=value")
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
+            value = value[1:-1]
+        if name not in os.environ:
+            os.environ[name] = value
+            names.append(name)
+    return names
 
 
 def main(argv: Sequence[str] | None = None) -> None:
@@ -74,6 +102,12 @@ def main(argv: Sequence[str] | None = None) -> None:
             parser.exit(2, f"{args.out}: no manifest.json; is this a run's output folder?\n")
         _write_reports(args.out, maps=True, offline=args.offline)
         return
+    try:
+        loaded = load_env_file()  # keys such as CENSUS_API_KEY
+    except settings.ConfigError as err:
+        parser.exit(2, f"{err}\n")
+    if loaded:
+        logging.info("settings from .env: %s", ", ".join(loaded))
     try:
         study = settings.load(args.config, local=not args.no_local)
     except settings.ConfigError as err:
