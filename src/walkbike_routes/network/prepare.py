@@ -21,7 +21,7 @@ optional ``traffic_aadt`` column carries a counted daily volume (see
 the LTS criteria (see ``counted_traffic_band``), and presets that use
 volumes directly read it first.
 
-Each edge gets two traffic stress levels: ``lts_best`` by the legacy rules
+Each edge gets two traffic stress levels: ``lts_best`` by the simplified rules (``classify_lts``)
 and ``lts_furth`` by Furth's criteria tables (see
 :mod:`walkbike_routes.network.furth`), with ``lts_furth_defaults`` naming
 what was assumed.  Optional columns ``lane_markings``, ``lanes_both_ways``, ``lanes_per_direction``, ``shoulder_width_m``,

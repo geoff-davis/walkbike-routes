@@ -18,7 +18,7 @@ Bierlaire 1999), so a route sharing nothing has size 1.  Routes that
 overlap heavily split one route's worth of probability between them, rather
 than each counting in full.  With one route this is all-or-nothing.
 
-The defaults, set by hand for a Los Altos downtown study: up to 3 routes from a
+The defaults, set by hand for a small downtown access study: up to 3 routes from a
 12-route search, within 60 s and 10% of the best, a 60 s logit scale and a
 path-size exponent of 1.  Published route-choice models estimated with a
 path-size logit (Broach, Dill and Gliebe 2012) supply their own values.

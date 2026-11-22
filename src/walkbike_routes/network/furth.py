@@ -16,10 +16,11 @@ missing, a stated default is used, and :func:`classify_furth` lists every
 default it relied on:
 
 - **Speed**: the posted limit stands in for the prevailing speed; without
-  one, the road class default of the legacy rules.
+  one, the road class default of the simplified rules (``classify_lts``).
 - **Daily traffic**: a matched count (``traffic_aadt``); without one,
   :data:`DEFAULT_ADT` by road class.  These are judgments, set near typical
-  counts (counted tertiary roads in Los Altos have a median near 5,800).
+  counts (in the one area where they were checked, counted tertiary roads
+  had a median near 5,800).
 - **Lanes**: the busier direction's tagged lanes (``lanes_per_direction``),
   or else the ``lanes`` tag less any centre turn lane (``lanes_both_ways``),
   halved on two-way streets; without a tag, the road class default.
@@ -64,7 +65,7 @@ DEFAULT_ADT = {
     "trunk": 30000, "trunk_link": 30000, "motorway": 50000, "motorway_link": 30000,
 }  # fmt: skip
 UNKNOWN_CLASS_ADT = 4000
-# Speeds and total lanes by road class where untagged: the legacy rules' defaults.
+# Speeds and total lanes by road class where untagged: the simplified rules' defaults.
 DEFAULT_SPEED_LANES = {
     "motorway": (55, 4), "motorway_link": (45, 2), "trunk": (45, 4), "trunk_link": (40, 2),
     "primary": (35, 4), "primary_link": (35, 2), "secondary": (35, 2),

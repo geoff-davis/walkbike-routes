@@ -40,7 +40,7 @@ TRAFFIC_ORDER = {
     "unknown": 6,
 }
 
-LTS_FIELDS = {"legacy": "lts_best", "furth": "lts_furth"}
+LTS_FIELDS = {"simplified": "lts_best", "furth": "lts_furth"}
 ROAD_DEFAULTS = {
     "motorway": (55, "very_high", 4),
     "motorway_link": (45, "very_high", 2),
@@ -72,11 +72,14 @@ class LTSResult:
 
 @dataclass(frozen=True)
 class BicycleProfile:
-    """Bicycle speed, stress tolerance, and LTS cost factors."""
+    """Bicycle speed and LTS cost factors.
+
+    Every rideable street is kept: traffic stress multiplies riding time by
+    its level's factor, a penalty, never a ban.
+    """
 
     profile_id: str
     speed_mph: float = BICYCLE_SPEED_MPH
-    maximum_lts: int | None = None
     lts_cost_factors: tuple[float, float, float, float] = LTS_COST_FACTORS
     unknown_crossing_cost_s: float = 0.0
     uncontrolled_crossing_cost_s: float = 0.0
@@ -86,9 +89,10 @@ class BicycleProfile:
     # Waits across and along a main road at its signals; None uses signal_wait_s.
     signal_wait_cross_arterial_s: float | None = None
     signal_wait_along_arterial_s: float | None = None
-    # Which traffic stress levels to read: the legacy rules (lts_best) or
-    # Furth's criteria tables, v2.2 (lts_furth; see network.furth).
-    lts_criteria: str = "legacy"
+    # Which traffic stress levels to read: the rules simplified from Mekuria,
+    # Furth and Nixon 2012 (lts_best; classify_lts) or Furth's criteria
+    # tables, v2.2 (lts_furth; see network.furth).
+    lts_criteria: str = "simplified"
 
     @property
     def lts_field(self) -> str:
@@ -339,8 +343,6 @@ def build_bicycle_links(
         if raw_lts is None:
             raise ValueError(f"edge {physical_id} has no {lts_field} value")
         lts = int(float(raw_lts))
-        if profile.maximum_lts is not None and lts > profile.maximum_lts:
-            continue
         flat_time = float(str(edge.length_m)) / speed_mps
         grade = float(getattr(edge, "grade", math.nan)) if profile.grade_speeds else math.nan
         factor = profile.factor(lts)

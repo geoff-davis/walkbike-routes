@@ -116,10 +116,18 @@ def test_osm_tags_feed_the_tables() -> None:
 
 
 def test_a_profile_chooses_which_levels_to_read() -> None:
+    assert BicycleProfile("p").lts_criteria == "simplified"
     assert BicycleProfile("p").lts_field == "lts_best"
     assert BicycleProfile("p", lts_criteria="furth").lts_field == "lts_furth"
-    with pytest.raises(ValueError, match="lts_criteria"):
-        BicycleProfile("p", lts_criteria="dutch")
+    for retired in ("dutch", "legacy"):
+        with pytest.raises(ValueError, match="lts_criteria"):
+            BicycleProfile("p", lts_criteria=retired)
+
+
+def test_no_profile_can_leave_out_streets_by_traffic_stress() -> None:
+    # Stress is a penalty, never a ban: there is no maximum level to ride.
+    with pytest.raises(TypeError, match="maximum_lts"):
+        BicycleProfile("p", maximum_lts=2)  # type: ignore[call-arg]
 
 
 def lane_street(**tags: Any) -> dict[str, Any]:
