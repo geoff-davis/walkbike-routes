@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import math
 import re
+from collections import Counter
 from collections.abc import Mapping
 from dataclasses import replace
 from pathlib import Path
@@ -102,6 +103,8 @@ def load(path: str | Path, local: bool = True) -> Study:
         drawn = _outline(checks.mapping(item, where), private.parent, where)
         if drawn.limits and known[str(key)].serves is not None:
             raise ConfigError(f"{where}: give serves or a limiting outline, not both")
+        if drawn.limits and known[str(key)].nearest is not None:
+            raise ConfigError(f"{where}: give nearest or a limiting outline, not both")
         known[str(key)] = replace(known[str(key)], outline=drawn)
     return replace(study, destinations=tuple(known.values()), local_source=private)
 
@@ -161,6 +164,9 @@ def parse(raw: Mapping[str, Any], base: Path = Path("."), source: Path | None = 
     ids = [d.id for d in destinations]
     if len(set(ids)) != len(ids):
         raise ConfigError(f"destinations: ids must be unique, got {ids}")
+    groups = Counter(d.nearest for d in destinations if d.nearest is not None)
+    if alone := sorted(g for g, n in groups.items() if n < 2):
+        raise ConfigError(f"destinations: nearest group {alone[0]!r} has only one destination")
     if area.source == "demo":
         for key in ("overrides", "local_layers"):
             if top.get(key):
@@ -273,6 +279,11 @@ def _destination(raw: Mapping[str, Any], base: Path, area: Area, demand: Demand)
         )
         if outline.limits and serves is not None:
             raise ConfigError(f"{where}: give serves or a limiting outline, not both")
+    nearest = (
+        None if top.get("nearest") is None else checks.text(top["nearest"], f"{where} nearest")
+    )
+    if nearest is not None and (serves is not None or (outline is not None and outline.limits)):
+        raise ConfigError(f"{where}: give nearest, serves or a limiting outline, not more than one")
     return Destination(
         id=_destination_id(top["id"], f"{where} id"),
         name=checks.text(top["name"], f"{where} name"),
@@ -290,6 +301,7 @@ def _destination(raw: Mapping[str, Any], base: Path, area: Area, demand: Demand)
         min_age=low,
         max_age=high,
         purpose=checks.choice(top.get("purpose", "everyday"), f"{where} purpose", PURPOSES),
+        nearest=nearest,
     )
 
 
