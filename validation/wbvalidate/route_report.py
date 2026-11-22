@@ -121,7 +121,9 @@ def _route_all(
     preset's network rides on.
     """
     if used.empty:
-        empty = pd.DataFrame(columns=["trip_id", "preset", "route_status", "edges"])
+        empty = pd.DataFrame(
+            columns=["trip_id", "preset", "route_status", "start_moved_m", "end_moved_m", "edges"]
+        )
         return empty, gpd.GeoDataFrame(geometry=[], crs=links.crs)
     ends = routes.trip_ends(used.geometry, used.trip_id)
     context = routes.context(study, links, nodes, ends, out)
@@ -224,6 +226,7 @@ def report_blocks(
         Heading(2, "Trips"),
         _status_table(table),
         _route_status_table(table, names),
+        _moved_para(table, names),
     ]
     rows = compared(table, names)
     found = routes.route_scores(rows, buffer_m=BUFFER_M) if not rows.empty else []
@@ -377,6 +380,29 @@ def _route_status_table(table: pd.DataFrame, names: list[str]) -> Table:
         for s, values in zip(counts.index, counts.to_numpy(), strict=True)
     )
     return Table(("Route status", *names), rows, (False, *(True for _ in names)))
+
+
+def _moved_para(table: pd.DataFrame, names: list[str]) -> Para:
+    """How many eligible trips had an end moved more than FAR_M to reach the network.
+
+    Every end joins the nearest street in the network's main connected piece,
+    however far, so an end on a cut-off street can land some way off.  The
+    stretch moved is not part of the modelled route, which lowers the trip's
+    overlap.
+    """
+    used = table[table.status.eq(traces.USED)]
+    moved = used[["start_moved_m", "end_moved_m"]].max(axis=1)
+    far = used[moved.gt(routes.FAR_M)]
+    counts = far.groupby("preset").trip_id.nunique().reindex(names, fill_value=0)
+    lead = f"Trips with an end moved more than {routes.FAR_M:g} m to reach the network"
+    if not counts.any():
+        return Para(f"{lead}: none.", note=True)
+    most = float(moved[moved.gt(routes.FAR_M)].max())
+    if counts.nunique() == 1:
+        found = f"{int(counts.iloc[0]):,} under every preset"
+    else:
+        found = ", ".join(f"{n} {int(c):,}" for n, c in counts.items())
+    return Para(f"{lead}: {found} (farthest {most:,.0f} m).", note=True)
 
 
 def _score_table(found: list[RouteScore]) -> Table:

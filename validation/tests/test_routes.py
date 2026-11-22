@@ -102,18 +102,36 @@ def test_a_preset_with_turn_costs_routes_to_the_end_from_any_side(tmp_path: Path
     assert across[routes.column(20)] < 0.5
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="The core joins every origin to the network however far, so a trace ending 4 km "
-    "off the network now routes; whether traces need their own limit is undecided.",
-)
-def test_trips_that_cannot_be_routed_say_why(tmp_path: Path) -> None:
-    far = LineString([_at(ROW, 2), _at(ROW, 40)])  # ends 4 km beyond the town
+def test_a_far_end_joins_the_network_and_says_how_far_it_moved(tmp_path: Path) -> None:
+    # Ends join the nearest street however far, as homes do: a trace ending
+    # 4 km beyond the town is routed, and the distance moved is kept.
+    far = LineString([_at(ROW, 2), _at(ROW, 40)])
     same = LineString([_at(ROW, 2), _at(ROW + 0.05, 2.05)])
     found = _route(tmp_path, "shortest", {"far": far, "same": same})
-    assert found.loc["far", "route_status"] == routes.OFF_NETWORK
+    beyond = (40 - (demo.SIZE - 1)) * S  # from the last intersection on E Street
+    assert found.loc["far", "route_status"] == routes.ROUTED
+    assert found.loc["far", "start_moved_m"] == pytest.approx(0, abs=1)
+    assert found.loc["far", "end_moved_m"] == pytest.approx(beyond, abs=1)
     assert found.loc["same", "route_status"] == routes.SAME_NODE
-    assert found[routes.column(20)].isna().all()
+
+
+def test_the_report_counts_trips_with_an_end_moved_far(tmp_path: Path) -> None:
+    def row(trip: str, preset: str, start: float, end: float) -> dict[str, object]:
+        return {"trip_id": trip, "preset": preset, "status": traces.USED,
+                "start_moved_m": start, "end_moved_m": end}  # fmt: skip
+
+    def line(rows: list[dict[str, object]]) -> str:
+        return route_report._moved_para(pd.DataFrame(rows), ["a", "b"]).text
+
+    near = [row("t1", p, 5, 12) for p in ("a", "b")]
+    assert line(near).endswith("to reach the network: none.")
+    both = [*near, row("t2", "a", 3, 400), row("t2", "b", 3, 380)]
+    assert line(both).endswith(": 1 under every preset (farthest 400 m).")
+    one = [*near, row("t2", "a", 3, 400), row("t2", "b", 3, 20)]
+    assert line(one).endswith(": a 1, b 0 (farthest 400 m).")
+    # A trip the filters left out is not counted, however far its end.
+    skipped = [*near, {**row("t3", "a", 900, 0), "status": "too short"}]
+    assert line(skipped).endswith(": none.")
 
 
 def test_the_filters_look_only_at_the_trace() -> None:
@@ -212,6 +230,7 @@ def test_routes_writes_the_report_from_a_run(tmp_path: Path) -> None:
     assert "Better than shortest" in text and "Recorded trips: trips.geojson" in text
     assert "made-up" in text.lower()  # the synthetic banner comes from the study, not a manifest
     assert "What the routes are made of" in text and "Trips per street" in text
+    assert "end moved more than 50 m to reach the network: none." in text
     streets = gpd.read_parquet(folder / "streets.parquet")
     # The three detours turn off E Street at once; both presets send all six trips along it.
     assert streets[["ridden", "legacy", "shortest"]].max().tolist() == [3, 6, 6]
