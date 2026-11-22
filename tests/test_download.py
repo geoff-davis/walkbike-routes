@@ -304,6 +304,39 @@ def test_elevations_come_in_batches_and_missing_values_stay_missing(
     assert result.elevation_m[1] == pytest.approx(1010.0)
 
 
+def test_a_changed_network_asks_only_for_its_new_points(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(elevation, "BATCH", 3)
+    calls: list[str] = []
+    fetcher = fake.fetcher(tmp_path, calls)
+
+    def nodes(points: list[Point]) -> gpd.GeoDataFrame:
+        ids = [f"n{i}" for i in range(len(points))]
+        return gpd.GeoDataFrame({"node_id": ids}, geometry=points, crs=4326)
+
+    grid = [Point(fake.WEST, fake.SOUTH + i * fake.STEP) for i in range(7)]
+    first = elevation.node_elevations(nodes(grid), fetcher)
+    assert len(calls) == 3
+    # One node added at the start shifts every batch of 3; only it is asked for.
+    added = Point(fake.WEST + fake.STEP / 2, fake.SOUTH)
+    second = elevation.node_elevations(nodes([added, *grid]), fetcher)
+    assert len(calls) == 4
+    assert second.elevation_m.iloc[1:].tolist() == pytest.approx(
+        first.elevation_m.tolist(), nan_ok=True
+    )
+    # Nothing new: no request at all, and a repeated point is asked for once.
+    elevation.node_elevations(nodes([*grid, grid[2]]), fetcher)
+    assert len(calls) == 4
+    # A damaged table is read as empty and rebuilt.
+    (tmp_path / elevation.POINTS_FILE).write_text("{not json")
+    for saved in tmp_path.glob("3dep-*.json"):
+        if saved.name != elevation.POINTS_FILE:
+            saved.unlink()
+    elevation.node_elevations(nodes(grid), fetcher)
+    assert len(calls) == 7
+
+
 def test_a_service_error_or_no_data_at_all_is_reported(tmp_path: Path) -> None:
     nodes = gpd.GeoDataFrame({"node_id": ["a"]}, geometry=[Point(0, 0)], crs=4326)
     refused = Fetcher(
