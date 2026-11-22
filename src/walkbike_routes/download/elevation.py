@@ -45,7 +45,8 @@ def node_elevations(nodes: gpd.GeoDataFrame, fetcher: Fetcher) -> gpd.GeoDataFra
     ]
     table_path = fetcher.cache / POINTS_FILE
     known = _read_points(table_path)
-    wanted = list(dict.fromkeys(c for c in coordinates if _key(c) not in known))
+    # One request per key: the key, not the float pair, is a point's identity.
+    wanted = list({_key(c): c for c in coordinates if _key(c) not in known}.values())
     for start in range(0, len(wanted), BATCH):
         batch = wanted[start : start + BATCH]
         answer = fetcher.json(
@@ -75,7 +76,9 @@ def node_elevations(nodes: gpd.GeoDataFrame, fetcher: Fetcher) -> gpd.GeoDataFra
 
 
 def _key(coordinate: tuple[float, float]) -> str:
-    return f"{coordinate[0]:.7f},{coordinate[1]:.7f}"
+    """The table key; adding 0.0 turns a -0.0 from rounding into 0.0."""
+    x, y = (round(value, 7) + 0.0 for value in coordinate)
+    return f"{x:.7f},{y:.7f}"
 
 
 def _stored(value: float | None) -> float:

@@ -337,6 +337,21 @@ def test_a_changed_network_asks_only_for_its_new_points(
     assert len(calls) == 7
 
 
+def test_points_that_round_to_signed_zeros_are_one_point(tmp_path: Path) -> None:
+    calls: list[str] = []
+    fetcher = fake.fetcher(tmp_path, calls)
+    points = [Point(1e-8, 10), Point(-1e-8, 10), Point(10, 1e-8), Point(10, -1e-8)]
+    nodes = gpd.GeoDataFrame({"node_id": list("abcd")}, geometry=points, crs=4326)
+    first = elevation.node_elevations(nodes, fetcher)
+    # Each pair rounds to the same place, so it shares one answer.
+    assert first.elevation_m[0] == pytest.approx(first.elevation_m[1], nan_ok=True)
+    assert first.elevation_m[2] == pytest.approx(first.elevation_m[3], nan_ok=True)
+    asked = len(calls)
+    again = elevation.node_elevations(nodes, fetcher)  # warm: all from the table
+    assert len(calls) == asked
+    assert again.elevation_m.tolist() == pytest.approx(first.elevation_m.tolist(), nan_ok=True)
+
+
 def test_a_service_error_or_no_data_at_all_is_reported(tmp_path: Path) -> None:
     nodes = gpd.GeoDataFrame({"node_id": ["a"]}, geometry=[Point(0, 0)], crs=4326)
     refused = Fetcher(
