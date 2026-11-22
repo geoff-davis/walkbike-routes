@@ -252,8 +252,8 @@ GLOSSARY: dict[str, str] = {
     "to cross, a missing sidewalk or crosswalk, cycling stress and drop-off traffic, added "
     "up. Not a crash rate.",
     "drop-off": "Car trips to the destination, such as parents dropping children at "
-    "school. A street among the busiest 10% for these that already has other points gets "
-    "one more.",
+    "school. The streets busiest with these trips get extra points; Risk points used "
+    "gives the rule.",
     "potential flow": "How many people would use a street if everyone within reach made "
     "the trip by the route the model picks. Not a count of people seen there.",
     "route-cost minutes": ROUTE_COST.replace(" (often called generalized cost)", "")
@@ -261,8 +261,9 @@ GLOSSARY: dict[str, str] = {
     "generalized cost": ROUTE_COST.replace(" (often called generalized cost)", "") + ".",
     "route model": MODEL_RULES,
     "route-choice model": MODEL_RULES,
-    "uncalibrated": "Not tuned to local trip counts or surveys: the numbers come from "
-    "the published study, used as they are.",
+    "uncalibrated": "Not checked against counts or surveys of where people here walk "
+    "or cycle. The penalties come from published studies, some adjusted by hand; Method "
+    "says how for each route model.",
     "distance-decay": "How fast trips fall off with distance: the national share of "
     "trips of each length, used to weight homes by how far away they are.",
     "watch": "A place with risk points that does not meet the fix-first threshold.",
@@ -290,19 +291,23 @@ GLOSS_PATTERN = re.compile(
 
 
 @functools.cache
-def model_tips() -> dict[str, str]:
-    """Each shipped route model's name and its one-line description."""
+def model_tip(mode: str, name: str) -> str:
+    """What a shipped route model is, for a hover note; "" if it is not shipped."""
     from walkbike_routes.costs import presets  # here, so text stays light to import
 
-    found: dict[str, str] = {}
-    for mode in ("walk", "bike", "car"):
-        for name in presets.names(mode):
-            found.setdefault(name, f"Route model: {presets.load(mode, name).title}.")
-    return found
+    try:
+        return f"Route model: {presets.load(mode, name).title}."
+    except presets.PresetError:
+        return ""
 
 
-def tips(header: tuple[str, ...], flow: str = "") -> tuple[str, ...]:
-    """What each column of a table means, for the HTML report's hover notes; "" for none."""
+def tips(
+    header: tuple[str, ...], flow: str = "", models: Mapping[str, str] | None = None
+) -> tuple[str, ...]:
+    """What each column of a table means, for the HTML report's hover notes; "" for none.
+
+    ``models`` gives the notes for columns named after route models.
+    """
     counted = flow.lower() or "people"
     known = {
         "On the map": "The place's label on the map: S for a street, C for a crossing, "
@@ -338,7 +343,7 @@ def tips(header: tuple[str, ...], flow: str = "") -> tuple[str, ...]:
         "Factor": "What earns a place risk points.",
         "Points": "The risk points the factor adds.",
         "Mode": "How people travel: walking, cycling or driving.",
-        **model_tips(),
+        **(models or {}),
     }
     for h in header:
         if m := re.fullmatch(r"≤ (.+) min", h):

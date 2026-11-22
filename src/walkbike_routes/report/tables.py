@@ -101,7 +101,15 @@ class Lines:
     items: tuple[str, ...]
 
 
-Cell = str | Linked | Where | Lines
+@dataclass(frozen=True)
+class Noted:
+    """A cell with a hover note in the HTML report, such as a route model's name."""
+
+    text: str
+    tip: str
+
+
+Cell = str | Linked | Where | Lines | Noted
 
 
 @dataclass(frozen=True)
@@ -356,7 +364,7 @@ def destination_sections(
             else None
         )
         found.busiest.append(Heading(3, f"{name}: {MODE_NAMES.get(mode, mode).lower()}"))
-        found.busiest += busiest_blocks(tops, spots)
+        found.busiest += busiest_blocks(tops, spots, mode)
     return found
 
 
@@ -758,8 +766,9 @@ def summary_table(rows: pd.DataFrame) -> Table:
         cap = _float(r.get("time_cap_min"))
         limit = f"{_num(within)} (≤ {_num(cap, 1)} min)" if cap is not None else _num(within)
         share = text.percent(within / total) if total and within is not None else "–"
-        mode = str(r["mode"])
-        cells = [MODE_NAMES.get(mode, mode), str(r["preset"]), _num(total), limit, share]
+        mode, preset = str(r["mode"]), str(r["preset"])
+        model: Cell = Noted(preset, tip) if (tip := text.model_tip(mode, preset)) else preset
+        cells: list[Cell] = [MODE_NAMES.get(mode, mode), model, _num(total), limit, share]
         # Runs from before the column show "–", not the all-homes median under this label.
         cells.append(text.minutes(_float(r.get("median_minutes_within_cap"))))
         cells += [_num(_float(r.get(_band_column(rows, b)))) for b in bands]
@@ -902,7 +911,9 @@ def top_spots(
 
 
 def busiest_blocks(
-    tops: dict[str, pd.Series], spots: Mapping[str, Mapping[str, Spot]] | None = None
+    tops: dict[str, pd.Series],
+    spots: Mapping[str, Mapping[str, Spot]] | None = None,
+    mode: str = "",
 ) -> list[Block]:
     """The top streets under each preset of one mode, and which agree."""
     presets_ = list(tops)
@@ -945,7 +956,7 @@ def busiest_blocks(
             ("#", *presets_),
             tuple(rows),
             (True,) + (False,) * len(presets_),
-            text.tips(("#", *presets_)),
+            text.tips(("#", *presets_), models={p: text.model_tip(mode, p) for p in presets_}),
         ),
         Para(note, note=True),
     ]
@@ -1161,6 +1172,8 @@ def _cell_md(cell: Cell) -> str:
         return f"{_cell(cell.text)} ([Google Maps]({street_map_url(cell.lat, cell.lon)}))"
     if isinstance(cell, Lines):
         return _cell("; ".join(cell.items))
+    if isinstance(cell, Noted):
+        return _cell(cell.text)
     return _cell(cell)
 
 
@@ -1339,8 +1352,8 @@ def _cell_html(cell: Cell) -> str:
         )
     if isinstance(cell, Lines):
         return '<ul class="f">' + "".join(f"<li>{_glossed(i)}</li>" for i in cell.items) + "</ul>"
-    if model := text.model_tips().get(cell):
-        return _noted(cell, model)
+    if isinstance(cell, Noted):
+        return _noted(cell.text, cell.tip)
     return _glossed(cell)
 
 

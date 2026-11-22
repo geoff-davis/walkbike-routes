@@ -55,7 +55,12 @@ def test_the_summary_figures_come_from_summary_csv(out: Path) -> None:
     summary = tables.read_summary(out)
     walk = summary[summary.preset.eq("broach-2016") & summary["mode"].eq("walk")].iloc[0]
     table = tables.summary_table(summary)
-    row = next(r for r in table.rows if r[:2] == ("Walking", "broach-2016"))
+    row = next(
+        r
+        for r in table.rows
+        if r[0] == "Walking"
+        and r[1] == tables.Noted("broach-2016", words.model_tip("walk", "broach-2016"))
+    )
     assert row[2] == f"{walk.total_weight:,.0f}"
     assert row[3] == f"{walk.within_cap_weight:,.0f} (≤ {walk.time_cap_min:g} min)"
     assert row[4] == f"{100 * walk.within_cap_weight / walk.total_weight:.0f}%"
@@ -484,3 +489,37 @@ def test_jargon_is_defined_once_per_passage_and_only_as_a_whole_word() -> None:
     assert ">Traffic stress</span> &amp; traffic stress;" in got
     assert "a stopwatch, a watch-list, &lt;<span" in got
     assert all(key == key.lower() for key in words.GLOSSARY)  # matching lowers the text
+
+
+def test_a_route_models_note_is_for_its_own_mode() -> None:
+    # Walking and cycling both ship a "shortest" model; each cell says which (TT1).
+    rows = pd.DataFrame(
+        {
+            "mode": ["walk", "bike"],
+            "preset": ["shortest", "shortest"],
+            "total_weight": [100.0, 100.0],
+            "within_cap_weight": [40.0, 60.0],
+            "time_cap_min": [20.0, 20.0],
+            "median_minutes_within_cap": [12.0, 9.0],
+            "expected_weight": [None, None],
+            "decay_curve": ["", ""],
+        }
+    )
+    walk, bike = (row[1] for row in tables.summary_table(rows).rows)
+    assert walk == tables.Noted(
+        "shortest", f"Route model: {presets.load('walk', 'shortest').title}."
+    )
+    assert bike == tables.Noted(
+        "shortest", f"Route model: {presets.load('bike', 'shortest').title}."
+    )
+    flows = pd.Series([3.0], index=["Main Street"])
+    table = tables.busiest_blocks({"shortest": flows, "broach-2011": flows}, mode="bike")[0]
+    assert isinstance(table, tables.Table)
+    assert table.tips[1] == bike.tip
+
+
+def test_glossary_notes_do_not_fix_what_a_study_can_set() -> None:
+    # The drop-off share and points are rules a study may change (TT2); some route
+    # models adjust the published penalties (TT3).
+    assert not re.search(r"\d", words.GLOSSARY["drop-off"])
+    assert "adjusted by hand" in words.GLOSSARY["uncalibrated"]
