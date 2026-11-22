@@ -81,15 +81,6 @@ def test_a_bike_lane_on_a_calm_street_is_lts_2() -> None:
 
 def test_bicycle_links_apply_lts_threshold_direction_and_stress_cost() -> None:
     edges = _classified_edges()
-    strict = build_bicycle_links(
-        edges,
-        BicycleProfile("strict", maximum_lts=1),
-        evidence_source="fixture",
-        evidence_confidence="high",
-    )
-    assert "maple_w_m" not in set(strict.physical_edge_id)
-    assert "north_w_m" in set(strict.physical_edge_id)
-
     weighted = build_bicycle_links(
         edges,
         BicycleProfile("weighted"),
@@ -98,6 +89,9 @@ def test_bicycle_links_apply_lts_threshold_direction_and_stress_cost() -> None:
     )
     graph = routable_links_to_graph(weighted, directed=True)
     assert graph.has_edge("W", "M") and graph.has_edge("M", "W")
+    # Every rideable street is kept, however stressful: stress is a penalty.
+    rideable = edges[edges.bike_allowed.fillna(True).astype(bool)]
+    assert set(weighted.physical_edge_id) == set(rideable.edge_id.astype(str))
     maple = weighted[weighted.physical_edge_id.eq("maple_w_m")]
     quiet = weighted[weighted.physical_edge_id.eq("north_w_m")]
     assert maple.stress_cost_s.gt(0).all()
@@ -400,7 +394,7 @@ def test_unknown_sidewalk_collectors_cost_their_own_factor() -> None:
 
 def test_link_builders_return_typed_empty_layers_when_everything_is_filtered() -> None:
     edges = _classified_edges()
-    strict = build_bicycle_links(edges, BicycleProfile("impossible", maximum_lts=0))
+    strict = build_bicycle_links(edges.assign(bike_allowed=False), BicycleProfile("none"))
     assert strict.empty
     assert {"routable_link_id", "generalized_cost_s", "geometry"} <= set(strict.columns)
     assert routable_links_to_graph(strict, directed=True).number_of_edges() == 0
