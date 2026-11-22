@@ -19,7 +19,8 @@ Three rules hold for every preset:
 - **Route choice and physical time are kept apart.** Each preset has an
   objective: generalized cost, physical length or travel time. Generalized
   cost adds the extra effort of busy streets, hills and crossings to clock
-  time, and is reported in generalized minutes. Time limits (the walk or
+  time, and is reported in
+  [route-cost minutes](#route-cost-minutes). Time limits (the walk or
   ride time a home must be within) always use physical travel time: speed,
   slowing on hills where the preset applies it, and signal waits.
 - **Outputs are potential flow.** Flows show where trips would go if
@@ -29,6 +30,26 @@ Three rules hold for every preset:
 - **Coefficients from a paper are used as printed** and checked against it,
   and a test reproduces a small worked example from the paper where one
   exists.
+
+## Route-cost minutes
+
+Route-cost minutes are what a preset's route model keeps low when it picks a
+route: the clock minutes of the trip plus extra minutes for what people
+avoid. Depending on the preset, the extras are for busy or fast traffic,
+climbing, crossing a busy road without a signal, turning, or walking where
+there is no sidewalk. The literature calls this generalized cost.
+
+They are not a time anyone would measure with a watch. A route that takes
+10 clock minutes on a stressful arterial can cost 14 route-cost minutes,
+more than a calm 12-minute route that costs 12, and the model picks the calm
+one. How many extra minutes each feature is worth comes from the preset's
+source, below.
+
+The report ranks barriers by the route-cost minutes they would save, added
+up over everyone whose route gets cheaper. A change can save route-cost
+minutes without saving any clock time, by making a route less stressful.
+Time limits, such as who can walk to school within 20 minutes, always use
+clock time.
 
 ## Summary
 

@@ -117,9 +117,10 @@ class Table:
 
 @dataclass(frozen=True)
 class Terms:
-    """Terms and what they mean."""
+    """Terms and what they mean, with an optional "more" link for some."""
 
     items: tuple[tuple[str, str], ...]
+    links: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -203,7 +204,10 @@ def report_blocks(out: Path, manifest: dict[str, Any]) -> list[Block]:
     has_lists = any(path.name == "exposure_streets.parquet" for path in listed)
     if has_lists:
         any_decayed = bool(summary.get("decay_curve", pd.Series(dtype=str)).map(text.decayed).any())
-        blocks += [Heading(2, "Key terms"), Terms(tuple(text.key_terms(rules, any_decayed)))]
+        route_cost = any(path.name == "screen.parquet" for path in listed)
+        terms = tuple(text.key_terms(rules, any_decayed, route_cost))
+        more = (("Route-cost minutes", text.ROUTE_COST_DOC),) if route_cost else ()
+        blocks += [Heading(2, "Key terms"), Terms(terms, more)]
     together = combined_sections(out, summary, labels, listed, rules)
     parts = [together]
     for destination_id in dict.fromkeys(summary.destination_id):
@@ -1127,7 +1131,13 @@ def _markdown_parts(blocks: Sequence[Block]) -> list[str]:
         elif isinstance(block, Bullets):
             parts.append("\n".join(f"- {_md(item)}" for item in block.items))
         elif isinstance(block, Terms):
-            parts.append("\n".join(f"- **{_md(t)}:** {_md(d)}" for t, d in block.items))
+            more = dict(block.links)
+            parts.append(
+                "\n".join(
+                    f"- **{_md(t)}:** {_md(d)}" + (f" [More]({more[t]})" if t in more else "")
+                    for t, d in block.items
+                )
+            )
         elif isinstance(block, Scatter):
             count = len(block.points)
             parts.append(f"_{_md(block.title)}: a plot of {count} sites, in the HTML report._")
@@ -1259,8 +1269,15 @@ def _html_parts(blocks: Sequence[Block], ids: list[tuple[str, str]] | None = Non
             items = "".join(f"<li>{html.escape(i)}</li>" for i in block.items)
             parts.append(f"<ul>{items}</ul>")
         elif isinstance(block, Terms):
+            more = dict(block.links)
             items = "".join(
-                f"<div><dt>{html.escape(t)}</dt><dd>{html.escape(d)}</dd></div>"
+                f"<div><dt>{html.escape(t)}</dt><dd>{html.escape(d)}"
+                + (
+                    f' <a href="{html.escape(more[t])}" target="_blank" rel="noopener">More</a>'
+                    if t in more
+                    else ""
+                )
+                + "</dd></div>"
                 for t, d in block.items
             )
             parts.append(f'<dl class="terms">{items}</dl>')

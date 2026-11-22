@@ -158,8 +158,9 @@ or ambiguous identity.
   citation. A coefficient taken from a paper is checked against the paper, and
   a test reproduces a small worked example from it.
 - **Physical time and generalized cost are kept apart.** Time limits use
-  physical time. Route choice uses generalized cost. Reports say "generalized
-  minutes" for the latter.
+  physical time. Route choice uses generalized cost. Reports and docs say
+  "route-cost minutes" for the latter, defined where readers meet it (key
+  terms, column notes, `docs/routing-methods.md#route-cost-minutes`).
 - **Outputs say what they are:** potential flow, not counts, forecasts or risk.
 
 ## Gotchas

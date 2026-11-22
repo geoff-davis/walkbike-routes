@@ -904,8 +904,9 @@ destinations at once, for comparing modelled flows with street counts.
   sections), sections of unnamed or one-section streets, a crossing (all its
   pieces together, named after the street crossed and the nearest other
   street) or a junction (named after two streets that meet there). It ranks
-  places by generalized minutes saved, weighted by the homes that use them
-  (decayed, as above); the report and map call these "route-cost minutes". For presets with turn and crossing costs
+  places by route-cost minutes saved (generalized cost; see
+  [route-cost minutes](routing-methods.md#route-cost-minutes)), weighted by
+  the homes that use them (decayed, as above). For presets with turn and crossing costs
   (the Broach ones), sections are found on the street links, but routes
   before and after are found on the preset's graph of movements, so those
   costs count: a protected lane that leads to an unsignalised crossing of a
