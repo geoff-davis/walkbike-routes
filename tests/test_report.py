@@ -31,7 +31,7 @@ def out(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """The demo run, with walking under two presets, to the school only."""
     raw = yaml.safe_load(DEMO.read_text())
     raw["destinations"] = [d for d in raw["destinations"] if d["id"] == "school"]
-    raw["presets"]["walk"] = ["legacy", "legacy-hills"]
+    raw["presets"]["walk"] = ["broach-2016", "shortest"]
     folder = tmp_path_factory.mktemp("report")
     path = folder / "study.yaml"
     path.write_text(yaml.safe_dump(raw))
@@ -59,8 +59,8 @@ def test_every_run_is_offered_with_the_main_preset_first(out: Path) -> None:
     data = _data(report.build_maps(out)[0].read_text())
     runs = [(r["id"], r["main"]) for r in data["runs"]]
     assert runs == [
-        ("walk-legacy", True),
-        ("walk-legacy-hills", False),
+        ("walk-broach-2016", True),
+        ("walk-shortest", False),
         ("bike-broach-2011", True),
         ("car-central", True),
     ]
@@ -89,7 +89,7 @@ def test_flows_round_trip(out: Path) -> None:
 def test_the_squares_follow_the_runs_routes(out: Path) -> None:
     data = _data(report.build_maps(out)[0].read_text())
     walk = data["runs"][0]
-    routes = pd.read_parquet(out / "school" / "walk-legacy" / "routes.parquet")
+    routes = pd.read_parquet(out / "school" / "walk-broach-2016" / "routes.parquet")
     assert sum(w for _, _, w in walk["cells"]) == pytest.approx(
         routes.demand_weight.sum(), abs=0.1 * len(walk["cells"])
     )
@@ -196,7 +196,7 @@ def test_a_car_square_counts_the_trip_to_the_destination() -> None:
 def test_the_run_writes_maps_unless_told_not_to(tmp_path: Path) -> None:
     raw = yaml.safe_load(DEMO.read_text())
     raw["destinations"] = raw["destinations"][:1]
-    raw["modes"], raw["presets"] = ["walk"], {"walk": ["legacy"]}
+    raw["modes"], raw["presets"] = ["walk"], {"walk": ["shortest"]}
     raw["time_caps_min"] = {"walk": 20}
     path = tmp_path / "study.yaml"
     path.write_text(yaml.safe_dump(raw))
@@ -387,14 +387,14 @@ def test_files_left_from_an_earlier_run_are_not_shown(tmp_path: Path) -> None:
     path = tmp_path / "study.yaml"
     path.write_text(yaml.safe_dump(raw))
     cli.build(config.load(path), tmp_path / "out")
-    raw["modes"], raw["presets"] = ["walk"], {"walk": ["legacy"]}
+    raw["modes"], raw["presets"] = ["walk"], {"walk": ["shortest"]}
     raw["time_caps_min"] = {"walk": 20}
     path.write_text(yaml.safe_dump(raw))
     cli.build(config.load(path), tmp_path / "out")
     assert (tmp_path / "out" / "school" / "overlap.parquet").exists()  # left behind
     data = _data(report.build_maps(tmp_path / "out")[0].read_text())
     assert data["overlap"] == []
-    assert [r["id"] for r in data["runs"]] == ["walk-legacy"]
+    assert [r["id"] for r in data["runs"]] == ["walk-shortest"]
 
 
 def test_the_page_has_a_mode_menu_a_title_and_plain_labels(out: Path) -> None:

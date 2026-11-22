@@ -4,7 +4,9 @@ Results of the two checks in this folder (see [README.md](README.md) for how
 they work), run on the central Philadelphia study in November 2026. Only
 aggregate figures are given here. Nothing was fitted to the trips or the
 counts, but one preset, `bike/broach-2011-lanes`, was added after looking at
-the trips (see below).
+the trips (see below). The `legacy` presets, with `legacy-hills` and the
+`child` presets built on them, have since been removed on these results;
+their figures are kept as run.
 
 ## Summary
 

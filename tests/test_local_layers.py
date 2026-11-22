@@ -64,7 +64,7 @@ def _parse(extra: dict[str, Any]) -> config.Study:
     raw = {
         "study": "t", "area": {"source": "place", "place": "Somewhere, Oregon"},
         "destinations": [{"id": "d", "name": "D", "kind": "point", "location": [-122.1, 37.4]}],
-        "modes": ["walk"], "presets": {"walk": ["legacy"]}, "time_caps_min": {"walk": 10},
+        "modes": ["walk"], "presets": {"walk": ["shortest"]}, "time_caps_min": {"walk": 10},
         "demand": {"weight": "residents"}, **extra,
     }  # fmt: skip
     return config.parse(raw)
@@ -175,7 +175,7 @@ def _demo() -> dict[str, Any]:
     return {
         "study": "t", "area": {"source": "demo"},
         "destinations": [{"id": "d", "name": "D", "kind": "point"}],
-        "modes": ["walk"], "presets": {"walk": ["legacy"]}, "time_caps_min": {"walk": 10},
+        "modes": ["walk"], "presets": {"walk": ["shortest"]}, "time_caps_min": {"walk": 10},
         "demand": {"weight": "residents"},
     }  # fmt: skip
 

@@ -78,8 +78,9 @@ to look, then go and look.
   sidewalk, signal, speed or bikeway layers can replace OSM's, and hand
   corrections fix what neither has.
 - **Route choice:** published models of how people choose routes (Broach and
-  colleagues' Portland models for walking and cycling, Furth's traffic
-  stress criteria and others), plus slower, more cautious child versions.
+  colleagues' Portland models for walking and cycling, and Furth's traffic
+  stress criteria), shortest-distance baselines to compare them with, and
+  slower, more cautious child versions of the Portland models.
   The child versions are assumptions, not fitted to children's trips.
 - **Distance:** fewer people walk or cycle the farther they have to go, by
   the 2017 National Household Travel Survey's curves for each trip purpose
@@ -142,11 +143,9 @@ names:
   avoid busy streets and crossings more, without ruling any out.
   `bike: [broach-2011-lanes]` also values bike lanes on quiet streets, and
   `walk: [broach-2016-sidewalks]` sidewalks on busier roads;
-  `walk: [legacy-hills]` and `bike: [legacy-hills]` change speed on hills;
   `bike: [furth]` rates traffic stress by Furth's criteria tables, v2.2;
   `walk: [shortest]` and `bike: [shortest]` take the shortest route, as a
-  baseline to compare the others with;
-  the `child` presets are the legacy-based child presets; see
+  baseline to compare the others with; see
   [`docs/assumptions.md`](docs/assumptions.md);
 - the time limits for walking and cycling;
 - who the trips start from: residents in an age range, or households.

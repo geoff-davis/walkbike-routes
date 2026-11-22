@@ -244,15 +244,16 @@ def test_walk_and_bike_get_screens_and_cars_do_not(
     bike = gpd.read_parquet(out / "school" / "bike-broach-2011" / "screen.parquet")
     assert set(bike.treatment) == {"protected bike lane", "signal or crossing beacon"}
     assert not (out / "school" / "car-central" / "screen.parquet").exists()
-    settings = _study(modes=["walk"], presets={"walk": ["legacy"]})
+    # The hand-set stress-factor kind (bike/furth) is screened too.
+    settings = _study(modes=["bike"], presets={"bike": ["furth"]})
     study.analyze(settings, town, tmp_path)
-    _a_screen(tmp_path / "school" / "walk-legacy" / "screen.parquet")
+    _a_screen(tmp_path / "school" / "bike-furth" / "screen.parquet")
 
 
 def test_screens_can_be_turned_off(town: demo.Town, tmp_path: Path) -> None:
     settings = _study(modes=["walk"], screen_candidates=0)
     study.analyze(settings, town, tmp_path)
-    assert not (tmp_path / "school" / "walk-legacy" / "screen.parquet").exists()
+    assert not (tmp_path / "school" / "walk-broach-2016" / "screen.parquet").exists()
     for bad in (-1, 2.5, "many"):
         with pytest.raises(config.ConfigError, match="screen_candidates"):
             _study(screen_candidates=bad)

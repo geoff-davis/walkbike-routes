@@ -214,7 +214,7 @@ def test_the_study_config_names_the_file(tmp_path: Path) -> None:
     raw: dict[str, Any] = {
         "study": "t", "area": {"source": "demo"},
         "destinations": [{"id": "d", "name": "D", "kind": "point"}],
-        "modes": ["walk"], "presets": {"walk": ["legacy"]}, "time_caps_min": {"walk": 10},
+        "modes": ["walk"], "presets": {"walk": ["shortest"]}, "time_caps_min": {"walk": 10},
         "demand": {"weight": "residents"}, "overrides": "fixes.yaml",
     }  # fmt: skip
     with pytest.raises(config.ConfigError, match="the demo town takes no overrides"):

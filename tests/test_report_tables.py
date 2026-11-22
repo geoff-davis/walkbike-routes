@@ -32,7 +32,7 @@ def out(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """The demo run, walking under two presets, to the school only."""
     raw = yaml.safe_load(DEMO.read_text())
     raw["destinations"] = [d for d in raw["destinations"] if d["id"] == "school"]
-    raw["presets"]["walk"] = ["legacy", "legacy-hills"]
+    raw["presets"]["walk"] = ["broach-2016", "shortest"]
     folder = tmp_path_factory.mktemp("tables")
     path = folder / "study.yaml"
     path.write_text(yaml.safe_dump(raw))
@@ -53,9 +53,9 @@ def test_the_report_is_written_both_ways(out: Path) -> None:
 
 def test_the_summary_figures_come_from_summary_csv(out: Path) -> None:
     summary = tables.read_summary(out)
-    walk = summary[summary.preset.eq("legacy") & summary["mode"].eq("walk")].iloc[0]
+    walk = summary[summary.preset.eq("broach-2016") & summary["mode"].eq("walk")].iloc[0]
     table = tables.summary_table(summary)
-    row = next(r for r in table.rows if r[:2] == ("Walking", "legacy"))
+    row = next(r for r in table.rows if r[:2] == ("Walking", "broach-2016"))
     assert row[2] == f"{walk.total_weight:,.0f}"
     assert row[3] == f"{walk.within_cap_weight:,.0f} (≤ {walk.time_cap_min:g} min)"
     assert row[4] == f"{100 * walk.within_cap_weight / walk.total_weight:.0f}%"
@@ -90,7 +90,7 @@ def test_each_destination_opens_with_who_can_get_there(out: Path) -> None:
 
 def test_a_run_from_before_units_and_decay_were_recorded_still_reports() -> None:
     old = pd.DataFrame(
-        {"destination_id": ["s"], "mode": ["walk"], "preset": ["legacy"], "total_weight": [10.0],
+        {"destination_id": ["s"], "mode": ["walk"], "preset": ["shortest"], "total_weight": [10.0],
          "within_cap_weight": [4.0], "time_cap_min": [20.0]}
     )  # fmt: skip
     assert tables.glance(old, []) == ""
@@ -114,7 +114,7 @@ def test_two_presets_get_an_agreement_table(out: Path) -> None:
     text = tables.build_report(out)[0].read_text()
     busiest = text.split("## Reference: busiest streets", 1)[1]
     walking = busiest.split("### Demo Elementary: walking", 1)[1].split("###", 1)[0]
-    assert "| # | legacy | legacy-hills |" in walking
+    assert "| # | broach-2016 | shortest |" in walking
     assert "under every preset" in walking
     # How streets are grouped is said once, not under every table.
     assert text.count(tables.HOW_STREETS) == 1
@@ -135,9 +135,9 @@ def test_the_screen_is_in_route_cost_minutes_and_says_what_they_are(out: Path) -
 
 def test_the_method_cites_each_preset_and_curve(out: Path) -> None:
     text = tables.build_report(out)[0].read_text()
-    for mode, name in (("walk", "legacy"), ("walk", "legacy-hills"), ("car", "central")):
+    for mode, name in (("walk", "broach-2016"), ("walk", "shortest"), ("car", "central")):
         assert presets.load(mode, name).title in text
-    assert "Walking (walk/legacy, walk/legacy-hills, walk/shortest)" in text
+    assert "Walking: speed, waits and sidewalks (walk/shortest)" in text
     assert "Driving (car/\\*)" in text
     assert "### Distance-decay curves" in text and "National Household Travel Survey" in text
 
@@ -235,7 +235,7 @@ def test_a_street_in_every_top_list_is_not_marked() -> None:
 def test_the_cli_writes_the_report(tmp_path: Path) -> None:
     raw = yaml.safe_load(DEMO.read_text())
     raw["destinations"] = raw["destinations"][:1]
-    raw["modes"], raw["presets"] = ["walk"], {"walk": ["legacy"]}
+    raw["modes"], raw["presets"] = ["walk"], {"walk": ["shortest"]}
     raw["time_caps_min"] = {"walk": 20}
     path = tmp_path / "study.yaml"
     path.write_text(yaml.safe_dump(raw))
@@ -249,7 +249,7 @@ def test_the_cli_writes_the_report(tmp_path: Path) -> None:
 def test_the_method_says_when_decay_is_off() -> None:
     def summary(curves: list[str]) -> pd.DataFrame:
         return pd.DataFrame(
-            {"mode": ["walk", "bike"], "preset": ["legacy", "legacy"], "decay_curve": curves}
+            {"mode": ["walk", "bike"], "preset": ["shortest", "shortest"], "decay_curve": curves}
         )
 
     def text(curves: list[str]) -> str:
@@ -259,7 +259,7 @@ def test_the_method_says_when_decay_is_off() -> None:
     assert "Distance decay is off" in text(["none", "none"])
     assert "Expected trips" not in text(["none", "none"])
     mixed = text(["walk-everyday", "none"])
-    assert "except in bike/legacy, where distance decay is off" in mixed
+    assert "except in bike/shortest, where distance decay is off" in mixed
     assert "Driving" not in mixed
 
 
@@ -279,12 +279,12 @@ def test_main_runs_list_where_routes_meet_traffic(out: Path) -> None:
 
     from walkbike_routes.analysis.exposure import CROSSING_COLUMNS, STREET_COLUMNS
 
-    run = out / "school" / "walk-legacy"
+    run = out / "school" / "walk-broach-2016"
     streets = gpd.read_parquet(run / "exposure_streets.parquet")
     crossings = gpd.read_parquet(run / "exposure_crossings.parquet")
     assert list(streets.columns) == STREET_COLUMNS
     assert list(crossings.columns) == CROSSING_COLUMNS
-    assert not (out / "school" / "walk-legacy-hills" / "exposure_streets.parquet").exists()
+    assert not (out / "school" / "walk-shortest" / "exposure_streets.parquet").exists()
     text = tables.build_report(out)[0].read_text()
     assert "### Walking: places to fix first" in text
     section = text.split("### Walking: places to fix first", 1)[1].split("\n### ", 1)[0]

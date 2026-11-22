@@ -27,7 +27,7 @@ GOOD: dict[str, Any] = {
         {"id": "centre", "name": "Town centre", "kind": "area", "boundary_file": "centre.geojson"},
     ],
     "modes": ["walk", "bike"],
-    "presets": {"walk": ["legacy"], "bike": "legacy"},
+    "presets": {"walk": ["shortest"], "bike": "shortest"},
     "time_caps_min": {"walk": 20, "bike": 15},
     "demand": {"weight": "residents", "min_age": 5, "max_age": 11},
 }
@@ -57,7 +57,7 @@ def test_the_demo_config_loads() -> None:
 def test_a_good_config_is_read_into_its_parts(tmp_path: Path) -> None:
     study = config.parse(GOOD, base=tmp_path)
     assert study.modes == ("walk", "bike")
-    assert study.presets == {"walk": ("legacy",), "bike": ("legacy",)}
+    assert study.presets == {"walk": ("shortest",), "bike": ("shortest",)}
     assert study.time_caps_min == {"walk": 20.0, "bike": 15.0}
     school, centre = study.destinations
     assert school.location == (-122.1, 37.4) and school.access_points == ((-122.1001, 37.4001),)
@@ -279,8 +279,8 @@ def test_a_setting_given_twice_is_refused(tmp_path: Path) -> None:
 
 
 def test_a_preset_listed_twice_is_refused() -> None:
-    with pytest.raises(config.ConfigError, match="'legacy' is listed twice"):
-        config.parse(changed("presets.walk", ["legacy", "legacy"]))
+    with pytest.raises(config.ConfigError, match="'shortest' is listed twice"):
+        config.parse(changed("presets.walk", ["shortest", "shortest"]))
 
 
 def test_a_band_above_the_shortest_limit_is_refused_and_left_out_of_the_defaults() -> None:

@@ -62,7 +62,7 @@ def test_every_shipped_curve_loads_and_falls_from_one() -> None:
     assert set(decay.names("bike")) == {n for n in found if n.startswith("bike-")}
 
 
-@pytest.mark.parametrize("name", ["nope", "../walk/legacy", ""])
+@pytest.mark.parametrize("name", ["nope", "../walk/shortest", ""])
 def test_unknown_curves_are_refused(name: str) -> None:
     with pytest.raises(decay.DecayError, match="no decay curve"):
         decay.load(name)
@@ -166,7 +166,7 @@ def test_the_study_can_name_curves_or_turn_decay_off() -> None:
 def test_bad_decay_settings_are_refused(changes: dict[str, Any], message: str) -> None:
     raw = _raw(**changes)
     if "modes" in changes:
-        raw["presets"] = {"walk": ["legacy"]}
+        raw["presets"] = {"walk": ["shortest"]}
         raw["time_caps_min"] = {"walk": 20}
     with pytest.raises(config.ConfigError, match=message):
         config.parse(raw, base=DEMO.parent)
@@ -178,7 +178,7 @@ def runs(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
     out = {}
     for label, decay_setting in (("decay", {}), ("hard", "none")):
         raw = _raw(modes=["walk"], distance_decay=decay_setting)
-        raw["presets"] = {"walk": ["legacy"]}
+        raw["presets"] = {"walk": ["shortest"]}
         raw["time_caps_min"] = {"walk": 20}
         folder = tmp_path_factory.mktemp(label)
         study.analyze(config.parse(raw, base=DEMO.parent), town, folder)
@@ -196,10 +196,10 @@ def test_decay_lowers_flows_but_not_catchments(runs: dict[str, Path]) -> None:
     assert hard.expected_weight.to_numpy() == pytest.approx(hard.within_cap_weight.to_numpy())
     assert (decayed.expected_weight < 0.9 * hard.expected_weight).all()
     flows = {
-        k: gpd.read_parquet(v / "school" / "walk-legacy" / "flows.parquet")
+        k: gpd.read_parquet(v / "school" / "walk-shortest" / "flows.parquet")
         for k, v in runs.items()
     }  # fmt: skip
     assert flows["decay"].potential_flow.sum() < flows["hard"].potential_flow.sum()
-    routes = pd.read_parquet(runs["decay"] / "school" / "walk-legacy" / "routes.parquet")
-    shares = pd.read_parquet(runs["decay"] / "school" / "walk-legacy" / "route_shares.parquet")
+    routes = pd.read_parquet(runs["decay"] / "school" / "walk-shortest" / "routes.parquet")
+    shares = pd.read_parquet(runs["decay"] / "school" / "walk-shortest" / "route_shares.parquet")
     assert shares.assigned_weight.sum() == pytest.approx(routes.expected_weight.sum())

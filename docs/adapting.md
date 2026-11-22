@@ -157,15 +157,12 @@ each one used.
   20% shorter. It fitted Philadelphia's trips best, but that lane bonus is
   this tool's assumption, chosen after seeing those trips. Worth running
   beside `broach-2011` where most lanes are on quiet streets.
-- `legacy`, `legacy-hills`: hand-set planning judgments, not estimated from
-  data. `bike/legacy` was the furthest of all from Philadelphia riders'
-  routes.
 - `bike/furth`: traffic stress by Furth's criteria tables. In Philadelphia
   it kept to quiet streets far more than riders did.
 - `bike/shortest`, `walk/shortest`: plain shortest distance, a
   baseline.
-- `child`: the same idea built on the legacy presets. No preset has been
-  checked against children's routes.
+
+No preset has been checked against children's routes.
 
 The first preset listed for a mode is its main one: the map shows it first
 and the improvement screen uses it. `walk/broach-2016` has no sidewalk

@@ -3,7 +3,7 @@ mode: bike
 kind: lts_factors
 title: Low-stress cycling profile on Furth's LTS criteria v2.2, slowed uphill (uncalibrated)
 source: >-
-  As bike/legacy-hills, but traffic stress levels come from Furth, P. G.
+  Traffic stress levels come from Furth, P. G.
   (2022), "Level of Traffic Stress Criteria for Road Segments, version 2.2"
   (https://peterfurth.sites.northeastern.edu/files/2014/05/LTS-Tables-v2.2.pdf):
   mixed traffic by lanes, daily traffic and speed; bike lanes by lanes,
@@ -12,10 +12,19 @@ source: >-
   walkbike_routes.network.furth); they lean to the more stressful reading.
   Distance is multiplied by 1, 1.25, 3 or 8 for levels 1 to 4, a hand-set
   judgment, not
-  estimated from observed route choice. Signal waits as bike/legacy-hills
-  (Highway Capacity Manual average delay, assumed 120 s cycle). Riding speed
-  changes with grade by Parkin, J. and Rotheram, J. (2010), Transport Policy
-  17(5), 335-341, Table 2.
+  estimated from observed route choice; a crossing without a signal adds
+  30 s, or 15 s where its control is unknown. Flat riding speed 10 mph.
+  Signal waits across and along a main road (primary, trunk or
+  secondary) use the Highway Capacity Manual's average delay, (C - g)^2 /
+  2C, with an assumed 120 s cycle: crossing the main road, about 25 s of
+  side-street green gives 40 s (rounded up); along it, about 60 s gives
+  15 s; other signals 20 s. The timings are assumptions, not measured.
+  Riding speed changes with grade by Parkin, J. and Rotheram, J. (2010),
+  "Design speeds and acceleration characteristics of bicycle traffic for use
+  in planning, design and appraisal", Transport Policy 17(5), 335-341,
+  Table 2: 0.2379 m/s faster per 1% down and 0.4002 m/s slower per 1% up
+  from 6.01 m/s on the flat, used as a ratio to the flat speed and held
+  within the 8.39% down to 9.34% up the data covered.
 objective: generalized_cost_s
 parameters:
   speed_mph: 10.0

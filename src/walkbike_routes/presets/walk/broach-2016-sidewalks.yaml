@@ -24,8 +24,16 @@ source: >-
   together term applies only with together: true. The model's expanded path
   size is approximated by the ordinary path size. The model has no sidewalk
   or signal-delay term (see walkbike_routes.network.broach_walk and
-  docs/assumptions.md). Walking speed, signal waits and slowing on hills,
-  for travel time only, are as in walk/legacy-hills.
+  docs/assumptions.md). Walking speed (a flat 3 mph), signal waits and slowing
+  on hills are for travel time only. Signal waits across and along a main road (primary, trunk or
+  secondary) use the Highway Capacity Manual's average pedestrian delay,
+  (C - g)^2 / 2C, with an assumed 120 s cycle: crossing the main road,
+  about 11 s of usable walk time gives 50 s; along it, about 60 s gives
+  15 s; other signals 30 s. The timings are assumptions, not measured. On hills, walking speed changes with grade by Tobler's hiking
+  function (Tobler, W. 1993, "Three presentations on geographical analysis
+  and modeling", National Center for Geographic Information and Analysis
+  Technical Report 93-1), fitted to Eduard Imhof's Swiss walking data, as a
+  ratio to its flat speed.
 objective: generalized_cost_s
 parameters:
   together: false

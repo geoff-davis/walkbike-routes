@@ -4,8 +4,13 @@ kind: pedestrian_evidence
 title: Shortest distance on foot, ignoring sidewalks and traffic
 source: >-
   A baseline for comparison, not a model of how people walk: every walkable
-  link counts at its length, whatever its sidewalk evidence. Signal waits as
-  in walk/legacy, which set travel times but not the route.
+  link counts at its length, whatever its sidewalk evidence. Walking speed
+  is a flat 3 mph. Signal waits across and along a main road (primary, trunk or
+  secondary) use the Highway Capacity Manual's average pedestrian delay,
+  (C - g)^2 / 2C, with an assumed 120 s cycle: crossing the main road,
+  about 11 s of usable walk time gives 50 s; along it, about 60 s gives
+  15 s; other signals 30 s. The timings are assumptions, not measured. Speed and waits set travel times but
+  not the route.
 objective: physical_length_m
 parameters:
   speed_mph: 3.0

@@ -74,8 +74,8 @@ def test_sites_match_by_name_and_say_why_when_not() -> None:
     within = box(demo.ORIGIN[0] - 50, demo.ORIGIN[1] - 50, X_CENTRAL - 50, Y_MAIN + 50)
     edge = town.links.link_id.astype(str)
     flows = {
-        "bike-legacy": pd.Series(np.arange(len(edge), dtype=float), index=edge),
-        "walk-legacy": pd.Series(1.0, index=edge),
+        "bike-broach-2011": pd.Series(np.arange(len(edge), dtype=float), index=edge),
+        "walk-broach-2016": pd.Series(1.0, index=edge),
     }
     found = match.match(sites, town.links, flows, within=within).set_index("site_id")
     assert found.loc["main", "status"] == match.MATCHED
@@ -86,14 +86,14 @@ def test_sites_match_by_name_and_say_why_when_not() -> None:
     ids = [str(i) for i in row["link_ids"]]
     assert set(names.loc[ids]) == {"Main Street"}
     # The flow is the highest among the matched links, and walking runs give none.
-    assert found.loc["main", "flow:bike-legacy"] == flows["bike-legacy"].loc[ids].max()
-    assert math.isnan(row["flow:walk-legacy"])
+    assert found.loc["main", "flow:bike-broach-2011"] == flows["bike-broach-2011"].loc[ids].max()
+    assert math.isnan(row["flow:walk-broach-2016"])
     assert found.loc["wrong-name", "status"] == match.NO_STREET
-    assert math.isnan(found.loc["wrong-name"].to_dict()["flow:bike-legacy"])
+    assert math.isnan(found.loc["wrong-name"].to_dict()["flow:bike-broach-2011"])
     assert found.loc["one-way-count", "status"] == match.ONE_DIRECTION
     assert found.loc["trail", "status"] == match.MATCHED
     assert found.loc["trail", "matched_by"] == "nearest path"
-    assert found.loc["trail", "flow:walk-legacy"] == 1.0
+    assert found.loc["trail", "flow:walk-broach-2016"] == 1.0
     assert found.loc["far-away", "status"] == match.OUTSIDE
 
 
@@ -129,7 +129,7 @@ def _flow_at(links: gpd.GeoDataFrame, flows: dict[str, float], **site: Any) -> p
            "direction": "both", "side": "", "facility": "", "source": "made up",
            "geometry": Point(100, y), **site}  # fmt: skip
     sites = counts.check(gpd.GeoDataFrame([row], geometry="geometry", crs=UTM))
-    run = f"{row['mode']}-legacy"
+    run = f"{row['mode']}-broach"
     found = match.match(sites, links, {run: pd.Series(flows)})
     return found.iloc[0].rename({f"flow:{run}": "flow"})
 
@@ -234,9 +234,9 @@ def test_a_walking_count_of_one_side_takes_that_sidewalk() -> None:
 def test_no_counts_give_an_empty_match_and_report() -> None:
     town = demo.build()
     empty = _counts([_site("a", "bike", X_CENTRAL, Y_MAIN)]).iloc[:0]
-    found = match.match(empty, town.links, {"bike-legacy": pd.Series(dtype=float)})
-    assert len(found) == 0 and "status" in found and "flow:bike-legacy" in found
-    blocks = vreport.report_blocks(found, {}, "Counts: made up", ["bike-legacy"])
+    found = match.match(empty, town.links, {"bike-broach-2011": pd.Series(dtype=float)})
+    assert len(found) == 0 and "status" in found and "flow:bike-broach-2011" in found
+    blocks = vreport.report_blocks(found, {}, "Counts: made up", ["bike-broach-2011"])
     assert "Sites" in markdown(blocks)
 
 
@@ -259,7 +259,7 @@ def _scored_sites(n: int = 30) -> pd.DataFrame:
             "volume": volume,
             "highway": ["primary", "residential", "cycleway"] * (n // 3),
             "bike_facility": ["lane", "none", "path"] * (n // 3),
-            "flow:bike-legacy": volume * rng.lognormal(0, 0.3, n),
+            "flow:bike-broach-2011": volume * rng.lognormal(0, 0.3, n),
             "flow:bike-shortest": rng.lognormal(4, 1, n),
         }
     )
@@ -271,11 +271,11 @@ def test_scores_are_repeatable_and_paired_against_shortest() -> None:
     assert repr(first) == repr(again)  # NaN fields never compare equal
     other = compare.scores(sites, "bike", seed=9)
     by = {s.name: s for s in first}
-    assert by["bike-legacy"].low != {s.name: s for s in other}["bike-legacy"].low
-    legacy, shortest = by["bike-legacy"], by["bike-shortest"]
-    assert legacy.rho > 0.8 and legacy.low < legacy.rho < legacy.high
-    assert legacy.difference == pytest.approx(legacy.rho - shortest.rho)
-    assert legacy.difference_low > 0  # clearly better than random shortest flows
+    assert by["bike-broach-2011"].low != {s.name: s for s in other}["bike-broach-2011"].low
+    model, shortest = by["bike-broach-2011"], by["bike-shortest"]
+    assert model.rho > 0.8 and model.low < model.rho < model.high
+    assert model.difference == pytest.approx(model.rho - shortest.rho)
+    assert model.difference_low > 0  # clearly better than random shortest flows
     assert math.isnan(shortest.difference)
     assert [s.name for s in first][-1] == "street class"
 
@@ -384,7 +384,7 @@ def network_run(tmp_path_factory: pytest.TempPathFactory) -> Path:
     raw = {
         "study": "Demo town network", "synthetic": True, "area": {"source": "demo"},
         "destinations": [], "modes": ["walk", "bike"],
-        "presets": {"walk": ["legacy", "shortest"], "bike": ["legacy", "shortest"]},
+        "presets": {"walk": ["broach-2016", "shortest"], "bike": ["broach-2011", "shortest"]},
         "time_caps_min": {"walk": 20, "bike": 20}, "demand": {"weight": "residents"},
         "network_flows": {"destinations": 4},
     }  # fmt: skip
@@ -422,7 +422,7 @@ def test_validate_writes_the_report_from_a_counts_file(network_run: Path, tmp_pa
 def test_validate_needs_network_flows(tmp_path: Path) -> None:
     raw = yaml.safe_load((Path(__file__).resolve().parents[2] / "config" / "demo.yaml").read_text())
     raw["destinations"], raw["modes"] = raw["destinations"][:1], ["walk"]
-    raw["presets"], raw["time_caps_min"] = {"walk": ["legacy"]}, {"walk": 20}
+    raw["presets"], raw["time_caps_min"] = {"walk": ["shortest"]}, {"walk": 20}
     path = tmp_path / "study.yaml"
     path.write_text(yaml.safe_dump(raw))
     cli.build(config.load(path), tmp_path / "out")

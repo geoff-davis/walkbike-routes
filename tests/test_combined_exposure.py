@@ -25,7 +25,7 @@ DEMO = Path(__file__).resolve().parents[1] / "config" / "demo.yaml"
 def _build(folder: Path, destinations: int) -> Path:
     raw = yaml.safe_load(DEMO.read_text())
     raw["destinations"] = raw["destinations"][:destinations]
-    raw["modes"], raw["presets"] = ["walk", "bike"], {"walk": ["legacy"], "bike": ["legacy"]}
+    raw["modes"], raw["presets"] = ["walk", "bike"], {"walk": ["shortest"], "bike": ["shortest"]}
     path = folder / "study.yaml"
     path.write_text(yaml.safe_dump(raw))
     cli.build(config.load(path), folder / "out")
@@ -41,7 +41,7 @@ def test_the_lists_add_up_every_destination(out: Path) -> None:
     ids = ["school", "downtown"]
     for mode in ("walk", "bike"):
         together = gpd.read_parquet(
-            out / ALL_DESTINATIONS / f"{mode}-legacy" / "exposure_streets.parquet"
+            out / ALL_DESTINATIONS / f"{mode}-shortest" / "exposure_streets.parquet"
         )
         assert list(together.columns) == STREET_COLUMNS
         assert len(together)
@@ -50,7 +50,7 @@ def test_the_lists_add_up_every_destination(out: Path) -> None:
             assert set(people) <= set(ids)
             assert sum(people.values()) == pytest.approx(total)
         # A destination's own list says nothing about others.
-        alone = gpd.read_parquet(out / "school" / f"{mode}-legacy" / "exposure_streets.parquet")
+        alone = gpd.read_parquet(out / "school" / f"{mode}-shortest" / "exposure_streets.parquet")
         assert alone.people_by_destination.eq("").all()
 
 
@@ -108,9 +108,9 @@ def test_a_sliver_from_a_destination_is_not_shown_as_none() -> None:
 def test_a_destination_called_all_destinations_is_not_read_as_the_lists(tmp_path: Path) -> None:
     # Its own runs sit where the lists would; the run then writes no lists (study.py).
     summary = pd.DataFrame(
-        {"destination_id": ["school", ALL_DESTINATIONS], "mode": "walk", "preset": "legacy"}
+        {"destination_id": ["school", ALL_DESTINATIONS], "mode": "walk", "preset": "shortest"}
     )
-    run = tmp_path / ALL_DESTINATIONS / "walk-legacy"
+    run = tmp_path / ALL_DESTINATIONS / "walk-shortest"
     listed = {run / "exposure_streets.parquet", run / "exposure_crossings.parquet"}
     assert tables.combined_blocks(tmp_path, summary, {}, listed) == []
     empty = gpd.GeoDataFrame(geometry=[], crs="EPSG:26910")
@@ -120,7 +120,7 @@ def test_a_destination_called_all_destinations_is_not_read_as_the_lists(tmp_path
 def test_the_run_records_and_prints_its_rules(tmp_path: Path) -> None:
     raw = yaml.safe_load(DEMO.read_text())
     raw["destinations"] = raw["destinations"][:1]
-    raw["modes"], raw["presets"] = ["bike"], {"bike": ["legacy"]}
+    raw["modes"], raw["presets"] = ["bike"], {"bike": ["shortest"]}
     raw["time_caps_min"] = {"bike": 15}
     raw["exposure"] = {"fix_first": {"min_points": 1, "busiest_share": 0.2}}
     path = tmp_path / "study.yaml"
