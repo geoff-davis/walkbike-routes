@@ -6,7 +6,7 @@
 
 ```bash
 uv sync --locked
-make hooks            # once per clone: commit and push hooks (prek)
+make hooks            # once per clone, from the main checkout only (see Gotchas)
 git fetch origin
 git log --oneline main..origin/main   # any output means local main is stale
 ```
@@ -164,6 +164,10 @@ or ambiguous identity.
 
 ## Gotchas
 
+- Run `make hooks` only in the main checkout, never in a worktree. The
+  hooks are shared by every worktree and record the path of the `prek` that
+  installed them; after that worktree was deleted, every commit failed with
+  `prek: not found`. In a worktree, run `uv sync --locked` and nothing else.
 - `validation/` is not in `make check`; it went stale unnoticed (an import
   through a module that did not export it, a test expecting a snap limit the
   core had dropped). CI now runs its type check and tests.
