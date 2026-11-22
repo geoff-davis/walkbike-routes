@@ -55,6 +55,7 @@ WGS84 = "EPSG:4326"
 CELL_M = 150.0  # catchment grid squares: coarse enough not to show single buildings
 TOP_SHARE = 0.10  # "busy": the top tenth of a run's streets with flow
 SCREEN_ROWS = 10
+JUNCTION_REACH_M = 1.0  # streets meeting at a junction end within this of its point
 OPENING_FLOW_SHARE = 0.05  # the opening view frames streets with this share of the top flow
 MARGIN_M = 400.0  # background streets drawn this far beyond the flows and homes
 STREET_CLASSES = {  # basemap line classes, most important first
@@ -358,7 +359,7 @@ def page_data(
                     for e, f in zip(used.physical_edge_id, used.potential_flow, strict=True)
                 ],
                 "cells": catchment(routes[run.id], cell_index),
-                "screen": _screen(run.folder / "screen.parquet", to_degrees, found),
+                "screen": _screen(run.folder / "screen.parquet", to_degrees, found, flows[run.id]),
                 **_exposure(run.folder, to_degrees, found),
             }
         )
@@ -643,8 +644,32 @@ def _entrances(
     return [list(p) for p in sorted(points)]
 
 
+def busiest_today(row: Mapping[Any, Any], flows: gpd.GeoDataFrame) -> float | None:
+    """The most flow today on any street of a ranked place, before the change.
+
+    A street section lists its own streets. A junction (``J:<node>``) has no
+    street of its own, so it takes the busiest street meeting at its point.
+    """
+    flow = flows.set_index(flows.physical_edge_id.astype(str)).potential_flow.astype(float)
+    ids = [i for i in str(row.get("physical_edge_ids") or "").split(";") if i]
+    known = [flow[i] for i in ids if i in flow.index]
+    geometry = row.get("geometry")
+    points = [
+        g
+        for g in getattr(geometry, "geoms", [geometry])
+        if g is not None and g.geom_type == "Point"
+    ]
+    for point in points if any(i.startswith("J:") for i in ids) else []:
+        near = flows.geometry.distance(point) <= JUNCTION_REACH_M
+        known.extend(flows.potential_flow[near].astype(float))
+    return max(known) if known else None
+
+
 def _screen(
-    path: Path, to_degrees: Transformer, found: Callable[[Path], bool]
+    path: Path,
+    to_degrees: Transformer,
+    found: Callable[[Path], bool],
+    flows: gpd.GeoDataFrame | None = None,
 ) -> list[dict[str, Any]]:
     if not found(path):
         return []
@@ -670,11 +695,17 @@ def _screen(
                 "counted_text": text.people(_finite(row["analyzed_weight"], 12)),
                 "share": _share(row["benefiting_weight"], row["analyzed_weight"]),
                 "part": _part_note(row),
+                "today_text": _today(row, flows),
                 "lines": [_line(p, to_degrees) for p in parts if p.geom_type != "Point"],
                 "points": [_line(p, to_degrees)[0] for p in points],
             }
         )
     return rows
+
+
+def _today(row: Mapping[Any, Any], flows: gpd.GeoDataFrame | None) -> str | None:
+    busiest = busiest_today(row, flows) if flows is not None else None
+    return text.people(busiest) if busiest is not None else None
 
 
 EXPOSURE_ROWS = 10

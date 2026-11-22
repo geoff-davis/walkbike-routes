@@ -184,7 +184,7 @@ function draw(){
     for(const i of ag.every)L_.polyline(D.edges.g[i],{renderer:overR,color:"#111",weight:7,opacity:.55}).bindPopup(()=>edgePopup(i)).addTo(agreeLayer);}
   if($("showoverlap").checked){const T={"top 1%":"#6b0f1a","top 5%":"#b5332e","top 10%":"#e8865a"};
     for(const [i,t] of D.overlap)L_.polyline(D.edges.g[i],{renderer:overR,color:T[t]||"#999",weight:8,opacity:.7}).bindPopup(()=>edgePopup(i)).addTo(overlapLayer);}
-  if($("showscreen").checked)for(const s of r.screen){const c=treatColour(s.treatment),pop=`<div class="pop"><h3>${s.rank}. ${esc(s.label)}</h3><div>${esc(s.treatment)}; helps ${esc(s.helped_text)} ${esc(r.flow_words)}; ${dec(s.minutes)} weighted route-cost minutes saved</div>${s.part?`<div class="note">${esc(s.part)}</div>`:""}</div>`;
+  if($("showscreen").checked)for(const s of r.screen){const c=treatColour(s.treatment),pop=`<div class="pop"><h3>${s.rank}. ${esc(s.label)}</h3><div>${esc(s.treatment)}; helps ${esc(s.helped_text)} ${esc(r.flow_words)}; ${dec(s.minutes)} weighted route-cost minutes saved</div>${s.today_text?`<div class="note">Busiest street here today: ${esc(s.today_text)} ${esc(r.flow_words)}. "Helps" counts everyone whose best route gets better, including people who would switch to it, so the two differ.</div>`:""}${s.part?`<div class="note">${esc(s.part)}</div>`:""}</div>`;
     for(const ln of s.lines)L_.polyline(ln,{pane:"screen",color:c,weight:4,opacity:.9,dashArray:"1 6",lineCap:"round"}).bindPopup(pop).addTo(screenLayer);
     for(const pt of s.points)L_.circleMarker(pt,{pane:"screen",radius:7,color:c,weight:3,fill:false}).bindPopup(pop).addTo(screenLayer);
     const mid=s.lines.length?s.lines[0][Math.floor(s.lines[0].length/2)]:s.points[0];if(!mid)continue;
