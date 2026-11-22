@@ -300,8 +300,32 @@ and appraisal", Transport Policy 17(5), 335-341, Table 2.
   ([defaults table](assumptions.md#cycling-on-furths-criteria-bikefurth)).
 - **Posted limit** stands in for Furth's prevailing speed.
 - **Not covered:** Furth's tables for right-turn lanes and unsignalised
-  crossings; "the crossing and signal waits above stand in for them".
+  crossings (Mekuria, Furth and Nixon 2012, Tables 5 and 6).
   "Frequently blocked" bike lanes are not detected.
+
+### Limitations
+
+`bike/furth` is kept as it is: Furth's published street ratings, with
+hand-set costs on top. It is not extended with improvements of our own.
+Read its routes with these limits in mind:
+
+- **Intersections cost nothing but signal waits.** Furth's criteria rate
+  street segments. The published crossing table is not implemented, and the
+  preset's 15 s and 30 s crossing costs only apply to separate crossing
+  links, which OpenStreetMap input creates only for signalised crosswalks.
+  So a route can cross a 20,000-a-day road with no signal at no extra cost.
+  The Broach presets do charge for this, and for left and right turns.
+- **No turn cost.** Nothing discourages a zig-zag through quiet side
+  streets. In Philadelphia it made 3.12 turns per km, against riders' 1.11.
+- **The step from rating to cost is a judgment.** The 1, 1.25, 3 and 8
+  multipliers are not Furth's and were not fitted, and LTS 4 at 8 times
+  pushes routes hard onto low-stress streets (64% of length, against
+  riders' 41%).
+- **Defaults lean stressful**, so streets OpenStreetMap says little about
+  are often rated worse than they are.
+
+Use it as a stress-avoiding contrast to the Broach presets, not as a
+prediction of where people ride.
 
 ### Validation
 
