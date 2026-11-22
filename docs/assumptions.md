@@ -447,7 +447,8 @@ from them. The journal version (Transportation Research Part A 46(10),
   per-mile count (b is the term's coefficient, b_d the distance
   coefficient). This first-order form is exact for small shares and counts.
   It understates a route that is mostly steep or busy, because the model is
-  exponential in them. The extra distance is costed at 10 mph.
+  exponential in them. The extra distance is costed at the preset's flat
+  speed (10 mph, or 6 mph in `bike/broach-2011-child`).
 - **What the terms are worth** on everyday trips, as extra distance:
 
   | Term | Everyday | Commute |
