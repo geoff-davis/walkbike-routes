@@ -25,9 +25,9 @@ from walkbike_routes.network.pedestrian import PedestrianProfile
 from walkbike_routes.network.signals import ARTERIALS
 
 MPH = 0.44704
-# Profiles made up for these tests, routed by generalized cost.  No shipped
-# preset leaves streets out: "cautious" leaves out links with no sidewalk
-# evidence on busier streets, or with a known poor one.  "flat" is bike/furth's
+# Profiles made up for these tests, routed by generalized cost.  "cautious"
+# charges the default factors for unknown or poor sidewalk evidence (x5 on a
+# major road), where walk/shortest charges nothing.  "flat" is bike/furth's
 # cost on the default stress levels, without hills, so that two streets of the
 # same length and stress take the same time.
 MADE_UP: dict[str, BicycleProfile | PedestrianProfile] = {
@@ -173,14 +173,16 @@ def test_stress_aware_cyclists_keep_off_the_arterials(
     assert aware.sum() >= shortest.sum()  # calmer routes are no shorter
 
 
-def test_walkers_never_use_the_arterial_stretch_with_no_sidewalk(
+def test_walkers_avoid_the_arterial_stretch_with_no_sidewalk_but_may_use_it(
     town: demo.Town, edges: gpd.GeoDataFrame
 ) -> None:
     routes, links, _, _ = _to_school(edges, town, "walk", "cautious")
     no_sidewalk = set(edges.physical_edge_id[edges.pedestrian_status.eq("problematic")])
-    assert no_sidewalk and not no_sidewalk & set(links.physical_edge_id)
+    kept = links[links.physical_edge_id.isin(no_sidewalk)]
+    assert no_sidewalk and set(kept.physical_edge_id) == no_sidewalk  # a penalty, not a ban
+    assert (kept.generalized_cost_s > 1.2 * kept.movement_time_s).all()
     used = {e for ids in routes.physical_edge_ids.astype(str) for e in ids.split(";") if e}
-    assert used and not used & no_sidewalk
+    assert used and not used & no_sidewalk  # the penalty steers routes around it
     assert routes.route_reachable.all()
 
 

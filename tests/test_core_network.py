@@ -123,19 +123,22 @@ def test_bicycle_crossing_cost_is_separate_and_evidence_sensitive() -> None:
     assert controlled.crossing_cost_s.eq(0.0).all()
 
 
-def test_pedestrian_policy_includes_supported_and_configured_unknown_links() -> None:
+def test_pedestrian_links_keep_unknown_and_poor_evidence_at_a_cost() -> None:
     edges = _classified_edges()
     unknown_index = edges.index[edges.edge_id.eq("north_w_m")][0]
     edges.loc[unknown_index, "pedestrian_status"] = "unknown"
-    realistic = build_pedestrian_links(
+    poor_index = edges.index[edges.edge_id.eq("maple_w_m")][0]
+    edges.loc[poor_index, "pedestrian_status"] = "problematic"
+    links = build_pedestrian_links(
         edges,
-        PedestrianProfile("realistic", allow_unknown_local=True),
+        PedestrianProfile("default"),
         evidence_source="fixture",
         evidence_confidence="high",
     )
-    unknown = realistic[realistic.physical_edge_id.eq("north_w_m")].iloc[0]
-    assert unknown.facility_cost_s > 0
-    assert "maple_w_m" not in set(realistic.physical_edge_id)
+    walkable = set(edges.edge_id[edges.ped_allowed.fillna(True).astype(bool)].astype(str))
+    assert set(links.physical_edge_id) == walkable  # no evidence leaves a link out
+    for edge_id in ("north_w_m", "maple_w_m"):
+        assert links[links.physical_edge_id.eq(edge_id)].facility_cost_s.gt(0).all()
 
 
 def test_signal_waits_charge_once_per_crossing_or_divided_intersection() -> None:
@@ -378,22 +381,13 @@ def test_roundabouts_without_oneway_tags_are_one_way_for_every_mode() -> None:
     assert arcs[arcs.edge_id.eq("circle")].arc_id.tolist() == ["circle:f"]
 
 
-def test_unknown_sidewalk_collectors_need_their_own_switch() -> None:
+def test_unknown_sidewalk_collectors_cost_their_own_factor() -> None:
     edges = _classified_edges()
     tertiary = edges[edges.highway.eq("tertiary")].copy()
     assert not tertiary.empty
     tertiary["pedestrian_status"] = "unknown"
 
-    cautious = build_pedestrian_links(
-        tertiary,
-        PedestrianProfile("cautious", allow_unknown_local=True, allow_unknown_major=False),
-    )
-    assert cautious.empty
-
-    with_collectors = build_pedestrian_links(
-        tertiary,
-        PedestrianProfile("collectors", allow_unknown_collector=True),
-    )
+    with_collectors = build_pedestrian_links(tertiary, PedestrianProfile("collectors"))
     assert set(with_collectors.physical_edge_id) == set(tertiary.edge_id.astype(str))
     expected_factor = PedestrianProfile("collectors").unknown_collector_factor
     assert (

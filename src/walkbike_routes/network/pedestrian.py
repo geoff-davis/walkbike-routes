@@ -55,13 +55,15 @@ def crossing_markings_indicate_unmarked(value: Any) -> bool:
 
 @dataclass(frozen=True)
 class PedestrianProfile:
-    """Pedestrian speed and facility-evidence disutility."""
+    """Pedestrian speed and facility-evidence disutility.
+
+    Every walkable link is kept.  A link with unknown sidewalk or crossing
+    evidence, or a sidewalk or crossing known to be poor, costs its time
+    multiplied by its road class's factor: a penalty, never a ban.
+    """
 
     profile_id: str
     speed_mph: float = WALK_SPEED_MPH
-    allow_unknown_local: bool = True
-    allow_unknown_collector: bool = False
-    allow_unknown_major: bool = False
     unknown_local_factor: float = 1.25
     unknown_collector_factor: float = 2.0
     unknown_other_factor: float = 2.0
@@ -72,9 +74,6 @@ class PedestrianProfile:
     # Waits across and along a main road at its signals; None uses signal_wait_s.
     signal_wait_cross_arterial_s: float | None = None
     signal_wait_along_arterial_s: float | None = None
-    # Charge links with a known missing sidewalk or poor crossing their class's
-    # unknown factor, instead of leaving them out.
-    allow_problematic: bool = False
 
     def signal_wait(self, kind: str) -> float:
         """The wait for a :class:`SignalWait` kind."""
@@ -149,36 +148,23 @@ def pedestrian_status(edge: dict[str, Any]) -> tuple[str, str]:
     return "unknown", "no complete sidewalk evidence"
 
 
-def evidence_factor(profile: PedestrianProfile, status: str, highway: str) -> float | None:
-    """Return the distance factor for a link, or ``None`` when the profile excludes it.
+def evidence_factor(profile: PedestrianProfile, status: str, highway: str) -> float:
+    """Return the distance factor for a link: 1 with good evidence, else its class's factor.
 
-    Unknown-sidewalk roadways are gated by class: quiet local streets,
-    tertiary collectors, and major roads each have their own switch, so a
-    profile that admits local streets does not silently admit collectors.
-    Paths, crossings, and unrecognized classes with unknown evidence follow the
-    local switch at the ``unknown_other_factor``.  Problematic links (a
-    sidewalk known to be missing) are left out unless ``allow_problematic``,
-    when they cost their class's unknown factor whatever the switches.
+    Unknown evidence and poor evidence (a sidewalk known to be missing, an
+    unmarked crossing) cost the same factor for the link's road class: quiet
+    local streets, tertiary collectors, major roads, or anything else such as
+    paths and crossings.  No link is left out for its evidence.
     """
     if status == "supported":
         return 1.0
-    if status == "problematic":
-        if not profile.allow_problematic:
-            return None
-        if highway in LOCAL_HIGHWAYS:
-            return profile.unknown_local_factor
-        if highway in COLLECTOR_HIGHWAYS:
-            return profile.unknown_collector_factor
-        if highway in MAJOR_HIGHWAYS:
-            return profile.unknown_major_factor
-        return profile.unknown_other_factor
     if highway in LOCAL_HIGHWAYS:
-        return profile.unknown_local_factor if profile.allow_unknown_local else None
+        return profile.unknown_local_factor
     if highway in COLLECTOR_HIGHWAYS:
-        return profile.unknown_collector_factor if profile.allow_unknown_collector else None
+        return profile.unknown_collector_factor
     if highway in MAJOR_HIGHWAYS:
-        return profile.unknown_major_factor if profile.allow_unknown_major else None
-    return profile.unknown_other_factor if profile.allow_unknown_local else None
+        return profile.unknown_major_factor
+    return profile.unknown_other_factor
 
 
 def _no_crossing(edge: Any) -> bool:
@@ -216,8 +202,6 @@ def build_pedestrian_links(
         status = str(getattr(edge, "pedestrian_status", "unknown"))
         highway = str(getattr(edge, "highway", ""))
         factor = evidence_factor(profile, status, highway)
-        if factor is None:
-            continue
         flat_time = float(str(edge.length_m)) / speed_mps
         grade = float(getattr(edge, "grade", math.nan)) if profile.grade_speeds else math.nan
         # Walking time each way: the grade is u to v, so the reverse walk sees -grade.

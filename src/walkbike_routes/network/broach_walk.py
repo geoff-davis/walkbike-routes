@@ -202,9 +202,6 @@ class WalkBroachProfile:
         return PedestrianProfile(
             self.profile_id,
             speed_mph=self.speed_mph,
-            allow_unknown_local=True,
-            allow_unknown_collector=True,
-            allow_unknown_major=True,
             unknown_local_factor=1.0,
             unknown_collector_factor=1.0,
             unknown_other_factor=1.0,
@@ -213,7 +210,6 @@ class WalkBroachProfile:
             signal_wait_cross_arterial_s=self.signal_wait_cross_arterial_s,
             signal_wait_along_arterial_s=self.signal_wait_along_arterial_s,
             grade_speeds=self.grade_speeds,
-            allow_problematic=True,
         )
 
 

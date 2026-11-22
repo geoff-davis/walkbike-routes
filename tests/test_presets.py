@@ -36,8 +36,9 @@ def test_the_presets_carry_their_settings() -> None:
     assert presets.load("bike", "shortest").objective == "physical_length_m"
     walk = presets.load("walk", "shortest").profile()
     assert isinstance(walk, PedestrianProfile)
-    assert walk.allow_unknown_major and walk.allow_problematic and walk.signal_wait_s == 30
+    assert walk.signal_wait_s == 30
     assert evidence_factor(walk, "unknown", "primary") == 1.0
+    assert evidence_factor(walk, "problematic", "primary") == 1.0
     assert presets.load("walk", "shortest").objective == "physical_length_m"
     car = presets.load("car", "central").profile()
     assert isinstance(car, MotorPenaltyProfile)
@@ -56,18 +57,16 @@ def test_no_preset_walks_across_where_crossing_is_not_allowed() -> None:
     records = [{str(k): v for k, v in e.items()} for e in edges.to_dict("records")]
     edges["pedestrian_status"] = [pedestrian_status(e)[0] for e in records]
     assert edges.pedestrian_status.tolist()[:2] == ["problematic", "problematic"]
-    # A path along the street tagged crossing=no is kept: walking along it is allowed.
+    # A path along the street tagged crossing=no is kept: walking along it is
+    # allowed.  The unmarked crossing is kept too, at a cost: poor evidence is
+    # a penalty, never a ban.
     shortest = presets.load("walk", "shortest").profile()
     assert isinstance(shortest, PedestrianProfile)
     assert set(build_pedestrian_links(edges, shortest).physical_edge_id) == {"y", "z", "w"}
-    # A profile that leaves out poor crossings drops the unmarked one too.
-    cautious = PedestrianProfile("cautious")
-    assert set(build_pedestrian_links(edges, cautious).physical_edge_id) == {"z", "w"}
-
-
-def test_the_new_switch_does_not_move_positional_settings() -> None:
-    profile = PedestrianProfile("p", 3, True, False, False, 1.25, 2, 2, 5, 10)
-    assert profile.signal_wait_s == 10 and not profile.allow_problematic
+    links = build_pedestrian_links(edges, PedestrianProfile("default"))
+    assert set(links.physical_edge_id) == {"y", "z", "w"}
+    unmarked = links[links.physical_edge_id.eq("y")]
+    assert unmarked.facility_cost_s.gt(0).all()
 
 
 def test_an_unknown_preset_is_refused_with_the_choices() -> None:
