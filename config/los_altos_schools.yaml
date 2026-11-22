@@ -1,17 +1,23 @@
-# Three Los Altos schools, from public data only (OpenStreetMap, Census,
-# Overture, USGS): Almond Elementary, Egan Junior High and Los Altos High.
-# Entrances are each campus's gates, reviewed against maps and local
-# knowledge; each school has the age group that attends it.
+# Los Altos schools, from public data only (OpenStreetMap, Census, Overture,
+# USGS): every Los Altos School District elementary and junior high school,
+# Los Altos High and Mountain View High. Each school has the age group that
+# attends it.
 #
-# Every home within reach counts toward every school. To count only a
-# school's attendance area and draw it on the map, add `outline:` (here or in
-# the private los_altos_schools.local.yaml, under `outlines:`); with
-# `limits: false` it is only drawn. Attendance boundaries are not distributed here.
+# Entrances: Almond, Egan and Los Altos High's are each campus's gates,
+# reviewed against maps and local knowledge. The others start from the gates
+# OpenStreetMap shows (only Gardner Bullis and Mountain View High have any)
+# and otherwise from the district's school point; they still need review.
+#
+# Elementary and junior high schools count only their attendance areas: add
+# `outline:` (here or in the private los_altos_schools.local.yaml, under
+# `outlines:`); with `limits: false` it is only drawn. Attendance boundaries are
+# not distributed here. The two high schools' areas are not published, so
+# `nearest: high` gives each home to the high school nearest it by street.
 study: Los Altos schools
 area:
   source: place
   place: Los Altos, California
-  buffer_m: 3000
+  buffer_m: 5000  # wide enough for Mountain View High's side of the split
 destinations:
   - id: almond
     name: Almond Elementary School
@@ -54,6 +60,69 @@ destinations:
       - [-122.110630, 37.385073]  # Almond Avenue, west
       - [-122.109473, 37.385074]  # Almond Avenue, central
       - [-122.107386, 37.385073]  # Almond Avenue at Gordon Way
+    nearest: high
+  - id: covington
+    name: Covington Elementary School
+    kind: point
+    purpose: school
+    location: [-122.106686, 37.371568]  # district school point
+    min_age: 4  # TK to grade 6
+    max_age: 11
+  - id: gardner-bullis
+    name: Gardner Bullis Elementary School
+    kind: point
+    purpose: school
+    location: [-122.130495, 37.380672]  # district school point
+    min_age: 4  # TK to grade 6
+    max_age: 11
+    access_points:
+      - [-122.130807, 37.381110]  # gate (OpenStreetMap)
+  - id: loyola
+    name: Loyola Elementary School
+    kind: point
+    purpose: school
+    location: [-122.092601, 37.360491]  # district school point
+    min_age: 4  # TK to grade 6
+    max_age: 11
+  - id: oak
+    name: Oak Avenue Elementary School
+    kind: point
+    purpose: school
+    location: [-122.071475, 37.357785]  # district school point
+    min_age: 4  # TK to grade 6
+    max_age: 11
+  - id: santa-rita
+    name: Santa Rita Elementary School
+    kind: point
+    purpose: school
+    location: [-122.122977, 37.393648]  # district school point
+    min_age: 4  # TK to grade 6
+    max_age: 11
+  - id: springer
+    name: Springer Elementary School
+    kind: point
+    purpose: school
+    location: [-122.094491, 37.372017]  # district school point
+    min_age: 4  # TK to grade 6
+    max_age: 11
+  - id: blach
+    name: Georgina P. Blach Junior High School
+    kind: point
+    purpose: school
+    location: [-122.081586, 37.363787]  # district school point
+    min_age: 12  # grades 7 and 8
+    max_age: 13
+  - id: mvhs
+    name: Mountain View High School
+    kind: point
+    purpose: school
+    location: [-122.068320, 37.360025]  # district school point
+    min_age: 14  # grades 9 to 12
+    max_age: 17
+    access_points:
+      - [-122.068605, 37.361074]  # gate (OpenStreetMap)
+      - [-122.067466, 37.359144]  # gate (OpenStreetMap)
+    nearest: high
 modes: [walk, bike, car]
 presets:
   walk: [broach-2016-child, broach-2016, broach-2016-sidewalks, shortest]
