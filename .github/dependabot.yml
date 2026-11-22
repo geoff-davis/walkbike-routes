@@ -1,0 +1,24 @@
+# Weekly grouped updates. Watching github-actions keeps the exact-tag pins in
+# ci.yml current. The hook revs in .pre-commit-config.yaml (pre-commit-hooks,
+# markdownlint-cli2) are not seen by Dependabot; update them with
+# `uv run prek autoupdate`.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # An application: uv.lock and pyproject.toml are updated together.
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      python:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]  # majors arrive as separate PRs

@@ -6,7 +6,7 @@ is kept apart from the package while it is an experiment: it imports
 deleted without touching anything else. `make check` does not cover it; run
 `make validation-check` (lint, types and its own tests).
 
-```
+```text
 validation/
   run.py           the command line (python validation/run.py --help)
   wbvalidate/      the checks
@@ -20,7 +20,7 @@ Results of the Philadelphia run are in [RESULTS.md](RESULTS.md).
 
 ### Routes against recorded trips (`routes`)
 
-```
+```bash
 uv run --locked python validation/run.py routes \
     --config validation/config/philadelphia_core.yaml --out <run> --traces cyclephilly
 ```
@@ -70,7 +70,7 @@ Philadelphia's.
 
 ### Flows against counts (`counts`)
 
-```
+```bash
 uv run --locked python validation/run.py counts --out <run> --counts dvrpc \
     --within validation/config/philadelphia_core.geojson
 ```
@@ -98,7 +98,7 @@ Nothing is fitted to the trips or the counts in either check.
 University City and South Philadelphia with a 3 km buffer. Run it with the
 package as usual:
 
-```
+```bash
 uv run --locked walkbike-routes run --config validation/config/philadelphia_core.yaml \
     --out output/philadelphia_core --no-map
 ```

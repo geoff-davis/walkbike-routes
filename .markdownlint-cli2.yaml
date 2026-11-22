@@ -1,0 +1,6 @@
+config:
+  MD013: false          # prose is wrapped by hand; tables and URLs cannot be
+  MD024:
+    siblings_only: true
+  MD033: false          # a few docs use HTML (images, details)
+  MD060: false          # tables are written compactly (|---|)

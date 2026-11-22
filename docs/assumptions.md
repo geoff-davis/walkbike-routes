@@ -404,7 +404,7 @@ for walking, crossing links where crossing is not allowed.
   the adult penalty on levels 3 and 4. The levels are Mekuria, Furth and
   Nixon's (2012), and Furth describes level 1 as suitable for children
   (Level of Traffic Stress page,
-  https://peterfurth.sites.northeastern.edu/level-of-traffic-stress/), so
+  <https://peterfurth.sites.northeastern.edu/level-of-traffic-stress/>), so
   only level 1 keeps the adult factor; the factors are judgments. Crossing costs and signal waits are as for
   adults.
 - **Walking without sidewalks** multiplies distance, on links with unknown
