@@ -120,19 +120,27 @@ The time cap still applies, as the farthest distance counted.
   way's height, links meeting their ends (the bare-earth model can put a
   bridge's end below its deck), and links shorter than 10 m, where small elevation errors
   make steep false grades, have no grade. Grades are capped at 30%. A link
-  over a crest counts only its net rise. The `legacy-hills`, `child` and
-  `bike/furth` presets use grade only for speed. The Broach presets add
+  over a crest counts only its net rise. `bike/furth` uses grade only for
+  speed. The Broach presets add
   their models' climbing terms to route choice; travel time ignores grade
   in the cycling ones and slows on hills in `walk/broach-2016`.
 
-## Walking (`walk/legacy`, `walk/legacy-hills`, `walk/shortest`)
+## Walking: speed, waits and sidewalks (`walk/shortest`)
 
-Hand-set for a Los Altos downtown access study, and not estimated from
-observed route choice.
+Travel time on foot, for every walking preset, and the route for
+`walk/shortest`. The values were hand-set for a Los Altos downtown access
+study (the old study), and not estimated from observed route choice. The
+Broach walking presets take their route cost from their model (below) and
+these values for travel time only.
 
-- **Speed: 3.0 mph** on the flat. Hand-set.
-- **Hills** (`walk/legacy-hills` only; otherwise the same as `walk/legacy`).
-  Speed is multiplied by Tobler's hiking function as a ratio to its flat
+- **`walk/shortest`** is a baseline for comparison, not a model of
+  walking. It takes the shortest route by distance over every walkable link,
+  whatever its sidewalk evidence; speed and signal waits set travel times
+  but not the route. It is the walking counterpart of `bike/shortest`.
+- **Speed: 3.0 mph** on the flat (2.5 mph in `walk/broach-2016-child`).
+  Hand-set.
+- **Hills** (the Broach walking presets; `walk/shortest` walks at the flat
+  speed). Speed is multiplied by Tobler's hiking function as a ratio to its flat
   value, exp(−3.5 (|g + 0.05| − 0.05)) for grade g (Tobler, W. 1993, "Three
   presentations on geographical analysis and modeling", National Center for
   Geographic Information and Analysis Technical Report 93-1, fitted to
@@ -189,40 +197,37 @@ observed route choice.
   whose own lines had no sidewalk tag, among them Almond Avenue and North
   San Antonio Road, which the walking screens had ranked first for a
   sidewalk they already have.
-- **Sidewalk evidence.** Distance multipliers:
-  - mapped sidewalk, local layer or path: × 1;
-  - local street with unknown sidewalks: × 1.25;
-  - other link with unknown sidewalks: × 2.
-- **Links the preset removes.** It does not penalise these; it leaves them
-  out of the walking network:
-  - collector (tertiary) and major streets with unknown sidewalks;
-  - primary, secondary or tertiary streets that OSM tags as having no
-    sidewalk;
-  - crossings mapped as unmarked or uncontrolled.
-
-  With OpenStreetMap input only signalised crosswalks become crossing
-  links, so the third case does not occur. This is the old
-  study's rule, kept so the port reproduces its results. It goes against the
-  plan that presets penalise stressful links and never remove them; the
-  literature presets will penalise instead.
-- **`walk/shortest`** is a baseline for comparison, not a model of
-  walking. It takes the shortest route by distance over every walkable link,
-  including those `walk/legacy` leaves out for missing or unknown sidewalks,
-  with the same speed and signal waits, which set travel times but not the
-  route. It is the walking counterpart of `bike/shortest`.
+- **Sidewalk evidence.** Each link is supported (mapped sidewalk, local
+  layer or path), unknown, or problematic (a street a local layer records
+  as having no sidewalk, a primary, secondary or tertiary road
+  OpenStreetMap tags as having none, or a crossing mapped as unmarked or
+  uncontrolled). `walk/shortest` ignores it. A preset of the
+  `pedestrian_evidence` kind can multiply distance by it, by road class, or
+  leave unknown and problematic links out; no shipped preset does. The
+  Broach presets with a sidewalk term read it (below).
 - **Crossing links recorded as `crossing=no`** (from local data) are left
-  out by every walking preset, `walk/child` included: the tag means crossing
+  out by every walking preset: the tag means crossing
   is not allowed there, which is no matter of stress. From OpenStreetMap a
   crossing way without a signal, whatever its `crossing` tag, becomes an
   ordinary path, as above.
 
-## Cycling (`bike/legacy`, `bike/shortest`, `bike/legacy-hills`)
+## Cycling: speed, waits and traffic stress (`bike/shortest`)
 
-Hand-set for the same study, and not estimated from observed route choice.
+Travel time by bike, for every cycling preset, the traffic stress levels
+every street gets, and the route for `bike/shortest`. The values were
+hand-set for the same study, and not estimated from observed route choice.
+`bike/furth` routes on these with Furth's stress levels (below); the Broach
+cycling presets take their route cost from their model and these values for
+travel time only.
 
-- **Speed: 10 mph** on the flat. Hand-set.
-- **Hills** (`bike/legacy-hills` only; otherwise the same as
-  `bike/legacy`). Speed is multiplied by the ratio of Parkin and
+- **`bike/shortest`** is a baseline for comparison, not a model of how
+  people ride: every link a bike may use counts at its length, whatever its
+  traffic stress. Speed and signal waits set travel times but not the
+  route.
+- **Speed: 10 mph** on the flat (6 mph in `bike/broach-2011-child`).
+  Hand-set.
+- **Hills** (`bike/furth` only; elsewhere riders keep the flat speed).
+  Speed is multiplied by the ratio of Parkin and
   Rotheram's speed on the grade to their speed on the flat (Parkin, J. and
   Rotheram, J. 2010, "Design speeds and acceleration characteristics of
   bicycle traffic for use in planning, design and appraisal", Transport
@@ -251,8 +256,9 @@ Hand-set for the same study, and not estimated from observed route choice.
   pays nothing; charging exactly needs costs per turn, which only the
   Broach presets use so far. The same holds for walkers arriving along a
   road at a crosswalk's end.
-- **Traffic stress (LTS 1–4).** The rules are simplified from Mekuria, Furth
-  and Nixon (2012):
+- **Traffic stress (LTS 1–4).** Every street gets a level, `lts_best`,
+  which the reports' stress screens read. The rules are simplified from
+  Mekuria, Furth and Nixon (2012):
   - **LTS 1:** separated tracks and paths, and streets at 25 mph or less with
     2 lanes or fewer and low traffic;
   - **LTS 2:** bike lanes at 30 mph or less, 3 lanes or fewer and no more
@@ -307,17 +313,18 @@ Hand-set for the same study, and not estimated from observed route choice.
 - **Missing speed and lanes.** Defaults by road class (`ROAD_DEFAULTS` in
   `network/bicycle.py`): residential streets 25 mph with 2 lanes; primary
   streets 35 mph with 4 lanes.
-- **Stress multipliers.** Distance × 1, 1.25, 3 or 8 for LTS 1 to 4.
-  Hand-set, using LTS as the scale. `shortest` uses × 1 throughout,
-  as a shortest-distance comparison.
-- **Crossing penalties.** The preset sets 15 s at a crossing of unknown
+- **Stress multipliers** (`bike/furth`). Distance × 1, 1.25, 3 or 8 for
+  LTS 1 to 4. Hand-set, using LTS as the scale. `shortest` uses × 1
+  throughout, as a shortest-distance comparison.
+- **Crossing penalties** (`bike/furth`). The preset sets 15 s at a crossing of unknown
   control and 30 s at an uncontrolled one. They apply only to crossing
   links. With OpenStreetMap input only signalised crosswalks become crossing
   links, and those cost nothing extra, so these are never charged.
 
 ## Cycling on Furth's criteria (`bike/furth`)
 
-As `bike/legacy-hills`, but traffic stress levels come from Furth's
+Speed, hills, signal waits, stress multipliers and crossing penalties are
+as in the cycling section above, but traffic stress levels come from Furth's
 "Level of Traffic Stress Criteria for Road Segments", version 2.2 (May
 2022), the current version of the tables
 ([PDF](https://peterfurth.sites.northeastern.edu/files/2014/05/LTS-Tables-v2.2.pdf)).
@@ -339,7 +346,7 @@ Every street gets both levels: `lts_best` (the rules above) and
 - **Tracks and paths** are LTS 1, as in the original criteria.
 - **Shoulders** use the bike-lane table, without parking, where their width
   is tagged and at least 4 ft; otherwise the street is mixed traffic. The
-  legacy rules ignore shoulders.
+  `lts_best` rules ignore shoulders.
 - **Speed.** The posted limit stands in for Furth's prevailing speed.
 - **Not covered:** Furth's tables for right-turn lanes and unsignalised
   crossings (Mekuria, Furth and Nixon 2012, Tables 5 and 6; not updated
@@ -365,18 +372,17 @@ which lean to the more stressful reading:
 | One-way street width (`width`) | narrow |
 
 So an untagged residential street at 25 mph is LTS 1, and an uncounted
-tertiary road at 30 mph with a centre line is LTS 3 (the legacy rules give
-LTS 2). An untagged one-way street has half its class's default lanes, at
+tertiary road at 30 mph with a centre line is LTS 3 (the `lts_best` rules
+give LTS 2). An untagged one-way street has half its class's default lanes, at
 least one. A one-way carriageway of a divided road takes the whole road's
 count, so its stress is overstated. A contraflow bike lane is rated like any
 bike lane on the street, since one level serves both directions.
 
-## Children (`walk/child`, `bike/child`, `walk/broach-2016-child`, `bike/broach-2011-child`)
+## Children (`walk/broach-2016-child`, `bike/broach-2011-child`)
 
-No route-choice model estimated for children was found, so all four
-presets are assumptions: `walk/child` and `bike/child` are built on the
-legacy presets, and the `broach` child presets on the Portland models
-(see below). Children are taken to avoid
+No route-choice model estimated for children was found, so both presets
+are assumptions. `bike/broach-2011-child` and `walk/broach-2016-child` keep
+the adult Portland models (see their sections). Children are taken to avoid
 stressful streets more than adults do, but never to refuse them: no street
 is left out for stress, so a child still uses a short busy stretch when the
 way round is much longer. Mapped traffic stress and sidewalks can be out of
@@ -384,51 +390,23 @@ date, and a ban can cut a whole neighbourhood off. Access rules still
 apply: ways closed to walkers or bikes, one-way rules for bikes, and,
 for walking, crossing links where crossing is not allowed.
 
+The presets change three things, all judgments:
+
 - **Speeds** come from one GPS study of Dutch children aged 5 to 11 on
   school trips (Dessing, de Vries, Graham and Pierik 2014, BMC Public Health
   14, 227, Table 2). The averages were door to door, over short trips, with
   stops included:
-  - walking: 4.1 km/h on average over 357 m. `walk/child` uses 2.5 mph
-    (4.0 km/h), against 3 mph for adults;
-  - cycling: 6.8 km/h (4.2 mph) on average over 624 m. `bike/child` uses
-    6 mph, a judgment: waits at signals and crossings are modelled
-    separately, so the door-to-door figure would count them twice. Adults
-    use 10 mph.
+  - walking: 4.1 km/h on average over 357 m. `walk/broach-2016-child` uses
+    2.5 mph (4.0 km/h), against 3 mph for adults;
+  - cycling: 6.8 km/h (4.2 mph) on average over 624 m.
+    `bike/broach-2011-child` uses 6 mph, a judgment: waits at signals and
+    crossings are modelled separately, so the door-to-door figure would
+    count them twice. Adults use 10 mph.
 
   Older children ride and walk faster than this, so for a middle or high
   school the presets understate reach.
-- **Hills** slow both, as in the `legacy-hills` presets, as a ratio to the
-  flat speed. The grade relations come from adult data.
-- **Cycling stress** multiplies distance by 1, 1.5, 6 and 20 for traffic
-  stress levels 1 to 4, against 1, 1.25, 3 and 8 for adults: about twice
-  the adult penalty on levels 3 and 4. The levels are Mekuria, Furth and
-  Nixon's (2012), and Furth describes level 1 as suitable for children
-  (Level of Traffic Stress page,
-  <https://peterfurth.sites.northeastern.edu/level-of-traffic-stress/>), so
-  only level 1 keeps the adult factor; the factors are judgments. Crossing costs and signal waits are as for
-  adults.
-- **Walking without sidewalks** multiplies distance, on links with unknown
-  sidewalk or crossing evidence, by 1.5 on local streets, 4 on collectors
-  and on other links (for example a crossing of unknown control), and 12 on
-  major roads. Adults pay 1.25 on local streets and 2 on other links, and
-  leave collectors and major roads out. Mapped sidewalks and paths cost
-  × 1 for both.
-- **Problematic links**, which adults leave out, cost a child the same as
-  an unknown link of their class: a street a local survey records as
-  having no sidewalk, a primary, secondary or tertiary road OpenStreetMap
-  tags as having none, and a crossing mapped as unmarked or uncontrolled.
-  Many quiet residential streets have no sidewalk, and children do walk
-  them.
-
-### The Broach child presets
-
-`bike/broach-2011-child` and `walk/broach-2016-child` keep the adult
-Portland models (see their sections) and change three things, all
-judgments:
-
-- **Speeds** as above: 6 mph cycling, 2.5 mph walking.
-- **Stress terms doubled** (`stress_scale: 2`), as the legacy child presets
-  roughly double the adult penalties on stressful streets. Cycling: the
+- **Stress terms doubled** (`stress_scale: 2`), roughly twice the adult
+  penalties on stressful streets. Cycling: the
   terms for roads of 10k+ vehicles a day without a bike lane, and for turns
   and crossings without a signal. Walking: the busy-street term and the
   terms for crossings without a signal or marking. Distance, turns, hills
@@ -445,13 +423,12 @@ On the flat, a busy road without a sidewalk then costs a child walker
 about 2.3 times its length. The terms add, so a steep climb on such a road
 reaches about 3.3 times. That is in the range of the published adult
 models' largest terms: about 2 times for a steep climb walking, and about 3
-to 3.5 times cycling on a road of 30k+ vehicles a day or a climb over 6%. The legacy child presets go much further (12 times on a
-major road walking, 20 times on LTS 4 cycling); nothing published supports
-factors that large.
+to 3.5 times cycling on a road of 30k+ vehicles a day or a climb over 6%.
+Nothing published supports much larger factors.
 
 Cycling hills cost as in the model and do not slow the child, as for
 `bike/broach-2011`; walking hills slow travel time as for
-`walk/broach-2016`.
+`walk/broach-2016`. The grade relations come from adult data.
 
 ## Cycling: Broach, Gliebe and Dill (`bike/broach-2011`, `bike/broach-2011-commute`, `bike/broach-2011-lanes`)
 
@@ -575,8 +552,8 @@ from them. The journal version (Transportation Research Part A 46(10),
   the power −5.22 (−8.98 for commutes), relative to the others. The cost
   includes the ride to the network. The study's `route_choice` search
   limits still decide which routes are compared.
-- **Speed and waits** for travel time are as in `bike/legacy`. Hills do not
-  change speed here, because the climbing terms already include the time.
+- **Speed and waits** for travel time are as in the cycling section above
+  (10 mph; 40 s, 15 s or 20 s at signals). Hills do not change speed here, because the climbing terms already include the time.
 - **Where it may not transfer.** Portland had a dense network of low-traffic
   bike routes. The authors doubt the very large penalties for busy roads
   would hold in places with fewer alternatives; there, people may not ride
@@ -691,11 +668,11 @@ Mapping to OpenStreetMap, all assumptions:
 - **Sidewalks.** The paper tested missing sidewalks and found no effect,
   perhaps because the alleys and unpaved streets, which lack them, took it.
   So the preset charges nothing for sidewalk evidence, and walks streets
-  known to lack one; access rules still apply. The legacy presets still
-  weigh sidewalk evidence.
+  known to lack one; access rules still apply.
 - **Signals.** The model has no term for signal delay. Waits stay in travel
-  time, so time limits are as for `walk/legacy-hills`, but they are not in
-  the cost. Hills slow walking in travel time as in `walk/legacy-hills`;
+  time (50 s, 15 s or 30 s, as in the walking section above), so they
+  count toward time limits, but they are not in the cost. Hills slow
+  walking in travel time by Tobler's function, as in the walking section;
   the cost uses the model's climbing term instead.
 - **Screens.** The sidewalk screen marks sidewalks as present, which this
   model does not value, so it is not run for this preset. It is run for

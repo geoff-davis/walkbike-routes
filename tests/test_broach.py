@@ -527,12 +527,12 @@ def test_boulevards_are_read_from_osm() -> None:
 def test_a_study_runs_with_the_broach_preset(tmp_path: Path) -> None:
     raw: dict[str, Any] = copy.deepcopy(yaml.safe_load(DEMO.read_text()))
     raw["modes"] = ["bike"]
-    raw["presets"] = {"bike": ["broach-2011", "legacy"]}
+    raw["presets"] = {"bike": ["broach-2011", "furth"]}
     raw["time_caps_min"] = {"bike": 20}
     raw["route_choice"] = {"routes": 3}
     study.analyze(config.parse(raw, base=DEMO.parent), demo.build(), tmp_path)
     summary = pd.read_csv(tmp_path / "summary.csv")
-    assert set(summary.preset) >= {"broach-2011", "legacy"}
+    assert set(summary.preset) >= {"broach-2011", "furth"}
     shares = pd.read_parquet(tmp_path / "school" / "bike-broach-2011" / "route_shares.parquet")
     assert shares.groupby("origin_id").route_share.sum().to_numpy() == pytest.approx(1.0)
     assert (shares.route_rank > 1).any()

@@ -35,7 +35,7 @@ def _config(tmp_path: Path, **changes: Any) -> Path:
         "area": {"source": "demo"},
         "destinations": [],
         "modes": ["walk"],
-        "presets": {"walk": ["legacy"]},
+        "presets": {"walk": ["shortest"]},
         "time_caps_min": {"walk": 20},
         "demand": {"weight": "residents"},
         "network_flows": {"destinations": 3},
@@ -187,7 +187,7 @@ def test_flows_add_each_clusters_routes_at_its_gravity_share(
         gates=town.access_points.iloc[:0],
         out=tmp_path,
     )
-    preset = presets.load("walk", "legacy")
+    preset = presets.load("walk", "shortest")
     shares = []
     for row in clusters.itertuples(index=False):
         destination = config.Destination(id=str(row.destination_id), name="x", kind="point")
@@ -204,7 +204,7 @@ def test_flows_add_each_clusters_routes_at_its_gravity_share(
     for edges, weight in zip(every.physical_edge_ids, every.weight, strict=True):
         for edge in set(str(edges).split(";")) - {""}:
             expected[edge] = expected.get(edge, 0.0) + weight
-    flows = gpd.read_parquet(out / "network" / "walk-legacy" / "flows.parquet")
+    flows = gpd.read_parquet(out / "network" / "walk-shortest" / "flows.parquet")
     found = flows.set_index("physical_edge_id").potential_flow
     assert found[found.gt(0)].to_dict() == pytest.approx(expected)
     summary = pd.read_csv(out / "network" / "summary.csv").iloc[0]
@@ -220,9 +220,9 @@ def test_a_network_only_run_writes_no_maps_and_lists_its_files(
     out, _ = network_run
     manifest = json.loads((out / "manifest.json").read_text())
     for name in ("jobs.parquet", "network/destinations.parquet", "network/summary.csv",
-                 "network/walk-legacy/flows.parquet"):  # fmt: skip
+                 "network/walk-shortest/flows.parquet"):  # fmt: skip
         assert name in manifest["files"], name
-    assert not (out / "network" / "walk-legacy" / "by_destination").exists()
+    assert not (out / "network" / "walk-shortest" / "by_destination").exists()
     assert not (out / "report.md").exists()
     cli.main(["report", "--out", str(out)])  # nothing to draw, and no error
     assert not (out / "report.md").exists()
@@ -234,7 +234,7 @@ def test_workers_give_the_same_flows(tmp_path: Path) -> None:
         study = config.load(_config(tmp_path, network_flows=flows_settings))
         out = tmp_path / f"w{workers}"
         cli.build(study, out)
-        frame = gpd.read_parquet(out / "network" / "walk-legacy" / "flows.parquet")
+        frame = gpd.read_parquet(out / "network" / "walk-shortest" / "flows.parquet")
         return frame.set_index("physical_edge_id").potential_flow
 
     pd.testing.assert_series_equal(flows(1), flows(2))
@@ -246,8 +246,8 @@ def test_the_study_destinations_still_run_beside_the_network(tmp_path: Path) -> 
     )
     out = tmp_path / "out"
     cli.main(["run", "--config", str(path), "--out", str(out), "--no-map"])
-    assert (out / "school" / "walk-legacy" / "flows.parquet").exists()
-    assert (out / "network" / "walk-legacy" / "flows.parquet").exists()
+    assert (out / "school" / "walk-shortest" / "flows.parquet").exists()
+    assert (out / "network" / "walk-shortest" / "flows.parquet").exists()
     assert (out / "report.md").exists()
     assert not pd.read_csv(out / "summary.csv").destination_id.eq("network").any()
 
@@ -307,7 +307,7 @@ def test_a_real_study_may_have_no_destinations_of_its_own() -> None:
     study = config.parse(
         {
             "study": "x", "area": {"source": "place", "place": "Made-up, Nowhere"},
-            "destinations": [], "modes": ["walk"], "presets": {"walk": ["legacy"]},
+            "destinations": [], "modes": ["walk"], "presets": {"walk": ["shortest"]},
             "time_caps_min": {"walk": 20}, "demand": {"weight": "residents"},
             "network_flows": {},
         }
@@ -332,7 +332,7 @@ def test_a_cluster_far_from_the_streets_is_left_out_not_fatal(tmp_path: Path) ->
     network_flows.analyze(study, town, tmp_path)
     summary = pd.read_csv(tmp_path / "network" / "summary.csv").iloc[0]
     assert summary.destinations_too_far == 1 and summary.jobs_too_far == 5000
-    flows = gpd.read_parquet(tmp_path / "network" / "walk-legacy" / "flows.parquet")
+    flows = gpd.read_parquet(tmp_path / "network" / "walk-shortest" / "flows.parquet")
     assert flows.potential_flow.gt(0).any()
 
 

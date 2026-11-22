@@ -11,8 +11,12 @@ source: >-
   published version (Transportation Research Part A 46(10), 1730-1740,
   2012) was not available to check and may differ. Traffic volumes come
   from counts where matched, else road class; the bridge terms are not used (see
-  walkbike_routes.network.broach and docs/assumptions.md). Speed and signal
-  waits, for travel time only, are as in bike/legacy. Not in the paper:
+  walkbike_routes.network.broach and docs/assumptions.md). Speed (a flat 10 mph)
+  and signal waits are for travel time only. Signal waits across and along a main road (primary, trunk or
+  secondary) use the Highway Capacity Manual's average delay, (C - g)^2 /
+  2C, with an assumed 120 s cycle: crossing the main road, about 25 s of
+  side-street green gives 40 s (rounded up); along it, about 60 s gives
+  15 s; other signals 20 s. The timings are assumptions, not measured. Not in the paper:
   every bike lane and track also gets the model's bike boulevard term, an
   assumption added after CyclePhilly riders were seen to choose quiet streets
   with lanes, which the model values no more than quiet streets without

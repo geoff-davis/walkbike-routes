@@ -216,7 +216,7 @@ def test_routes_writes_the_report_from_a_run(tmp_path: Path) -> None:
     town.links.to_parquet(out / "links.parquet")
     town.nodes.to_parquet(out / "nodes.parquet")
     study_path = tmp_path / "study.yaml"
-    _study(tmp_path, ["legacy", "shortest"])  # writes study.yaml
+    _study(tmp_path, ["furth", "shortest"])  # writes study.yaml
     users = {f"t{i}": f"rider-{i % 3}" for i in range(6)}
     lines = {f"t{i}": STRAIGHT if i % 2 else DETOUR for i in range(6)}
     path = tmp_path / "trips.geojson"
@@ -233,7 +233,7 @@ def test_routes_writes_the_report_from_a_run(tmp_path: Path) -> None:
     assert "end moved more than 50 m to reach the network: none." in text
     streets = gpd.read_parquet(folder / "streets.parquet")
     # The three detours turn off E Street at once; both presets send all six trips along it.
-    assert streets[["ridden", "legacy", "shortest"]].max().tolist() == [3, 6, 6]
+    assert streets[["ridden", "furth", "shortest"]].max().tolist() == [3, 6, 6]
 
 
 def test_the_philadelphia_study_reads() -> None:

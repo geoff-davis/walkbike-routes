@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from dataclasses import replace
 
 import geopandas as gpd
 import numpy as np
@@ -20,6 +21,7 @@ from walkbike_routes.network import (
 )
 from walkbike_routes.network import osm_streets as o
 from walkbike_routes.network.bicycle import BicycleProfile
+from walkbike_routes.network.broach_walk import WalkBroachProfile
 from walkbike_routes.network.grade import GRADE_LIMIT, link_grades, parkin_factor, tobler_factor
 from walkbike_routes.network.pedestrian import PedestrianProfile
 from walkbike_routes.routing import measure_path
@@ -100,13 +102,14 @@ def test_the_hills_preset_slows_walks_to_the_demo_hilltop() -> None:
     town = demo.build()
     edges = prepare.physical_edges(town.links, town.nodes)
     assert edges.grade.notna().any() and edges.grade.abs().max() > 0.01
-    times = {}
-    for name in ("legacy", "legacy-hills"):
-        profile = presets.load("walk", name).profile()
-        assert isinstance(profile, PedestrianProfile)
-        links = build_pedestrian_links(edges, profile)
-        times[name] = links.movement_time_s.sum()
-    assert times["legacy-hills"] != pytest.approx(times["legacy"])
+    preset = presets.load("walk", "broach-2016").profile()
+    assert isinstance(preset, WalkBroachProfile) and preset.grade_speeds
+    hills = preset.timing()  # the profile that gives the preset's travel times
+    times = {
+        name: build_pedestrian_links(edges, profile).movement_time_s.sum()
+        for name, profile in (("hills", hills), ("flat", replace(hills, grade_speeds=False)))
+    }
+    assert times["hills"] != pytest.approx(times["flat"])
 
 
 def test_parkin_matches_the_papers_table_4_and_holds_beyond_its_data() -> None:

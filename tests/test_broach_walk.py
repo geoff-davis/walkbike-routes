@@ -438,12 +438,12 @@ def test_split_crossing_pieces_share_by_length() -> None:
 def test_a_study_runs_with_the_walking_preset(tmp_path: Path) -> None:
     raw: dict[str, Any] = copy.deepcopy(yaml.safe_load(DEMO.read_text()))
     raw["modes"] = ["walk"]
-    raw["presets"] = {"walk": ["broach-2016", "legacy"]}
+    raw["presets"] = {"walk": ["broach-2016", "shortest"]}
     raw["time_caps_min"] = {"walk": 20}
     raw["route_choice"] = {"routes": 3}
     study.analyze(config.parse(raw, base=DEMO.parent), demo.build(), tmp_path)
     summary = pd.read_csv(tmp_path / "summary.csv")
-    assert set(summary.preset) >= {"broach-2016", "legacy"}
+    assert set(summary.preset) >= {"broach-2016", "shortest"}
     folder = tmp_path / "school" / "walk-broach-2016"
     shares = pd.read_parquet(folder / "route_shares.parquet")
     assert shares.groupby("origin_id").route_share.sum().to_numpy() == pytest.approx(1.0)

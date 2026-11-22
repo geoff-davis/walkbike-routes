@@ -219,7 +219,7 @@ def _study(tmp_path: Path, **demand: Any) -> config.Study:
             {"id": "centre", "name": "Centre", "kind": "area", "boundary_file": "centre.geojson"},
         ],
         "modes": ["walk", "bike"],
-        "presets": {"walk": ["legacy"], "bike": ["legacy"]},
+        "presets": {"walk": ["shortest"], "bike": ["shortest"]},
         "time_caps_min": {"walk": 20, "bike": 15},
         "demand": demand or {"weight": "residents", "min_age": 5, "max_age": 11},
     }  # fmt: skip

@@ -23,7 +23,7 @@ SCHOOL = demo.node_id(9, 9)
 def setup() -> tuple[nx.Graph[str], pd.DataFrame, dict[str, tuple[str, ...]]]:
     town = demo.build()
     edges = prepare.physical_edges(town.links)
-    links = build_bicycle_links(edges, BicycleProfile("legacy"))
+    links = build_bicycle_links(edges, BicycleProfile("cyclist"))
     graph = routable_links_to_graph(links, directed=True)
     nodes = sorted(set(graph.nodes) - {SCHOOL})
     origins = pd.DataFrame({"node_id": nodes, "weight": 1.0, "access_time_s": 0.0})

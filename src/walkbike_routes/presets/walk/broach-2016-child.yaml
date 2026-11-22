@@ -10,7 +10,12 @@ source: >-
   roads without sidewalk evidence count as 2 times their length (1 + 2 x
   0.5, after Lue 2017, Toronto), and local streets, paths and crossings as
   1, since many quiet residential streets have no sidewalk and children
-  walk them. Flat speed 2.5 mph as in walk/child (Dessing et al. 2014). No
+  walk them. Flat speed 2.5 mph (4.0 km/h), after Dessing, D., de Vries, S. I.,
+  Graham, J. M. and Pierik, F. H. (2014), "Active transport between home and
+  school assessed with GPS: a cross-sectional study among Dutch elementary
+  school children", BMC Public Health 14, 227, Table 2: an average of
+  4.1 km/h on GPS-recorded walking trips of children aged 5 to 11, door to
+  door, so including some stops. No
   street is ruled out. The adult model:
   Broach, J. (2016), "Travel mode choice framework incorporating realistic
   bike and walk routes", PhD dissertation, Portland State University, Table
@@ -21,8 +26,16 @@ source: >-
   together term applies only with together: true. The model's expanded path
   size is approximated by the ordinary path size. The model has no sidewalk
   or signal-delay term (see walkbike_routes.network.broach_walk and
-  docs/assumptions.md). Walking speed, signal waits and slowing on hills,
-  for travel time only, are as in walk/legacy-hills.
+  docs/assumptions.md). Walking speed, signal waits and slowing on hills
+  are for travel time only. Signal waits across and along a main road (primary, trunk or
+  secondary) use the Highway Capacity Manual's average pedestrian delay,
+  (C - g)^2 / 2C, with an assumed 120 s cycle: crossing the main road,
+  about 11 s of usable walk time gives 50 s; along it, about 60 s gives
+  15 s; other signals 30 s. The timings are assumptions, not measured. On hills, walking speed changes with grade by Tobler's hiking
+  function (Tobler, W. 1993, "Three presentations on geographical analysis
+  and modeling", National Center for Geographic Information and Analysis
+  Technical Report 93-1), fitted to Eduard Imhof's Swiss walking data, as a
+  ratio to its flat speed.
 objective: generalized_cost_s
 parameters:
   together: false

@@ -45,7 +45,7 @@ def test_treatments_fix_only_what_they_can() -> None:
     treated = screens.treat_edges(furth, screens.BIKE_LANE).set_index("physical_edge_id")
     assert treated.lts_furth.to_dict() == {"busy": 1, "calm": 1, "freeway": 4}
     assert treated.lts_best.to_dict() == {"busy": 1, "calm": 2, "freeway": 4}
-    assert treated.bike_facility.to_dict()["calm"] != "track"  # facilities follow legacy
+    assert treated.bike_facility.to_dict()["calm"] != "track"  # facilities follow lts_best
     with pytest.raises(ValueError, match="no improvement treatment for car"):
         screens.treatments(Mode.CAR)
 

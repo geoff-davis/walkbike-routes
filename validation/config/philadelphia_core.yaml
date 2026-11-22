@@ -20,8 +20,8 @@ area:
 destinations: []
 modes: [walk, bike]
 presets:
-  walk: [legacy, broach-2016, shortest]
-  bike: [legacy, furth, broach-2011, broach-2011-lanes, shortest]
+  walk: [broach-2016, shortest]
+  bike: [furth, broach-2011, broach-2011-lanes, shortest]
 time_caps_min:
   walk: 30
   bike: 30

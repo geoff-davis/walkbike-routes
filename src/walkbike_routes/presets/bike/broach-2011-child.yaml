@@ -6,9 +6,15 @@ source: >-
   An assumption, not estimated from observed route choice: no route-choice
   model estimated for children was found. As bike/broach-2011, with its
   busy-traffic terms and its terms for turns and crossings without a signal
-  doubled (stress_scale 2), as bike/child roughly doubles the adult penalties
-  on stressful streets (after Mekuria, Furth and Nixon 2012), and a flat
-  speed of 6 mph as in bike/child (Dessing et al. 2014). No street is ruled
+  doubled (stress_scale 2), a judgment of roughly twice the adult penalty on
+  stressful streets, and a flat speed of 6 mph. The speed is a judgment:
+  Dessing, D., de Vries, S. I., Graham, J. M. and Pierik, F. H. (2014),
+  "Active transport between home and school assessed with GPS: a
+  cross-sectional study among Dutch elementary school children", BMC Public
+  Health 14, 227, Table 2, found an average of 6.8 km/h (4.2 mph) on
+  GPS-recorded cycling trips of children aged 5 to 11, but door to door over
+  short trips (624 m on average), with stops included; waits here are
+  modelled separately. No street is ruled
   out. A painted lane removes only a quarter of the busy-traffic term
   (lane_traffic_relief 0.25), where the adult model's lanes remove all of
   it: Copenhagen riders, a broader mix than Portland's, valued paint on a
@@ -25,7 +31,11 @@ source: >-
   2012) was not available to check and may differ. Traffic volumes come
   from counts where matched, else road class; the bridge terms are not used (see
   walkbike_routes.network.broach and docs/assumptions.md). Speed and signal
-  waits, for travel time only, are as in bike/legacy. Not in the paper: a protected lane
+  waits are for travel time only. Signal waits across and along a main road (primary, trunk or
+  secondary) use the Highway Capacity Manual's average delay, (C - g)^2 /
+  2C, with an assumed 120 s cycle: crossing the main road, about 25 s of
+  side-street green gives 40 s (rounded up); along it, about 60 s gives
+  15 s; other signals 20 s. The timings are assumptions, not measured. Not in the paper: a protected lane
   (separated track) removes the whole busy-traffic term and counts as 0.72
   times the same street with a painted lane that does the same, after Fosgerau, M., Łukawska, M., Paulsen, M. and Rasmussen, T. K.
   (2023), "Bikeability and the induced demand for cycling", PNAS 120(16),

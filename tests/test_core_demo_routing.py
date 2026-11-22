@@ -25,6 +25,30 @@ from walkbike_routes.network.pedestrian import PedestrianProfile
 from walkbike_routes.network.signals import ARTERIALS
 
 MPH = 0.44704
+# Profiles made up for these tests, routed by generalized cost.  No shipped
+# preset leaves streets out: "cautious" leaves out links with no sidewalk
+# evidence on busier streets, or with a known poor one.  "flat" is bike/furth's
+# cost on the default stress levels, without hills, so that two streets of the
+# same length and stress take the same time.
+MADE_UP: dict[str, BicycleProfile | PedestrianProfile] = {
+    "cautious": PedestrianProfile(
+        "cautious",
+        speed_mph=3.0,
+        signal_wait_s=30,
+        signal_wait_cross_arterial_s=50,
+        signal_wait_along_arterial_s=15,
+    ),
+    "flat": BicycleProfile(
+        "flat",
+        speed_mph=10.0,
+        lts_cost_factors=(1.0, 1.25, 3.0, 8.0),
+        unknown_crossing_cost_s=15,
+        uncontrolled_crossing_cost_s=30,
+        signal_wait_s=20,
+        signal_wait_cross_arterial_s=40,
+        signal_wait_along_arterial_s=15,
+    ),
+}
 
 
 @pytest.fixture(scope="module")
@@ -39,7 +63,7 @@ def edges(town: demo.Town) -> gpd.GeoDataFrame:
 
 def _links(edges: gpd.GeoDataFrame, town: demo.Town, mode: str, name: str) -> gpd.GeoDataFrame:
     signals = build_signal_wait_inventory(prepare.nodes(town.nodes), edges)
-    profile = presets.load(mode, name).profile()
+    profile = MADE_UP[name] if name in MADE_UP else presets.load(mode, name).profile()
     if isinstance(profile, BicycleProfile):
         return build_bicycle_links(edges, profile, signal_wait_inventory=signals)
     assert isinstance(profile, PedestrianProfile)
@@ -50,9 +74,13 @@ def _to_school(
     edges: gpd.GeoDataFrame, town: demo.Town, mode: str, name: str
 ) -> tuple[pd.DataFrame, gpd.GeoDataFrame, nx.Graph[str], str]:
     links = _links(edges, town, mode, name)
-    preset = presets.load(mode, name)
+    if name in MADE_UP:
+        objective, speed_mph = "generalized_cost_s", MADE_UP[name].speed_mph
+    else:
+        preset = presets.load(mode, name)
+        objective, speed_mph = preset.objective, float(preset.parameters["speed_mph"])
     core_mode = Mode.BICYCLE if mode == "bike" else Mode.PEDESTRIAN
-    graph = routable_links_to_graph(links, directed=True, preferred_cost=preset.objective)
+    graph = routable_links_to_graph(links, directed=True, preferred_cost=objective)
     nodes = prepare.nodes(town.nodes)
     nodes = nodes[nodes.node_id.isin(set(graph.nodes))]
     homes = town.homes.rename(columns={"home_id": "origin_id"})
@@ -63,7 +91,7 @@ def _to_school(
         school, nodes, AccessPointGenerationPolicy(modes=(core_mode,))
     )
     attachments = _nearest_nodes(origins, nodes, core_mode)
-    speed = float(preset.parameters["speed_mph"]) * MPH
+    speed = speed_mph * MPH
     result = calculate_accessibility(
         graph,
         origins,
@@ -75,7 +103,7 @@ def _to_school(
         scenario_id=f"{mode}:{name}",
         mode=core_mode,
         direction=TravelDirection.TO_DESTINATION,
-        route_weight=preset.objective,
+        route_weight=objective,
         thresholds_min=(10, 20),
         time_limit_min=20,
         snap_speed_mps=speed,
@@ -126,7 +154,7 @@ def test_the_demo_streets_get_the_stress_levels_their_design_implies(
 def test_every_home_reaches_the_school_by_bike_and_flow_adds_up(
     town: demo.Town, edges: gpd.GeoDataFrame
 ) -> None:
-    routes, _, _, school_node = _to_school(edges, town, "bike", "legacy")
+    routes, _, _, school_node = _to_school(edges, town, "bike", "furth")
     assert routes.route_reachable.all() and routes.within_time_limit.all()
     flows = _flows(routes, edges)
     # Every route ends on a link touching the school's node, so their flows add up to everyone.
@@ -138,7 +166,7 @@ def test_every_home_reaches_the_school_by_bike_and_flow_adds_up(
 def test_stress_aware_cyclists_keep_off_the_arterials(
     town: demo.Town, edges: gpd.GeoDataFrame
 ) -> None:
-    aware = _flows(_to_school(edges, town, "bike", "legacy")[0], edges)
+    aware = _flows(_to_school(edges, town, "bike", "furth")[0], edges)
     shortest = _flows(_to_school(edges, town, "bike", "shortest")[0], edges)
     arterial = edges.highway.eq("primary").to_numpy()
     assert aware[arterial].sum() < 0.5 * shortest[arterial].sum()
@@ -148,7 +176,7 @@ def test_stress_aware_cyclists_keep_off_the_arterials(
 def test_walkers_never_use_the_arterial_stretch_with_no_sidewalk(
     town: demo.Town, edges: gpd.GeoDataFrame
 ) -> None:
-    routes, links, _, _ = _to_school(edges, town, "walk", "legacy")
+    routes, links, _, _ = _to_school(edges, town, "walk", "cautious")
     no_sidewalk = set(edges.physical_edge_id[edges.pedestrian_status.eq("problematic")])
     assert no_sidewalk and not no_sidewalk & set(links.physical_edge_id)
     used = {e for ids in routes.physical_edge_ids.astype(str) for e in ids.split(";") if e}
@@ -156,23 +184,10 @@ def test_walkers_never_use_the_arterial_stretch_with_no_sidewalk(
     assert routes.route_reachable.all()
 
 
-def test_the_child_walking_preset_keeps_the_stretch_with_no_sidewalk_at_a_cost(
-    town: demo.Town, edges: gpd.GeoDataFrame
-) -> None:
-    links = _links(edges, town, "walk", "child")
-    no_sidewalk = edges[edges.pedestrian_status.eq("problematic")]
-    kept = links[links.physical_edge_id.isin(set(no_sidewalk.physical_edge_id))]
-    assert set(kept.physical_edge_id) == set(no_sidewalk.physical_edge_id)  # nothing banned
-    assert (kept.generalized_cost_s > 3.9 * kept.movement_time_s).all()  # x4 or x12 by class
-    adult, child = (_to_school(edges, town, "walk", n)[0] for n in ("legacy", "child"))
-    assert child.route_reachable.all()
-    assert (child.network_travel_time_s >= adult.network_travel_time_s - 1e-6).all()  # slower
-
-
 def test_signals_add_their_wait_to_links_entering_them(
     town: demo.Town, edges: gpd.GeoDataFrame
 ) -> None:
-    links = _links(edges, town, "bike", "legacy")
+    links = _links(edges, town, "bike", "furth")
     waited = links[links.signal_wait_s.gt(0)]
     # The demo's signals are on its arterials: riding along one waits 15 s,
     # arriving on a side street to cross it 40 s.
@@ -197,7 +212,7 @@ def _school_origins(routes: pd.DataFrame) -> pd.DataFrame:
 def test_a_new_path_saves_cyclists_time_but_a_calmer_arterial_does_not(
     town: demo.Town, edges: gpd.GeoDataFrame
 ) -> None:
-    routes, links, _, school_node = _to_school(edges, town, "bike", "legacy")
+    routes, links, _, school_node = _to_school(edges, town, "bike", "flat")
     # A candidate path diagonally across the block south-west of the school's node.
     corner = demo.node_id(demo.SCHOOL_BLOCK[0] - 1, demo.SCHOOL_BLOCK[1] - 1)
     template = links[links.lts.eq(1) & links.signal_wait_s.eq(0)].iloc[[0]]
@@ -244,7 +259,7 @@ def test_a_new_path_saves_cyclists_time_but_a_calmer_arterial_does_not(
 def test_a_screen_naming_edges_missing_from_the_graph_is_refused(
     town: demo.Town, edges: gpd.GeoDataFrame
 ) -> None:
-    routes, _, graph, school_node = _to_school(edges, town, "bike", "legacy")
+    routes, _, graph, school_node = _to_school(edges, town, "bike", "furth")
     origins = pd.DataFrame({"node_id": [routes.attached_node_id.iloc[0]], "weight": [1.0]})
     with pytest.raises(ValueError, match="'typo' names no edge in the graph"):
         generalized_cost_reduction_screen(

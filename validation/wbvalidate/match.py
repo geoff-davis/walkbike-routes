@@ -108,7 +108,7 @@ def match(
 ) -> gpd.GeoDataFrame:
     """Each site with its status, matched links and ``flow:<run>`` for each run.
 
-    ``flows`` maps a run name (``walk-legacy``) to flow by physical edge id;
+    ``flows`` maps a run name (``walk-shortest``) to flow by physical edge id;
     a site takes flows only from runs of its own mode.  ``within`` is the
     comparison area, in the links' CRS.  ``link_ids`` are all the matched
     links; ``section`` the groups whose flows are added, one per carriageway,
