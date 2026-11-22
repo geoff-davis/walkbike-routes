@@ -101,6 +101,7 @@ MIN_MINUTES_SAVED = 0.05
 # those saving at least this share of the best of that kind.
 PRIORITY_ROWS = 5
 PRIORITY_SHARE = 0.10
+SHARE_TOLERANCE = 1e-9  # relative
 
 SCREEN_COLUMNS = [
     "rank", "section_id", "label", "treatment", "length_m", "treated_flow",
@@ -639,5 +640,8 @@ def priorities(
     for _, kind in screen.groupby(screen.treatment.astype(str), sort=False):
         ranked = kind.sort_values("rank")
         saved = ranked.weighted_generalized_minutes_saved.astype(float)
-        kept.append(ranked[saved >= share * saved.max()].head(rows))
+        # A place saving exactly the share is kept despite float roundoff
+        # (0.1 * 3.0 is 0.30000000000000004).
+        floor = share * saved.max() * (1 - SHARE_TOLERANCE)
+        kept.append(ranked[saved >= floor].head(rows))
     return pd.concat(kept)

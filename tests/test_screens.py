@@ -518,3 +518,17 @@ def test_priorities_cut_each_kind_at_a_share_of_its_best() -> None:
     assert kept.groupby("treatment", sort=False).size().to_dict() == {"sidewalk": 2, "signal": 5}
     assert list(kept.treatment.unique()) == ["sidewalk", "signal"]  # kinds keep their order
     assert priorities(screen.iloc[:0]).empty
+
+
+def test_priorities_keep_a_place_at_exactly_the_share() -> None:
+    # SP1: 0.1 * 3.0 is 0.30000000000000004, which dropped a place saving 0.3.
+    from walkbike_routes.analysis.screens import priorities
+
+    screen = pd.DataFrame(
+        {
+            "treatment": ["signal"] * 3,
+            "rank": [1, 2, 3],
+            "weighted_generalized_minutes_saved": [3.0, 0.3, 0.29],
+        }
+    )
+    assert priorities(screen)["rank"].tolist() == [1, 2]  # at the share kept, below it cut
