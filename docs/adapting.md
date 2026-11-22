@@ -50,6 +50,12 @@ fields:
     homes inside it count) are optional, as is `outline`, an attendance
     area that is drawn on the map and limits the homes too (with
     `limits: false`, it is only drawn).
+  - `nearest` names a group of destinations that share their homes, for
+    schools whose attendance areas are not known: each home counts only
+    for the member nearest it along streets and paths (the shortest walk,
+    the same for every mode). A home with no street route to any of them
+    goes to the nearest in a straight line. A group needs two or more
+    destinations, and a member takes no `serves` or limiting `outline`.
 - **`modes`** and **`presets`**: which modes to run, and one or more
   route-choice presets for each. The first preset of a mode is its main one.
   See step 6.

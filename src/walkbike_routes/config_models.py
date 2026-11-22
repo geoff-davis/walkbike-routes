@@ -106,6 +106,11 @@ class Destination:
 
     ``purpose`` (everyday, school or work) picks the distance-decay curves
     for walking and cycling here; for a school the ages pick the walking curve.
+
+    ``nearest`` names a group of destinations that share their homes: each
+    home makes trips only to the group's destination nearest it along streets
+    and paths (high schools whose attendance areas are not known, say).  It
+    takes the place of ``serves`` or a limiting outline.
     """
 
     id: str
@@ -120,6 +125,7 @@ class Destination:
     min_age: int | None = None
     max_age: int | None = None
     purpose: str = "everyday"
+    nearest: str | None = None
 
 
 @dataclass(frozen=True)

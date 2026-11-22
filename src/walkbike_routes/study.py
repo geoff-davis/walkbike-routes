@@ -50,6 +50,7 @@ from walkbike_routes.report import text
 from walkbike_routes.study_active import active_run
 from walkbike_routes.study_car import car_network, car_run
 from walkbike_routes.study_context import SNAP_M, Context, write
+from walkbike_routes.study_nearest import nearest_origins
 from walkbike_routes.study_networks import ModeNetwork, mode_network
 
 log = logging.getLogger(__name__)
@@ -114,7 +115,10 @@ def analyze(study: settings.Study, town: Town, out: Path) -> list[Path]:
     shared = replace(shared, signals=inventory)
     signal_legs = frozenset(inventory.crossing_leg_edges)
     signal_nodes = frozenset(inventory.cluster_by_node)
-    contexts = [replace(shared, origins=origins_for(study, d, homes)) for d in study.destinations]
+    origins = nearest_origins(
+        shared, study.destinations, [origins_for(study, d, homes) for d in study.destinations]
+    )
+    contexts = [replace(shared, origins=o) for o in origins]
     # Each preset's network is built once and used for every destination, then let go
     # before the next is built, so only one is held at a time.
     ran: dict[tuple[str, str, str], tuple[list[Path], list[dict[str, object]], pd.Series]] = {}
