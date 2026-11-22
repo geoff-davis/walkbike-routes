@@ -97,6 +97,10 @@ PARTS_PER_STREET = 3  # a whole street's busiest sections, scored to name its be
 BUSY_BAND = 2  # Broach's traffic bands: 2 is 10,000-20,000 vehicles a day
 # Places saving less than this (0.0 to one decimal) are not listed.
 MIN_MINUTES_SAVED = 0.05
+# Reports list, for each kind of change, at most this many places, and only
+# those saving at least this share of the best of that kind.
+PRIORITY_ROWS = 5
+PRIORITY_SHARE = 0.10
 
 SCREEN_COLUMNS = [
     "rank", "section_id", "label", "treatment", "length_m", "treated_flow",
@@ -617,3 +621,23 @@ def improvement_screen(
         crs=edges.crs,
     )
     return gpd.GeoDataFrame(table[SCREEN_COLUMNS], geometry="geometry", crs=edges.crs)
+
+
+def priorities(
+    screen: pd.DataFrame, rows: int = PRIORITY_ROWS, share: float = PRIORITY_SHARE
+) -> pd.DataFrame:
+    """The places worth listing: for each kind of change, in the order the run wrote
+    them, those saving at least ``share`` of the best of that kind, at most ``rows``.
+
+    Kinds are cut separately, not ranked against each other: the screen knows what
+    each change saves, not what it costs, and a signal costs far less than a long
+    sidewalk.
+    """
+    if screen.empty:
+        return screen
+    kept = []
+    for _, kind in screen.groupby(screen.treatment.astype(str), sort=False):
+        ranked = kind.sort_values("rank")
+        saved = ranked.weighted_generalized_minutes_saved.astype(float)
+        kept.append(ranked[saved >= share * saved.max()].head(rows))
+    return pd.concat(kept)

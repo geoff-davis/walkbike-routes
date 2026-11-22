@@ -40,7 +40,7 @@ from walkbike_routes.analysis.exposure_rules import (
     ExposureRules,
     rules_from,
 )
-from walkbike_routes.analysis.screens import PARTS_PER_STREET
+from walkbike_routes.analysis.screens import PARTS_PER_STREET, priorities
 from walkbike_routes.costs import presets
 from walkbike_routes.report import text
 from walkbike_routes.report.text import (
@@ -54,7 +54,6 @@ from walkbike_routes.report.text import (
 WGS84 = "EPSG:4326"
 CELL_M = 150.0  # catchment grid squares: coarse enough not to show single buildings
 TOP_SHARE = 0.10  # "busy": the top tenth of a run's streets with flow
-SCREEN_ROWS = 10
 JUNCTION_REACH_M = 1.0  # streets meeting at a junction end within this of its point
 OPENING_FLOW_SHARE = 0.05  # the opening view frames streets with this share of the top flow
 MARGIN_M = 400.0  # background streets drawn this far beyond the flows and homes
@@ -674,9 +673,7 @@ def _screen(
     if not found(path):
         return []
     read = gpd.read_parquet(path)
-    order = list(dict.fromkeys(read.treatment.astype(str)))  # as the run wrote them
-    ranked = read.assign(_order=read.treatment.astype(str).map(order.index))
-    top = ranked.sort_values(["_order", "rank"]).groupby("_order").head(SCREEN_ROWS)
+    top = priorities(read)
     rows = []
     for row in top.to_dict("records"):
         geometry = row["geometry"]
