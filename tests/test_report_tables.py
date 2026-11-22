@@ -520,6 +520,7 @@ def test_a_route_models_note_is_for_its_own_mode() -> None:
 
 def test_glossary_notes_do_not_fix_what_a_study_can_set() -> None:
     # The drop-off share and points are rules a study may change (TT2); some route
-    # models adjust the published penalties (TT3).
+    # models' values are set by hand, not taken from a study (TT3).
     assert not re.search(r"\d", words.GLOSSARY["drop-off"])
-    assert "adjusted by hand" in words.GLOSSARY["uncalibrated"]
+    assert "set by hand" in words.GLOSSARY["uncalibrated"]
+    assert "Not fitted to observed trips" in words.GLOSSARY["uncalibrated"]

@@ -261,9 +261,9 @@ GLOSSARY: dict[str, str] = {
     "generalized cost": ROUTE_COST.replace(" (often called generalized cost)", "") + ".",
     "route model": MODEL_RULES,
     "route-choice model": MODEL_RULES,
-    "uncalibrated": "Not checked against counts or surveys of where people here walk "
-    "or cycle. The penalties come from published studies, some adjusted by hand; Method "
-    "says how for each route model.",
+    "uncalibrated": "Not fitted to observed trips by the people or in the place studied. "
+    "The values may come from published studies or be set by hand; Method explains each "
+    "route model.",
     "distance-decay": "How fast trips fall off with distance: the national share of "
     "trips of each length, used to weight homes by how far away they are.",
     "watch": "A place with risk points that does not meet the fix-first threshold.",

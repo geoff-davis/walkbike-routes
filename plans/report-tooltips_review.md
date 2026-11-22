@@ -75,3 +75,34 @@ Append "## Review, round 1" with a verdict naming `33e29aa`, then send one promp
 - Status: open.
 
 - Verification limits: accuracy probes used synthetic summary/rule tables and committed preset descriptions; no live external studies were fetched. Browser smoke tests passed, but they do not check these semantic tooltip cases.
+
+## Handoff, round 2
+
+- Target: `33e29aa` -> `99efb0b`
+- TT1 fixed: `text.model_tip(mode, name)` replaces the name-only lookup. The reference table's route-model cells are `Noted` cells (plain text in Markdown), and `busiest_blocks` takes the mode for its header notes. Test: `test_a_route_models_note_is_for_its_own_mode` (walk and bike `shortest` in one table, and bike busiest-streets headers).
+- TT2 fixed: the drop-off note has no share or points and points to "Risk points used". Test: `test_glossary_notes_do_not_fix_what_a_study_can_set`.
+- TT3 fixed: "uncalibrated" says some route models adjust the published penalties by hand. Same test.
+- Both new tests fail at `33e29aa`: the first because `tables.Noted` does not exist there, the second on the old wording.
+- `make check`: 1000 passed, 95.73%. `make validation-check`: 58 passed.
+
+Append "## Review, round 2" with a verdict naming `99efb0b`, then send one prompt to walkbike-implementer.
+
+## Review, round 2
+
+- Loop: `report-tooltips-1`, round 2; Standard tier retained.
+- Target reviewed: `33e29aa` -> `99efb0b4efa355c08ba6a25dc88a5e52e9883fca`.
+- Verdict: **changes required** at `99efb0b`. TT1 and TT2 are verified fixed; TT3 remains open because the revised definition still makes an unsupported provenance claim.
+- Snapshot: independent local clone detached at the exact target, with a separate `33e29aa` clone for identical probes. The implementer's checkout was not modified; this handoff is the only file written there.
+- Reviewer checks: cached locked dependency sync and `git diff --check` passed. `make check` passed lint, formatting, mypy and **1000 tests**, coverage **95.73%**. `make validation-check` passed lint, formatting, mypy and **58 tests**. Chromium smoke tests ran with normal local process permissions.
+- TT1, fixed: independent rendering of walking and cycling shortest in the same summary now gives each its own shipped title. A cycling busiest-streets header also carries the cycling title. The same probes at `33e29aa` incorrectly describe cycling shortest as walking. Summary-table Markdown is identical across revisions; the new Noted cells preserve its plain text.
+- TT2, fixed: rendered rules with `drop_off_share=0.2` and `drop_off=3` keep their correct 20%/+3 values, and the tooltip no longer contradicts them with default numbers. The shared glossary used by report and map now directs readers to the run's rule.
+
+### TT3 — P2, blocking, remains open: uncalibrated still asserts published provenance
+
+- Current location: `src/walkbike_routes/report/text.py:264-266`.
+- Trigger and evidence: render a paragraph containing the committed bike/furth title and source. The actual resulting tooltip now says: `The penalties come from published studies, some adjusted by hand`. The same shipped source still calls the LTS cost multipliers hand-set judgments not estimated from observed route choice. `docs/routing-methods.md` explicitly says the multipliers are not Furth's and describes them as hand-set costs on top of published street ratings. The round-2 wording removes the unchanged-numbers claim, but still assigns published-study provenance to penalties that were set by judgment.
+- The first sentence also substitutes `Not checked against counts or surveys` for lack of calibration. The repository's own definition for this preset is that the multipliers were not fitted; checking a model and fitting its parameters are different operations.
+- Violated criterion: glossary definitions must accurately describe the shipped models and assumptions. This is the same semantic finding from round 1, not a routing regression or a request for a new model decision.
+- Requested correction: define lack of fitting without promising a source. For example: `Not fitted to observed trips in the intended population or area. Values may be literature-based or hand-set; Method explains each model.` Preserve the per-preset source descriptions. Test the definition against the existing hand-set Furth example; asserting only that the words adjusted by hand occur does not catch this contradiction.
+- Status: open. TT1 and TT2 are closed as verified fixed; no other new findings.
+- Evidence reused: implementer's fail-first tests and round-1 rendering/browser checks. The reviewer independently reproduced both check targets and the three semantic probes on base and head. No live study data or existing credential files were inspected.
