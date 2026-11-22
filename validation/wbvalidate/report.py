@@ -24,7 +24,6 @@ import pandas as pd
 from shapely.geometry.base import BaseGeometry
 
 from walkbike_routes.exceptions import AccessibilityError
-from walkbike_routes.report.map import SYNTHETIC
 from walkbike_routes.report.tables import (
     Block,
     Bullets,
@@ -35,6 +34,7 @@ from walkbike_routes.report.tables import (
     markdown,
     page,
 )
+from walkbike_routes.report.text import SYNTHETIC
 from wbvalidate import compare
 from wbvalidate.match import MATCHED, match
 

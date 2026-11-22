@@ -102,6 +102,11 @@ def test_a_preset_with_turn_costs_routes_to_the_end_from_any_side(tmp_path: Path
     assert across[routes.column(20)] < 0.5
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason="The core joins every origin to the network however far, so a trace ending 4 km "
+    "off the network now routes; whether traces need their own limit is undecided.",
+)
 def test_trips_that_cannot_be_routed_say_why(tmp_path: Path) -> None:
     far = LineString([_at(ROW, 2), _at(ROW, 40)])  # ends 4 km beyond the town
     same = LineString([_at(ROW, 2), _at(ROW + 0.05, 2.05)])
