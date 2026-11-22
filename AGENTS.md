@@ -38,33 +38,104 @@ instead of hand-written equivalents.
    `make check`. If the change touches `validation/` or anything it imports
    from `src/`, also run `make validation-check`. Do not commit while the
    hooks fail and do not use `--no-verify`.
-2. Unless every staged file is on the exempt list below, get an independent
-   review of the staged change from the Codex CLI, run read-only on a copy of
-   the staged files:
+2. Commit. Unless the slice is exempt (below), it then goes to the reviewer
+   before it is pushed.
 
-   ```bash
-   git diff --cached > "$SCRATCH/staged.diff"
-   git checkout-index --all --prefix="$SCRATCH/tree/"   # the staged files, not HEAD
-   codex exec --sandbox read-only --skip-git-repo-check -C "$SCRATCH" \
-       -o "$SCRATCH/review.md" - < "$SCRATCH/prompt.txt"
-   ```
+## Review: Claude implements, Codex reviews
 
-   `$SCRATCH` is a temporary folder outside the repository. The prompt asks
-   for correctness bugs in the diff, with a concrete failing case for each.
-3. Test each finding before acting on it. The reviewer cannot run the code.
-   Fix what is confirmed, or say in the commit report what was left and why.
-4. Then commit.
+The user authorizes direct review requests and replies through Herdr; no
+manual relay is needed. This covers message delivery only. A review verdict
+does not authorize a commit, push, merge, tag or publish.
 
-Exempt from the Codex review, decided by path (`git diff --cached
---name-only`), not by whether the change feels behavioral: `docs/**`, `*.md`
-other than `AGENTS.md`, and `uv.lock` alone. Agent instructions, config,
-hooks and CI are reviewed.
+Live agent names, in the walkbike-routes Herdr workspace: one Codex,
+`walkbike-reviewer`, and any number of Claude panes, `walkbike-implementer`,
+`walkbike-implementer-2`, `walkbike-implementer-3` and so on, each in its own
+worktree. Names must be unique among live agents and are cleared when an
+agent exits.
 
-## What may be sent for review
+- A Claude pane finds itself in `herdr agent list` (the entry whose
+  `agent_session.value` is its own session ID, or ask the user for the pane)
+  and, if unnamed, takes the lowest free `walkbike-implementer[-N]` with
+  `herdr agent rename <pane> <name>`.
+- Before every send, verify `HERDR_ENV=1` and check `herdr agent list` that
+  the peer is in this workspace with a walkbike-routes working directory.
+  Never send to another workspace's agents. If identity is ambiguous, stop
+  and ask.
+- The reviewer replies to the implementer named in the handoff's Loop
+  section, never to a default name or the focused pane.
 
-Staged files and the staged diff only. Never anything under `data/` or
-`output/`, never count or recorded-trip records (`validation/README.md`), and
-never `.env`.
+**When.** Once per PR-sized slice: after the local commit, before the push.
+Several small commits may share one review. Exempt, decided by path
+(`git diff --name-only <base>..<head>`), not by whether the change feels
+behavioral: `docs/**`, `*.md` other than `AGENTS.md`, `uv.lock` alone, and a
+Dependabot PR with green CI. Agent instructions, config, hooks and CI are
+reviewed. Every PR description has a `Review:` line:
+`plans/<task>_review.md, accepted at <head SHA>` or `exempt: <which rule>`.
+
+### What the reviewer may read
+
+Committed files at the review target only, taken with a local `git clone`,
+which leaves out everything git ignores. Never anything under `data/` or `output/`,
+`.env`, `*.local.yaml`, or count or recorded-trip records
+(`validation/README.md`). Reading a file sends it to the reviewer's model
+provider, so this applies to the main checkout too, not just the snapshot.
+
+### When implementing
+
+- Commit the slice with normal hooks; that commit is the review target. Do
+  not amend it during review; answer findings with new commits.
+- Write the handoff to `plans/<task>_review.md`
+  ([template](plans/review-handoff.md)) before prompting: base and head SHAs,
+  tier, acceptance criteria, evidence (each fix with its regression test shown
+  failing on the base), settled decisions, known limitations.
+- Record your own name and pane in the handoff's Loop section.
+- `herdr agent prompt walkbike-reviewer "<absolute handoff path, target, loop
+  and round>"`, without `--wait`, and only when the reviewer is idle or done.
+  The one reviewer serves every implementer, one review at a time: if it is
+  working, wait for it to finish rather than queueing a second prompt.
+- Poll the handoff file in the background about once a minute until it holds
+  a verdict naming this loop, this round and the exact target, or until the
+  loop's UTC expiry. An older verdict does not count. Agent states are hints:
+  `idle` or `done` may predate the request. If the reviewer is blocked or
+  settles with no matching verdict, inspect it with `herdr agent read`; do
+  not resend. At expiry, stop and tell the user.
+- Test each finding before acting on it. Fix blocking findings; record the
+  rest as non-blocking with a home (an issue number for deferred ones).
+
+### When reviewing
+
+- Read-only. Snapshot the target outside the repository, with its own `.git`
+  (a test reads the commit, so `git archive` is not enough):
+
+  ```bash
+  D=/tmp/walkbike-review/<task>-r<round>
+  git clone --quiet --no-hardlinks --no-checkout <repository path> "$D"
+  git -C "$D" checkout --quiet --detach <head SHA>
+  ```
+
+  Run checks there (`uv sync --locked`, `make check`), and delete it after
+  the verdict. Never
+  stash, reset or edit the implementer's tree; the handoff file is the only
+  thing you write to.
+- Run the same probe on base and head before calling something a regression.
+- Each finding: stable ID, severity, blocking or not, location, trigger,
+  violated invariant, evidence. Separate confirmed defects from hypotheses.
+- A finding blocks only if it defeats the acceptance criteria or introduces a
+  regression.
+- Append the round and a verdict naming the exact target to the handoff file,
+  then send one prompt to the implementer named in its Loop section. A
+  request that arrives mid-review waits until the current verdict is sent.
+
+### Tiers and limits
+
+The implementer declares the tier; the reviewer may raise it with a reason.
+Small: a local fix that adds, removes or loosens no guard, or docs; one round.
+Standard: new or changed logic or contracts; one round plus one to verify
+fixes. Critical: data-loss guards, destructive operations, security; up to
+three. Three submissions per loop and 60 minutes, both recorded in the
+handoff. No acknowledgment messages. A blocked approval dialog goes to the
+user. Stop and tell the user on acceptance, the third round, expiry, a stall,
+or ambiguous identity.
 
 ## Data
 
@@ -96,5 +167,7 @@ never `.env`.
 - `validation/` is not in `make check`; it went stale unnoticed (an import
   through a module that did not export it, a test expecting a snap limit the
   core had dropped). CI now runs its type check and tests.
+- Review records in `plans/` are committed to a public repository: they
+  follow the same rules as any other commit.
 - The hook revs for `pre-commit-hooks` and `markdownlint-cli2` are not
   updated by Dependabot; run `uv run prek autoupdate` now and then.
