@@ -17,10 +17,6 @@ parameters:
   signal_wait_s: 30
   signal_wait_cross_arterial_s: 50
   signal_wait_along_arterial_s: 15
-  allow_unknown_local: true
-  allow_unknown_collector: true
-  allow_unknown_major: true
-  allow_problematic: true
   unknown_local_factor: 1.0
   unknown_collector_factor: 1.0
   unknown_other_factor: 1.0

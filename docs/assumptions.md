@@ -202,9 +202,9 @@ these values for travel time only.
   as having no sidewalk, a primary, secondary or tertiary road
   OpenStreetMap tags as having none, or a crossing mapped as unmarked or
   uncontrolled). `walk/shortest` ignores it. A preset of the
-  `pedestrian_evidence` kind can multiply distance by it, by road class, or
-  leave unknown and problematic links out; no shipped preset does. The
-  Broach presets with a sidewalk term read it (below).
+  `pedestrian_evidence` kind multiplies the time of unknown and problematic
+  links by a factor for their road class; it never leaves a link out for its
+  evidence. The Broach presets with a sidewalk term read it (below).
 - **Crossing links recorded as `crossing=no`** (from local data) are left
   out by every walking preset: the tag means crossing
   is not allowed there, which is no matter of stress. From OpenStreetMap a
