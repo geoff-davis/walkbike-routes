@@ -53,14 +53,14 @@ def pages(tmp_path_factory: pytest.TempPathFactory) -> list[Path]:
     return build_maps(out, offline=True)
 
 
-def _result(page: Path) -> list[str]:
+def _result(page: Path, exercise: str = EXERCISE) -> list[str]:
     """What the page reports after drawing and being exercised: ok, or its script errors."""
     assert CHROME is not None
     text = page.read_text()
     assert "<script>\nconst D=" in text and "</body>" in text
     text = text.replace("<script>\nconst D=", WATCH + "<script>\nconst D=", 1)
     copy = page.with_name("_smoke.html")
-    copy.write_text(text.replace("</body>", RUN % EXERCISE, 1))
+    copy.write_text(text.replace("</body>", RUN % exercise, 1))
     dom = subprocess.run(
         [CHROME, "--headless=new", "--disable-gpu", "--no-sandbox",
          "--virtual-time-budget=20000", "--dump-dom", copy.resolve().as_uri()],
@@ -74,6 +74,21 @@ def test_every_map_draws_each_mode_and_layer_without_a_script_error(pages: list[
     assert sorted(p.parent.name for p in pages) == ["all-destinations", "downtown", "school"]
     for page in pages:
         assert _result(page) == ['data-ok="ok"'], page.parent.name
+
+
+# Jargon in map text is defined on hover at its first use, as a whole word only.
+GLOSS = """
+const got = gl("Traffic stress & traffic stress, a stopwatch, a watch-list");
+const marked = got.match(/class="gl"/g) || [];
+if (marked.length !== 1 || !got.startsWith('<span class="gl" tabindex="0" title="Level of traffic stress'))
+  throw new Error("gloss: " + got);
+if (!got.includes("&amp; traffic stress,")) throw new Error("not escaped once: " + got);
+"""
+
+
+@pytest.mark.skipif(CHROME is None, reason="no Chrome or Chromium to open the map in")
+def test_the_map_defines_jargon_on_hover(pages: list[Path]) -> None:
+    assert _result(pages[0], GLOSS) == ['data-ok="ok"']
 
 
 @pytest.mark.skipif(CHROME is None, reason="no Chrome or Chromium to open the map in")

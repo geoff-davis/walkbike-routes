@@ -736,7 +736,7 @@ def rules_blocks(rules: ExposureRules) -> list[Block]:
             f"changed under exposure in the study config. See “Where routes meet traffic "
             f"today” in {ASSUMPTIONS}."
         ),
-        Table(("Factor", "Points"), rows, (False, False)),
+        Table(("Factor", "Points"), rows, (False, False), text.tips(("Factor", "Points"))),
     ]
 
 
@@ -767,7 +767,7 @@ def summary_table(rows: pd.DataFrame) -> Table:
         cells.append(_num(expected) if text.decayed(r.get("decay_curve")) else "–")
         body.append(tuple(cells))
     numeric = (False, False) + (True,) * (len(header) - 2)
-    return Table(tuple(header), tuple(body), numeric)
+    return Table(tuple(header), tuple(body), numeric, text.tips(tuple(header)))
 
 
 UNNAMED = "\x00"  # an unnamed link's key: its label + UNNAMED + its OSM way (or link id)
@@ -941,7 +941,12 @@ def busiest_blocks(
         "on the route-choice model."
     )
     return [
-        Table(("#", *presets_), tuple(rows), (True,) + (False,) * len(presets_)),
+        Table(
+            ("#", *presets_),
+            tuple(rows),
+            (True,) + (False,) * len(presets_),
+            text.tips(("#", *presets_)),
+        ),
         Para(note, note=True),
     ]
 
@@ -1261,12 +1266,12 @@ def _html_parts(blocks: Sequence[Block], ids: list[tuple[str, str]] | None = Non
             )
         elif isinstance(block, Para):
             cls = ' class="note"' if block.note else ' class="warn"' if block.warn else ""
-            parts.append(f"<p{cls}>{html.escape(block.text)}</p>")
+            parts.append(f"<p{cls}>{_glossed(block.text)}</p>")
         elif isinstance(block, Link):
             href = html.escape(quote(block.href, safe="/%"), quote=True)
             parts.append(f'<p><a href="{href}">{html.escape(block.text)}</a></p>')
         elif isinstance(block, Bullets):
-            items = "".join(f"<li>{html.escape(i)}</li>" for i in block.items)
+            items = "".join(f"<li>{_glossed(i)}</li>" for i in block.items)
             parts.append(f"<ul>{items}</ul>")
         elif isinstance(block, Terms):
             more = dict(block.links)
@@ -1329,14 +1334,30 @@ def _cell_html(cell: Cell) -> str:
     if isinstance(cell, Where):
         url = html.escape(street_map_url(cell.lat, cell.lon), quote=True)
         return (
-            f'{html.escape(cell.text)} <a class="ext" href="{url}" target="_blank" '
+            f'{_glossed(cell.text)} <a class="ext" href="{url}" target="_blank" '
             'rel="noopener noreferrer">Google Maps</a>'
         )
     if isinstance(cell, Lines):
-        return (
-            '<ul class="f">' + "".join(f"<li>{html.escape(i)}</li>" for i in cell.items) + "</ul>"
-        )
-    return html.escape(cell)
+        return '<ul class="f">' + "".join(f"<li>{_glossed(i)}</li>" for i in cell.items) + "</ul>"
+    if model := text.model_tips().get(cell):
+        return _noted(cell, model)
+    return _glossed(cell)
+
+
+def _glossed(plain: str) -> str:
+    """Escaped text, with each glossary term's first use defined on hover or focus."""
+    seen: set[str] = set()
+
+    def note(m: re.Match[str]) -> str:
+        term = m.group(1).lower()
+        if term in seen:
+            return m.group(0)
+        seen.add(term)
+        tip = html.escape(text.GLOSSARY[term], quote=True)
+        return f'<span tabindex="0" data-tip="{tip}">{m.group(0)}</span>'
+
+    # The terms hold nothing html.escape changes, so they match the escaped text.
+    return text.GLOSS_PATTERN.sub(note, html.escape(plain))
 
 
 def scatter_svg(block: Scatter, width: int = 380, height: int = 320) -> str:
