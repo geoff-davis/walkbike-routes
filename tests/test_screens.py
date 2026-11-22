@@ -499,3 +499,36 @@ def test_the_map_works_its_shares_from_unrounded_weights() -> None:
     assert _share(3, 600) == 0.5
     assert _share(1, 0) is None and _share(1, math.nan) is None
     assert _finite(math.nan, 1) is None and _finite(None, 1) is None
+
+
+def test_priorities_cut_each_kind_at_a_share_of_its_best() -> None:
+    from walkbike_routes.analysis.screens import priorities
+
+    saved = {"sidewalk": [55.8, 21.7, 3.5, 3.0, 0.1], "signal": [5.2, 4.0, 3.0, 2.0, 1.0, 0.9, 0.2]}
+    screen = pd.DataFrame(
+        [
+            {"treatment": kind, "rank": i + 1, "weighted_generalized_minutes_saved": m}
+            for kind, values in saved.items()
+            for i, m in enumerate(values)
+        ]
+    )
+    kept = priorities(screen)
+    # Sidewalks: 10% of 55.8 is 5.58, so two. Signals are cut against their own
+    # best (5.2), not the sidewalks', so a cheap kind is not crowded out: six pass, five shown.
+    assert kept.groupby("treatment", sort=False).size().to_dict() == {"sidewalk": 2, "signal": 5}
+    assert list(kept.treatment.unique()) == ["sidewalk", "signal"]  # kinds keep their order
+    assert priorities(screen.iloc[:0]).empty
+
+
+def test_priorities_keep_a_place_at_exactly_the_share() -> None:
+    # SP1: 0.1 * 3.0 is 0.30000000000000004, which dropped a place saving 0.3.
+    from walkbike_routes.analysis.screens import priorities
+
+    screen = pd.DataFrame(
+        {
+            "treatment": ["signal"] * 3,
+            "rank": [1, 2, 3],
+            "weighted_generalized_minutes_saved": [3.0, 0.3, 0.29],
+        }
+    )
+    assert priorities(screen)["rank"].tolist() == [1, 2]  # at the share kept, below it cut

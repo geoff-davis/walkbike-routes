@@ -25,7 +25,12 @@ import pandas as pd
 
 from walkbike_routes.analysis.exposure import ALL_DESTINATIONS
 from walkbike_routes.analysis.exposure_rules import ExposureRules, points_rows
-from walkbike_routes.analysis.screens import PARTS_PER_STREET
+from walkbike_routes.analysis.screens import (
+    PARTS_PER_STREET,
+    PRIORITY_ROWS,
+    PRIORITY_SHARE,
+    priorities,
+)
 from walkbike_routes.costs import presets
 from walkbike_routes.demand import decay
 from walkbike_routes.network.sidewalks import match_sidewalks
@@ -41,7 +46,6 @@ from walkbike_routes.report.text import (
 )
 
 TOP_STREETS = 10
-SCREEN_ROWS = 5  # per kind of change
 ASSUMPTIONS = "docs/assumptions.md"
 SECTIONS_FILE = "assumption_sections.json"  # shipped in the package: docs/ is not
 NO_DECAY = text.NO_DECAY
@@ -963,12 +967,11 @@ def busiest_blocks(
 
 
 def screen_table(
-    screen: pd.DataFrame, n: int = SCREEN_ROWS, *, unit: str = "people", is_decayed: bool = False
+    screen: pd.DataFrame, n: int = PRIORITY_ROWS, *, unit: str = "people", is_decayed: bool = False
 ) -> Table:
     """The screen's best places for each kind of change, and the share of people each helps."""
     rows = []
-    for _, ranked in screen.groupby("treatment", sort=False):
-        best = ranked.sort_values("rank").head(n)
+    for _, best in priorities(screen, n).groupby("treatment", sort=False):
         for r, spot in zip(best.to_dict("records"), _spots(best), strict=True):
             helped, counted = float(r["benefiting_weight"]), _float(r.get("analyzed_weight"))
             share = text.percent(helped / counted) if counted else "–"
@@ -1006,8 +1009,10 @@ SCREEN_NOTE = (
     "helped: the route model's cost (often called generalized cost), in minutes, which "
     "counts stress and crossings as well as clock time. Helped: those "
     "whose route gets cheaper, many of whom would switch to the place only once it is treated. "
-    f"The report lists the best {SCREEN_ROWS} of each kind; places that save nothing are left "
-    "out. A screen of where to look, not a design."
+    f"For each kind of change, the report lists up to {PRIORITY_ROWS} places, leaving out any "
+    f"that save less than {PRIORITY_SHARE:.0%} as much as the best of that kind. Kinds are not "
+    "ranked against each other: the screen knows what a change saves, not what it costs. "
+    "A screen of where to look, not a design."
 )
 
 
