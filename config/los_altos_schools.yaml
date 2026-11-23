@@ -4,9 +4,10 @@
 # attends it.
 #
 # Entrances: Almond, Egan and Los Altos High's are each campus's gates,
-# reviewed against maps and local knowledge. The others start from the gates
-# OpenStreetMap shows (only Gardner Bullis and Mountain View High have any)
-# and otherwise from the district's school point; they still need review.
+# reviewed against maps and local knowledge. The other elementary and junior
+# high schools' gates were read from aerial imagery (driveways, drop-off loops
+# and walkways meeting the street) and still need checking on the ground.
+# Mountain View High's are the two gates OpenStreetMap shows.
 #
 # Elementary and junior high schools count only their attendance areas: add
 # `outline:` (here or in the private los_altos_schools.local.yaml, under
@@ -68,6 +69,12 @@ destinations:
     location: [-122.106686, 37.371568]  # district school point
     min_age: 4  # TK to grade 6
     max_age: 11
+    access_points:
+      - [-122.108110, 37.370944]  # drop-off loop entrance, Covington Road
+      - [-122.107498, 37.370598]  # loop exit, Covington Road
+      - [-122.105200, 37.371100]  # drive out to Rosita Avenue past the district office (approximate)
+    car_access_points:
+      - [-122.108110, 37.370944]  # drop-off loop entrance
   - id: gardner-bullis
     name: Gardner Bullis Elementary School
     kind: point
@@ -76,7 +83,9 @@ destinations:
     min_age: 4  # TK to grade 6
     max_age: 11
     access_points:
-      - [-122.130807, 37.381110]  # gate (OpenStreetMap)
+      - [-122.130827, 37.382235]  # parking lot off Fremont Road (approximate)
+    car_access_points:
+      - [-122.130827, 37.382235]  # parking lot off Fremont Road (approximate)
   - id: loyola
     name: Loyola Elementary School
     kind: point
@@ -84,6 +93,12 @@ destinations:
     location: [-122.092601, 37.360491]  # district school point
     min_age: 4  # TK to grade 6
     max_age: 11
+    access_points:
+      - [-122.093441, 37.361418]  # parking lot driveway, Berry Avenue
+      - [-122.092541, 37.361418]  # main walkway, Berry Avenue
+      - [-122.091764, 37.359672]  # back of the blacktop, onto the lane behind the Altos Oaks shops (unsure)
+    car_access_points:
+      - [-122.093441, 37.361418]  # parking lot driveway
   - id: oak
     name: Oak Avenue Elementary School
     kind: point
@@ -91,6 +106,12 @@ destinations:
     location: [-122.071475, 37.357785]  # district school point
     min_age: 4  # TK to grade 6
     max_age: 11
+    access_points:
+      - [-122.072100, 37.356873]  # west end of the drop-off loop, Oak Avenue
+      - [-122.071505, 37.356873]  # front walk, Oak Avenue
+      - [-122.070857, 37.356873]  # east end of the drop-off loop, Oak Avenue
+    car_access_points:
+      - [-122.072100, 37.356873]  # west end of the drop-off loop
   - id: santa-rita
     name: Santa Rita Elementary School
     kind: point
@@ -98,6 +119,12 @@ destinations:
     location: [-122.122977, 37.393648]  # district school point
     min_age: 4  # TK to grade 6
     max_age: 11
+    access_points:
+      - [-122.121414, 37.394672]  # north lot driveway and crosswalk, Los Altos Avenue
+      - [-122.121430, 37.394044]  # south lot driveway, Los Altos Avenue
+      - [-122.121398, 37.393873]  # school front, Los Altos Avenue
+    car_access_points:
+      - [-122.121414, 37.394672]  # north lot driveway and crosswalk
   - id: springer
     name: Springer Elementary School
     kind: point
@@ -105,6 +132,13 @@ destinations:
     location: [-122.094491, 37.372017]  # district school point
     min_age: 4  # TK to grade 6
     max_age: 11
+    access_points:
+      - [-122.094519, 37.371052]  # main walkway and crosswalk, Rose Avenue
+      - [-122.094987, 37.371039]  # by the playground and crosswalk, Rose Avenue
+      - [-122.094350, 37.371052]  # lot driveway (west), Rose Avenue
+      - [-122.093600, 37.371052]  # lot driveway (east), Rose Avenue
+    car_access_points:
+      - [-122.094350, 37.371052]  # lot driveway (west)
   - id: blach
     name: Georgina P. Blach Junior High School
     kind: point
@@ -112,6 +146,12 @@ destinations:
     location: [-122.081586, 37.363787]  # district school point
     min_age: 12  # grades 7 and 8
     max_age: 13
+    access_points:
+      - [-122.082870, 37.364569]  # west lot driveway, Covington Road
+      - [-122.082736, 37.364569]  # walk-in at the Hayman Place crosswalk
+      - [-122.081782, 37.364650]  # east lot, shared with Bullis Charter, Covington Road
+    car_access_points:
+      - [-122.082870, 37.364569]  # west lot driveway
   - id: mvhs
     name: Mountain View High School
     kind: point
