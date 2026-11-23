@@ -87,6 +87,12 @@ def main(argv: Sequence[str] | None = None) -> None:
         action="store_true",
         help="download OpenStreetMap again instead of using the saved extract",
     )
+    run.add_argument(
+        "--jobs",
+        type=int,
+        default=1,
+        help="destinations routed at once, in separate processes (each needs its own memory)",
+    )
     report = commands.add_parser("report", help="write the maps and report from a finished run")
     report.add_argument("--out", type=Path, required=True, help="the run's output folder")
     for command in (run, report):
@@ -118,7 +124,9 @@ def main(argv: Sequence[str] | None = None) -> None:
         named = ", ".join(layer.name or layer.file.name for layer in study.local_layers)
         logging.info("local layers: %s", named or "none; OpenStreetMap only")
     try:
-        written = build(study, args.out, args.data, refresh_osm=args.refresh_osm)
+        if args.jobs < 1:
+            parser.exit(2, "--jobs: expected 1 or more\n")
+        written = build(study, args.out, args.data, refresh_osm=args.refresh_osm, workers=args.jobs)
     except (settings.ConfigError, AreaError, DownloadError) as err:
         parser.exit(2, f"{args.config}: {err}\n")
     logging.info("wrote %s", written)
@@ -143,12 +151,17 @@ def _has_destinations(out: Path) -> bool:
 
 
 def build(
-    study: settings.Study, out: Path, data: Path | None = None, *, refresh_osm: bool = False
+    study: settings.Study,
+    out: Path,
+    data: Path | None = None,
+    *,
+    refresh_osm: bool = False,
+    workers: int = 1,
 ) -> Path:
     """Write the study's layers to ``out`` and return the manifest's path.
 
     ``refresh_osm`` removes the saved OpenStreetMap extract first, so the
-    streets are downloaded again.
+    streets are downloaded again.  ``workers`` destinations are routed at once.
     """
     if study.area.source == "demo":
         town = _demo_town(study)
@@ -191,7 +204,7 @@ def build(
         jobs.to_parquet(out / "jobs.parquet")
         files["jobs.parquet"] = _sha256(out / "jobs.parquet")
     for path in [
-        *study_runs.analyze(study, town, out),
+        *study_runs.analyze(study, town, out, workers=workers),
         *network_flows.analyze(study, town, out),
     ]:
         files[str(path.relative_to(out))] = _sha256(path)

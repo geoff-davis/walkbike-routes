@@ -197,7 +197,10 @@ Optional settings, each with a default that suits most studies:
 
 On the command line, `--data` says where downloads are kept (by default
 `data/raw/<study>`), and `--refresh-osm` downloads OpenStreetMap again
-instead of using the saved copy.
+instead of using the saved copy. With several destinations, `--jobs N`
+routes N of them at once, in separate processes sharing each preset's
+network; the outputs are the same as with one. Each process needs memory
+of its own, so watch it on a large area.
 
 Unknown or missing settings are errors, and so is a setting that cannot
 apply (a `place` for the demo town, say), a file that is not there, or a

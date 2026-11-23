@@ -25,6 +25,7 @@ their flows meet.
 from __future__ import annotations
 
 import logging
+import multiprocessing
 from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import replace
@@ -99,8 +100,13 @@ def origins_for(
     return canonical_origins(homes, weight_field=column, weight_unit=unit)
 
 
-def analyze(study: settings.Study, town: Town, out: Path) -> list[Path]:
-    """Run every destination, mode and preset; return the files written."""
+def analyze(study: settings.Study, town: Town, out: Path, *, workers: int = 1) -> list[Path]:
+    """Run every destination, mode and preset; return the files written.
+
+    With ``workers`` above 1, each preset's network is built once and its
+    destinations are routed in that many forked processes, which share it.
+    The results are the same as with one.
+    """
     homes = town.homes.rename(columns={"home_id": "origin_id"})
     edges = prepare.physical_edges(town.links, town.nodes)
     shared = Context(
@@ -126,12 +132,19 @@ def analyze(study: settings.Study, town: Town, out: Path) -> list[Path]:
     for mode in study.modes:
         for index, name in enumerate(study.presets[mode]):
             network: Network | None = None
-            for context, destination in zip(contexts, study.destinations, strict=True):
-                # The first preset is the mode's main case: it feeds overlap and screens.
+            pairs = list(zip(contexts, study.destinations, strict=True))
+            # The first preset is the mode's main case: it feeds overlap and screens.
+            # The first destination builds the network the rest reuse.
+            first, rest = pairs[:1], pairs[1:]
+            for context, destination in first:
                 files, rows, flow, network = _run(
                     context, destination, mode, name, network, main=index == 0
                 )
                 ran[destination.id, mode, name] = (files, rows, flow)
+            for (_, destination), result in zip(
+                rest, _each(rest, mode, name, network, index == 0, workers), strict=True
+            ):
+                ran[destination.id, mode, name] = result
     written: list[Path] = []
     summary: list[dict[str, object]] = []
     # Keyed by mode and time limit (None for the run's own).
@@ -272,6 +285,39 @@ def _combined(
 
 
 type Network = ModeNetwork | cars.CarNetwork
+
+
+# What forked workers read: set just before the pool starts, so they inherit it.
+_SHARED: tuple[list[tuple[Context, settings.Destination]], settings.Mode, str, Network | None,
+               bool] | None = None  # fmt: skip
+
+
+def _each(
+    pairs: list[tuple[Context, settings.Destination]],
+    mode: settings.Mode,
+    name: str,
+    network: Network | None,
+    main: bool,
+    workers: int,
+) -> list[tuple[list[Path], list[dict[str, object]], pd.Series]]:
+    """Each destination's run on one network, in order: in ``workers`` forked processes if > 1."""
+    global _SHARED
+    if workers <= 1 or not pairs:
+        return [_run(c, d, mode, name, network, main=main)[:3] for c, d in pairs]
+    _SHARED = (pairs, mode, name, network, main)
+    try:
+        with multiprocessing.get_context("fork").Pool(min(workers, len(pairs))) as pool:
+            return pool.map(_shared_run, range(len(pairs)), chunksize=1)
+    finally:
+        _SHARED = None
+
+
+def _shared_run(i: int) -> tuple[list[Path], list[dict[str, object]], pd.Series]:
+    assert _SHARED is not None
+    pairs, mode, name, network, main = _SHARED
+    context, destination = pairs[i]
+    files, rows, flow, _ = _run(context, destination, mode, name, network, main=main)
+    return files, rows, flow
 
 
 def _run(
