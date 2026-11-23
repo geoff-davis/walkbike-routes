@@ -70,6 +70,11 @@ def signal_inventory(context: Context) -> SignalWaitInventory:
     return context.signals or build_signal_wait_inventory(context.nodes, context.edges)
 
 
+def limit_folder(folder: Path, minutes: float) -> Path:
+    """Where a run's outputs at a shorter time limit go, inside the run's folder."""
+    return folder / f"limit-{minutes:g}"
+
+
 def write(folder: Path, **frames: pd.DataFrame) -> list[Path]:
     paths = []
     for name, frame in frames.items():

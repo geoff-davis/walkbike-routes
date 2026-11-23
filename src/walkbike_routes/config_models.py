@@ -190,6 +190,9 @@ class Study:
     route_choice: ChoiceSettings = ChoiceSettings()
     # Travel-time bands reported for catchments, in minutes.
     time_bands_min: tuple[float, ...] = (5.0, 10.0, 15.0, 20.0)
+    # Shorter walk and bike limits the map can switch to: route shares, flows
+    # and exposure lists are worked out again at each, from the same routes.
+    shorter_limits_min: tuple[float, ...] = ()
     # Street sections tried in each walk and bike improvement screen; 0 turns them off.
     screen_candidates: int = 25
     # Risk points and the fix-first rule of the exposure lists; see analysis/exposure_rules.py.

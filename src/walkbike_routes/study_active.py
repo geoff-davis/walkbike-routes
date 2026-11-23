@@ -22,7 +22,14 @@ from walkbike_routes.network.broach_walk import (
 )
 from walkbike_routes.routing.flows import shared_route_flows
 from walkbike_routes.routing.turns import place, sink
-from walkbike_routes.study_context import CORE_MODES, MPS_PER_MPH, Context, summary, write
+from walkbike_routes.study_context import (
+    CORE_MODES,
+    MPS_PER_MPH,
+    Context,
+    limit_folder,
+    summary,
+    write,
+)
 from walkbike_routes.study_entrances import access_points
 from walkbike_routes.study_networks import ModeNetwork, mode_network, preset_links, turn_costs
 
@@ -117,6 +124,31 @@ def active_run(
     row = summary(context, destination, mode, preset.name, routes, shares, cap)
     row["decay_curve"] = curve_name or settings.NO_DECAY
     row["expected_weight"] = float(routes.expected_weight.sum())
+    for limit in (m for m in context.study.shorter_limits_min if m < cap):
+        # The same routes, split again as if the limit were shorter: a route
+        # over it is dropped and the next near-best one may take its place.
+        within = result.routes.route_reachable.astype(bool) & (
+            result.routes.total_travel_time_s.astype(float) <= limit * 60.0 + 1e-9
+        )
+        cut = decay.apply(
+            result.routes.assign(within_time_limit=within, time_limit_min=limit), curve
+        )
+        cut_shares = split_routes(
+            cut.assign(demand_weight=cut.expected_weight), alternatives, settings=choice,
+            edge_lengths=lengths,
+            length_speed_mps=speed if preset.objective == "physical_length_m" else None,
+        )  # fmt: skip
+        sub = limit_folder(folder, limit)
+        sub.mkdir(exist_ok=True)
+        cut_row = summary(context, destination, mode, preset.name, cut, cut_shares, limit)
+        cut_row["decay_curve"] = curve_name or settings.NO_DECAY
+        cut_row["expected_weight"] = float(cut.expected_weight.sum())
+        pd.DataFrame([cut_row]).to_csv(sub / "summary.csv", index=False)
+        files += [
+            *write(sub, route_shares=cut_shares,
+                   flows=shared_route_flows(cut_shares, context.edges)),
+            sub / "summary.csv",
+        ]  # fmt: skip
     return files, [row], flows.set_index("physical_edge_id").potential_flow
 
 

@@ -67,6 +67,7 @@ body.printing .leaflet-control-attribution{display:none}
 <h1>/*TITLE*/</h1>
 <label id="modewrap">Getting there by <select id="mode"></select></label>
 <label id="runwrap" title="The rules used to pick each route: how much extra each preset charges for busy streets, hills, crossings and turns">Route model <select id="run"></select></label>
+<label id="limitwrap" title="The longest trip counted. A shorter limit drops homes and routes past it and splits the trips again; barriers are worked out at the full limit only">Time limit <select id="limit"></select></label>
 <label id="flowwrap" title="Line width: how many people would use each street (potential flow, not counts)"><input type="checkbox" id="showflow" checked> Trips</label>
 <label id="cellswrap" title="Shading: the median trip time from the homes in each area"><input type="checkbox" id="showcells" checked> Travel time</label>
 <label id="exposurewrap" title="Where routes meet traffic today: places to fix first, and to watch"><input type="checkbox" id="showexposure" checked> Fix first and watch</label>
@@ -103,17 +104,27 @@ const bandsOf=s=>Object.keys(s).map(k=>/^within_([0-9.]+)_min_weight$/.exec(k)).
 const SEQ=["#14574a","#2f8a6c","#6db98e","#b9dfb0","#ecefc8","#f6e2b5"],LATE="#e2c9b8",NEVER="#bdbdbd";
 const VERB={walk:"walked",bike:"cycled",car:"drove"},CAN={walk:"walk",bike:"cycle",car:"drive"};
 // Two choices: the mode, then one of that mode's route models (its main one first).
-const modeSel=$("mode"),runSel=$("run");
+const modeSel=$("mode"),runSel=$("run"),limitSel=$("limit");
+// A run's views at shorter time limits are runs too, with their limit set.
+const limitKey=r=>r.limit===null||r.limit===undefined?"":String(r.limit);
+function fillLimits(){const keep=limitSel.value,ofMode=D.runs.filter(r=>r.mode===modeSel.value);limitSel.replaceChildren();
+  const full=ofMode.find(r=>limitKey(r)==="");const fc=full?capOf(full):null;
+  for(const k of [...new Set(ofMode.map(limitKey))].sort((a,b)=>(a===""?Infinity:+a)-(b===""?Infinity:+b)).reverse()){
+    const o=document.createElement("option");o.value=k;o.textContent=k===""?(fc!==null?`${dec(fc)} min`:"Full limit"):`${dec(+k)} min`;limitSel.appendChild(o);}
+  limitSel.value=[...limitSel.options].some(o=>o.value===keep)?keep:"";
+  $("limitwrap").style.display=limitSel.options.length>1?"":"none";}
 for(const m of [...new Set(D.runs.map(r=>r.mode))]){const o=document.createElement("option");o.value=m;o.textContent=MODE[m]||m;modeSel.appendChild(o);}
-function fillRuns(){runSel.replaceChildren();
-  for(const r of D.runs.filter(r=>r.mode===modeSel.value)){const o=document.createElement("option");o.value=r.id;o.textContent=r.preset+(r.main?" (main)":"");o.title=r.title;runSel.appendChild(o);}}
-fillRuns();
+function fillRuns(){const was=D.runs.find(r=>r.id===runSel.value);runSel.replaceChildren();
+  for(const r of D.runs.filter(r=>r.mode===modeSel.value&&limitKey(r)===limitSel.value)){const o=document.createElement("option");o.value=r.id;o.textContent=r.preset+(r.main?" (main)":"");o.title=r.title;runSel.appendChild(o);}
+  const same=was&&D.runs.find(r=>r.mode===modeSel.value&&r.preset===was.preset&&limitKey(r)===limitSel.value);if(same)runSel.value=same.id;}
+fillLimits();fillRuns();
 // The address may hold a view to return to; anything else in it is ignored.
 const hv=location.hash.slice(1).split(","),hn=hv.slice(0,3).map(Number);
 const hok=hv.length>=3&&hv.slice(0,3).every(x=>x.trim()!=="")&&hn.every(isFinite)&&Math.abs(hn[0])<=90&&Math.abs(hn[1])<=180&&hn[2]>=0&&hn[2]<=22;
 let hr=null;try{hr=hv[3]?D.runs.find(r=>r.id===decodeURIComponent(hv[3]))||null:null;}catch(e){hr=null;}
-if(hr){modeSel.value=hr.mode;fillRuns();runSel.value=hr.id;}
-modeSel.addEventListener("change",()=>{fillRuns();draw();});
+if(hr){modeSel.value=hr.mode;fillLimits();limitSel.value=limitKey(hr);fillRuns();runSel.value=hr.id;}
+modeSel.addEventListener("change",()=>{fillLimits();fillRuns();draw();});
+limitSel.addEventListener("change",()=>{fillRuns();draw();});
 const map=L_.map("map");
 if(hok)map.setView([hn[0],hn[1]],hn[2]);else map.fitBounds(D.bounds);
 const run=()=>D.runs.find(r=>r.id===runSel.value)||D.runs[0];
@@ -153,7 +164,7 @@ for(const o of D.places||[D.outline]){if(o.point)L_.circleMarker(o.point,{...des
 else L_.polygon(o.rings,destStyle).addTo(map);}
 for(const e of D.entrances)L_.circleMarker(e,{pane:"dest",radius:4,color:"#111",weight:1.5,fillColor:"#ffe066",fillOpacity:1,interactive:false}).addTo(map);
 const FLOW=D.runs.map(r=>new Map(r.flow));
-function edgePopup(i){const rows=D.runs.map((r,k)=>`<tr${r.id===run().id?' style="font-weight:700"':""}><td>${esc(MODE[r.mode]||r.mode)}, ${esc(r.preset)}</td><td class="n">${dec(FLOW[k].get(i)||0)}</td></tr>`).join("");
+function edgePopup(i){const rows=D.runs.map((r,k)=>limitKey(r)!==limitKey(run())?"":`<tr${r.id===run().id?' style="font-weight:700"':""}><td>${esc(MODE[r.mode]||r.mode)}, ${esc(r.preset)}</td><td class="n">${dec(FLOW[k].get(i)||0)}</td></tr>`).join("");
   return `<div class="pop"><h3>${esc(D.edges.n[i]||"Unnamed street or path")}</h3><div>Potential flow, ${esc(run().unit)}</div><table>${rows}</table></div>`;}
 // Colours for the bands up to the time limit; over it, its own colour.
 const shownBands=(bands,cap)=>bands.filter(b=>cap===null||b<=cap);
@@ -179,7 +190,7 @@ function draw(){
       .bindPopup(`<div class="pop"><b>${min===null?"Most homes here cannot get there":"Median "+dec(min)+" min"}</b><div>${num(w)} ${esc(r.unit)}</div></div>`).addTo(cellLayer).bringToBack();}
   if($("showflow").checked){let top=0;for(const [,f] of r.flow)top=Math.max(top,f);
     for(const [i,f] of r.flow)L_.polyline(D.edges.g[i],{renderer:flowR,color:col,weight:1+11*Math.sqrt(f/(top||1)),opacity:.85,lineCap:"round"}).bindPopup(()=>edgePopup(i)).addTo(flowLayer);}
-  const ag=D.agreement[r.mode];
+  const ag=D.agreement[r.agree||r.mode];
   if(ag&&$("showagree").checked){
     for(const i of ag.some)L_.polyline(D.edges.g[i],{renderer:overR,color:"#e08a1e",weight:7,opacity:.75,dashArray:"2 6",lineCap:"butt"}).bindPopup(()=>edgePopup(i)).addTo(agreeLayer);
     for(const i of ag.every)L_.polyline(D.edges.g[i],{renderer:overR,color:"#111",weight:7,opacity:.55}).bindPopup(()=>edgePopup(i)).addTo(agreeLayer);}
@@ -228,6 +239,8 @@ function figures(r){const s=r.summary,cap=capOf(r),f=[],first=r.fix_first||{stre
   return f.length?`<div class="figs">${f.map(([a,b])=>`<div class="fig"><b>${a}</b><span>${b}</span></div>`).join("")}</div>`:"";}
 function panel(r,bands){const s=r.summary,u=esc(r.unit),cap=capOf(r);
   let h=`<h2>${esc(MODE[r.mode]||r.mode)} to ${esc(TO)}</h2>`+figures(r),how="";
+  const full=limitKey(r)!==""&&D.runs.find(x=>x.mode===r.mode&&x.preset===r.preset&&limitKey(x)==="");
+  if(full)h+=`<div class="note">Trips cut at ${dec(r.limit)} minutes: homes and routes past it are left out and the trips split again.${full.screen.length?` Barriers are worked out at the full ${dec(capOf(full))}-minute limit only.`:""}</div>`;
   if(ALL)h+=`<div class="note">Every destination's routes added up: ${esc(D.combined.join(", "))}. Each place's figure is the sum over them; its priority is judged on that sum, and each place says how many come from each.</div>`;
   else{h+="<table>";
   for(const b of bands)h+=`<tr><td>Within ${dec(b)} minutes</td><td class="n">${num(s["within_"+String(b).replace(/\.0$/,"")+"_min_weight"]??s["within_"+b+"_min_weight"])}</td></tr>`;
@@ -235,7 +248,7 @@ function panel(r,bands){const s=r.summary,u=esc(r.unit),cap=capOf(r);
   if(s.mean_routes_per_origin!==null&&s.mean_routes_per_origin!==undefined)h+=`<tr><td>${tip("Routes shared per home, on average","Each home's trips are shared among a few likely routes rather than one: this is how many, on average.")}</td><td class="n">${dec(s.mean_routes_per_origin)}</td></tr>`;
   if(s.expected_weight!==null&&s.expected_weight!==undefined)h+=`<tr><td>${tip(`Expected trips if usual shares applied (${s.decay_curve})`,"Trips the model expects: each home counts at the national share of trips of its length (the named distance-decay curve). Not a count.")}</td><td class="n">${num(s.expected_weight)}</td></tr>`;
   h+="</table>";
-  const same=D.runs.filter(x=>x.mode===r.mode);
+  const same=D.runs.filter(x=>x.mode===r.mode&&limitKey(x)===limitKey(r));
   if(same.length>1){h+=`<h2>${esc(MODE[r.mode]||r.mode)} under each route model</h2><table><tr><th>${tip("Route model",GL["route model"]||"")}</th><th class="n">Can get there</th><th class="n">Median min</th></tr>`+
     same.map(x=>`<tr${x.id===r.id?' class="on"':""}><td>${tip(x.preset,x.title)}</td><td class="n">${num(x.summary.within_cap_weight)}</td><td class="n">${dec(x.summary.median_minutes_within_cap)}</td></tr>`).join("")+"</table>";}}
   if(r.exposure.length&&$("showexposure").checked){

@@ -30,6 +30,7 @@ time_caps_min:
   walk: 15
   bike: 15
 time_bands_min: [5, 10]
+shorter_limits_min: [10]  # the map can switch to 10-minute trips
 demand:
   weight: residents
 overrides: overrides/los_altos.yaml  # reviewed corrections to OSM

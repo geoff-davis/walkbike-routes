@@ -90,10 +90,47 @@ class Run:
     folder: Path
     summary: dict[str, Any]
     main: bool
+    # A shorter time limit's view of the run: its folder is inside the run's,
+    # and the routes (the same at every limit) stay in ``routes_folder``.
+    limit: float | None = None
+    routes_folder: Path | None = None
 
     @property
     def id(self) -> str:
-        return f"{self.mode}-{self.preset}"
+        return f"{self.mode}-{self.preset}{_at(self.limit)}"
+
+    @property
+    def agreement_key(self) -> str:
+        """Runs are compared for agreement with the mode's other runs at the same limit."""
+        return f"{self.mode}{_at(self.limit)}"
+
+
+def _at(limit: float | None) -> str:
+    return "" if limit is None else f"@{limit:g}"
+
+
+def limit_folders(folder: Path, listed: set[Path]) -> list[Path]:
+    """A run's shorter-limit folders this run wrote, shortest first."""
+    found = {
+        p.parent for p in listed if p.parent.parent == folder and p.parent.name.startswith("limit-")
+    }
+    return sorted(found, key=lambda sub: float(sub.name.removeprefix("limit-")))
+
+
+def _limit_views(runs: list[Run], listed: set[Path]) -> list[Run]:
+    """Each run's views at the shorter limits, each read from its own summary."""
+    views = []
+    for run in runs:
+        for sub in limit_folders(run.folder, listed):
+            if sub / "summary.csv" not in listed:
+                continue
+            row = pd.read_csv(sub / "summary.csv", dtype={"destination_id": str, "mode": str,
+                                                          "preset": str}).iloc[0]  # fmt: skip
+            views.append(
+                Run(run.mode, run.preset, sub, _clean({str(k): v for k, v in row.items()}),
+                    run.main, limit=float(row["time_cap_min"]), routes_folder=run.folder)
+            )  # fmt: skip
+    return views
 
 
 def build_maps(out: Path, *, offline: bool = False) -> list[Path]:
@@ -126,6 +163,7 @@ def build_maps(out: Path, *, offline: bool = False) -> list[Path]:
                     _clean({str(k): v for k, v in row.items()}), main=mode not in seen)
             )  # fmt: skip
             seen.add(mode)
+        runs += _limit_views(runs, listed)
         target = destinations[destinations.destination_id.astype(str).eq(destination_id)]
         drawn = (
             None
@@ -197,10 +235,18 @@ def combined_page_data(
     labels = dict(zip(destinations.destination_id.astype(str), names, strict=True))
     shapes: dict[str, BaseGeometry] = {}
     totals: dict[str, dict[str, float]] = {}
+    # Each run, then its views at shorter limits: (id, run folder, limit, lists folder).
+    views: list[tuple[str, Path, float | None, Path]] = []
     for run in folders:
+        views.append((run.name, run, None, run))
+        for sub in limit_folders(run, listed):
+            minutes = float(sub.name.removeprefix("limit-"))
+            views.append((f"{run.name}{_at(minutes)}", run, minutes, sub))
+    for name, run, limit, _ in views:
         total: dict[str, float] = defaultdict(float)
         for destination_id in ids:
-            path = out / destination_id / run.name / "flows.parquet"
+            path = out / destination_id / run.name
+            path = (path if limit is None else path / f"limit-{limit:g}") / "flows.parquet"
             if path not in listed:
                 continue
             frame = gpd.read_parquet(path)
@@ -209,14 +255,14 @@ def combined_page_data(
                                            used.potential_flow, used.geometry, strict=True):  # fmt: skip
                 total[edge_id] += float(flow)
                 shapes.setdefault(edge_id, line)
-        totals[run.name] = total
+        totals[name] = total
     order = sorted(shapes)
     position = {edge_id: i for i, edge_id in enumerate(order)}
     street_names = dict(
         zip(links.link_id.astype(str), links.name.fillna("").astype(str), strict=True)
     )
     run_data = []
-    for run in folders:
+    for name, run, limit, lists in views:
         mode, _, preset = run.name.partition("-")
         rows = summary[summary["mode"].astype(str).eq(mode) & summary.preset.astype(str).eq(preset)]
         units = set(rows.weight_unit.astype(str)) if "weight_unit" in rows else set()
@@ -226,12 +272,12 @@ def combined_page_data(
         title, source = _preset(mode, preset)
         run_data.append(
             {
-                "id": run.name, "mode": mode, "preset": preset, "main": True, "title": title,
-                "source": source,
-                "summary": {"weight_unit": words["unit"]}, **words,
-                "flow": [[position[e], round(f, 2)] for e, f in sorted(totals[run.name].items())],
+                "id": name, "mode": mode, "preset": preset, "main": True, "title": title,
+                "source": source, "limit": limit, "agree": f"{mode}{_at(limit)}",
+                "summary": {"weight_unit": words["unit"], "time_cap_min": limit}, **words,
+                "flow": [[position[e], round(f, 2)] for e, f in sorted(totals[name].items())],
                 "cells": [], "screen": [],
-                **_exposure(run, to_degrees, lambda path: path in listed, labels),
+                **_exposure(lists, to_degrees, lambda path: path in listed, labels),
             }
         )  # fmt: skip
     shown = destinations[destinations.destination_id.astype(str).isin(ids)]
@@ -334,7 +380,12 @@ def page_data(
         "n": [names.get(e, "") for e in order],
     }
 
-    routes = {run.id: pd.read_parquet(run.folder / "routes.parquet") for run in runs}
+    read: dict[Path, pd.DataFrame] = {}
+    for run in runs:
+        where = run.routes_folder or run.folder
+        if where not in read:
+            read[where] = pd.read_parquet(where / "routes.parquet")
+    routes = {run.id: read[run.routes_folder or run.folder] for run in runs}
     routed = set().union(*(set(r.origin_id.astype(str)) for r in routes.values()))
     homes = homes[homes.home_id.astype(str).isin(routed)]
     cells, cell_index = _cells(homes, to_degrees)
@@ -349,6 +400,8 @@ def page_data(
                 "mode": run.mode,
                 "preset": run.preset,
                 "main": run.main,
+                "limit": run.limit,
+                "agree": run.agreement_key,
                 "title": preset[0],
                 "source": preset[1],
                 "summary": run.summary,
@@ -363,13 +416,13 @@ def page_data(
             }
         )
     agreement = {
-        mode: {tier: [position[e] for e in sorted(ids)] for tier, ids in found.items()}
-        for mode, found in busy_agreement(
-            {run.id: (run.mode, flows[run.id]) for run in runs}
+        key: {tier: [position[e] for e in sorted(ids)] for tier, ids in found.items()}
+        for key, found in busy_agreement(
+            {run.id: (run.agreement_key, flows[run.id]) for run in runs}
         ).items()
     }
     shape = target.geometry.iloc[0]
-    entrances = _entrances([run.folder for run in runs], to_degrees, found)
+    entrances = _entrances([run.folder for run in runs if run.limit is None], to_degrees, found)
     drawn = gpd.GeoSeries([shapes[e] for e in order], crs=links.crs) if order else links.geometry
     west, south, east, north = opening_view(
         flows[runs[0].id] if runs else None,
@@ -452,6 +505,8 @@ def opening_view(
 
 def busy_agreement(runs: dict[str, tuple[str, pd.DataFrame]]) -> dict[str, dict[str, set[str]]]:
     """For each mode run under two or more presets, its busy streets by agreement.
+
+    Runs are grouped by the key given with each, the mode or the mode at a limit.
 
     A street is busy in a run when its flow is in the top ``TOP_SHARE`` of the
     streets with any flow there.  ``every`` holds the streets busy in every

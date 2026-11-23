@@ -62,6 +62,14 @@ fields:
 - **`time_caps_min`**: the farthest walking and cycling trips go, in
   minutes. `time_bands_min` (default 5, 10, 15, 20) sets the bands in the
   tables and map; none may be above a limit.
+- **`shorter_limits_min`** (optional): shorter walking and cycling limits
+  the map can switch to, such as `[10]`. At each, homes past it are left
+  out, any route over it is dropped and the trips are split again among the
+  near-best routes left; flows and the fix-first lists are worked out again.
+  This uses the routes already found, so it adds little to a run, and gives
+  the same results as a run at that limit. Barriers are worked out at the
+  full limit only. Each must be below both the walk and bike limits; the
+  outputs go in a `limit-<minutes>` folder inside each run's folder.
 - **`demand`**: who travels. `weight: residents` (with `min_age` and
   `max_age` for a school) or `weight: households`.
 
