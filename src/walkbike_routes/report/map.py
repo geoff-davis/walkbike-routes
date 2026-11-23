@@ -326,7 +326,7 @@ def combined_page_data(
         "runs": run_data,
         "glossary": text.GLOSSARY,
         "agreement": {},
-        "overlap": [],
+        "overlap": {},
         "cells": [],
         "bounds": [[round(s_, 5), round(w, 5)], [round(n, 5), round(e, 5)]],
         "streets": lines,
@@ -354,8 +354,14 @@ def page_data(
         return path in listed if listed is not None else path.exists()
 
     flows = {run.id: gpd.read_parquet(run.folder / "flows.parquet") for run in runs}
-    overlap_path = folder / "overlap.parquet"
-    overlap = gpd.read_parquet(overlap_path) if found(overlap_path) else None
+    # The overlap at the full limit (key "") and at each shorter one the runs show.
+    overlaps: dict[str, gpd.GeoDataFrame] = {}
+    for key, where in [("", folder)] + [
+        (f"{m:g}", folder / f"limit-{m:g}")
+        for m in sorted({r.limit for r in runs if r.limit is not None})
+    ]:
+        if found(where / "overlap.parquet"):
+            overlaps[key] = gpd.read_parquet(where / "overlap.parquet")
 
     # Streets drawn: any with flow in a run, or in an overlap tier.  Each is stored
     # once and runs refer to it by position.
@@ -364,14 +370,15 @@ def page_data(
         used = frame[frame.potential_flow.gt(0)]
         for edge_id, line in zip(used.physical_edge_id.astype(str), used.geometry, strict=True):
             shapes.setdefault(edge_id, line)
-    tiers: dict[str, str] = {}
-    if overlap is not None:
+    tiers: dict[str, dict[str, str]] = {}
+    for key, overlap in overlaps.items():
         tiered = overlap[overlap.overlap_tier.fillna("").astype(str).ne("")]
+        tiers[key] = {}
         for edge_id, line, tier in zip(
             tiered.physical_edge_id.astype(str), tiered.geometry, tiered.overlap_tier, strict=True
         ):
             shapes.setdefault(edge_id, line)
-            tiers[edge_id] = str(tier)
+            tiers[key][edge_id] = str(tier)
     order = sorted(shapes)
     position = {edge_id: i for i, edge_id in enumerate(order)}
     names = dict(zip(links.link_id.astype(str), links.name.fillna("").astype(str), strict=True))
@@ -461,7 +468,11 @@ def page_data(
         "runs": run_data,
         "glossary": text.GLOSSARY,
         "agreement": agreement,
-        "overlap": [[position[e], t] for e, t in sorted(tiers.items())],
+        # Keyed by time limit: "" for the full one, else its minutes as the page writes them.
+        "overlap": {
+            key: [[position[e], t] for e, t in sorted(found.items())]
+            for key, found in tiers.items()
+        },
         "cells": cells,
         "bounds": [[round(s_, 5), round(w, 5)], [round(n, 5), round(e, 5)]],
         "streets": lines,

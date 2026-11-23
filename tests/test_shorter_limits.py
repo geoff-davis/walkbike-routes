@@ -55,6 +55,17 @@ def test_the_shorter_limit_matches_a_run_at_that_limit(
         assert made[column] == pytest.approx(real[column]), column
 
 
+@pytest.mark.parametrize("destination", ["school", "downtown"])
+def test_the_car_overlap_matches_at_the_shorter_limit(
+    both: tuple[Path, Path], destination: str
+) -> None:
+    with_short, at_short = both
+    pd.testing.assert_frame_equal(
+        _table(with_short / destination / "limit-5" / "overlap.parquet"),
+        _table(at_short / destination / "overlap.parquet"),
+    )
+
+
 @pytest.mark.parametrize("run", RUNS)
 def test_the_lists_for_every_destination_match_at_the_shorter_limit(
     both: tuple[Path, Path], run: str

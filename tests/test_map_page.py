@@ -129,6 +129,11 @@ if (cut.id !== full.id + "@5" || cut.preset !== full.preset) throw new Error("ru
 if (!(sum(cut) < sum(full))) throw new Error("flows not cut");
 if (!/Trips cut at 5 minutes/.test($("panel").textContent)) throw new Error("no note");
 if (cut.screen.length) throw new Error("barriers at the shorter limit");
+$("showoverlap").checked = true; draw();
+const drawn = overlapLayer.getLayers().length, at = D.overlap["5"] || [], all = D.overlap[""] || [];
+if (drawn !== at.length) throw new Error(`overlap drawn ${drawn}, at 5 min ${at.length}`);
+if (all.length && JSON.stringify(at) === JSON.stringify(all)) throw new Error("overlap not cut");
+$("showoverlap").checked = false;
 $("limit").value = ""; $("limit").dispatchEvent(new Event("change"));
 if (run().id !== full.id) throw new Error("not back: " + run().id);
 $("mode").value = "car"; $("mode").dispatchEvent(new Event("change"));
@@ -141,6 +146,28 @@ if (D.runs.some(r => r.mode === "car") && $("limitwrap").style.display !== "none
 def test_the_map_switches_to_a_shorter_time_limit(pages: list[Path]) -> None:
     for page in pages:
         assert _result(page, LIMIT) == ['data-ok="ok"'], page.parent.name
+
+
+@pytest.mark.skipif(CHROME is None, reason="no Chrome or Chromium to open the map in")
+def test_fix_first_starts_off_unless_a_link_names_one_of_its_places(
+    pages: list[Path], tmp_path: Path
+) -> None:
+    page = pages[0]
+    off = 'if ($("showexposure").checked) throw new Error("on");'
+    assert _result(page, off) == ['data-ok="ok"']
+    text = page.read_text()
+    tag = re.search(r'"tag":"([A-Z][0-9]+)"', text)
+    assert tag is not None
+    # The report's link: centre, zoom, run, place.
+    linked = text.replace(
+        "<script>\nconst D=",
+        f"<script>history.replaceState(null,'','#0,0,3,walk-broach-2016,{tag[1]}');</script>"
+        "<script>\nconst D=", 1,
+    )  # fmt: skip
+    copy = page.with_name("_linked.html")
+    copy.write_text(linked)
+    on = 'if (!$("showexposure").checked) throw new Error("off");'
+    assert _result(copy, on) == ['data-ok="ok"']
 
 
 @pytest.mark.skipif(CHROME is None, reason="no Chrome or Chromium to open the map in")

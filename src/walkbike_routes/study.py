@@ -151,6 +151,26 @@ def analyze(study: settings.Study, town: Town, out: Path) -> list[Path]:
             path = out / destination.id / "overlap.parquet"
             layer.to_parquet(path)
             written.append(path)
+            # Again at each shorter limit, from the walking and cycling trips cut there.
+            for limit in study.shorter_limits_min:
+                cut = {
+                    m: pd.read_parquet(
+                        limit_folder(
+                            out
+                            / destination.id
+                            / f"{m}-{study.presets[cast(settings.Mode, m)][0]}",
+                            limit,
+                        )
+                        / "flows.parquet"
+                    )
+                    .set_index("physical_edge_id")
+                    .potential_flow
+                    for m in active
+                }
+                path = limit_folder(out / destination.id, limit) / "overlap.parquet"
+                path.parent.mkdir(exist_ok=True)
+                overlap(edges, flows["car"], cut).to_parquet(path)
+                written.append(path)
         files, runs = _exposure(context, destination, flows, signal_legs, signal_nodes)
         written.extend(files)
         for key, run in runs.items():
