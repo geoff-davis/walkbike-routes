@@ -25,6 +25,7 @@ main{flex:1;display:flex;min-height:0}
 #panel table{border-collapse:collapse;width:100%}#panel td,#panel th{text-align:left;vertical-align:top;padding:2px 6px 2px 0;border-bottom:1px solid #eeece8}
 #panel th{font-weight:600;color:var(--muted)}#panel .n{text-align:right;font-variant-numeric:tabular-nums}
 .gl{border-bottom:1px dotted currentColor;cursor:help}#panel .note{color:var(--muted)}#panel tr.on td{background:var(--hi)}
+#tip{position:fixed;z-index:10000;max-width:20rem;background:var(--fg);color:#fff;padding:5px 8px;border-radius:4px;font-size:12px;line-height:1.35;pointer-events:none}
 #panel tr[data-go]{cursor:pointer}#panel tr[data-go]:hover td{background:#f3f1ec}
 #panel details{margin-top:12px}#panel summary{cursor:pointer;font-weight:600}
 .figs{margin:2px 0 8px;border:1px solid var(--line);border-radius:6px}.fig{display:flex;gap:10px;align-items:baseline;padding:5px 10px;border-bottom:1px solid var(--line)}.fig:last-child{border-bottom:0}
@@ -54,7 +55,7 @@ body.printing .leaflet-control-attribution{display:none}
   #map{width:10.2in;height:5.5in;flex:none}
   #panel{width:auto;max-height:none;overflow:visible;border:0;padding:8px 0 0;font-size:11px;columns:2;column-gap:24px}
   #panel tr{break-inside:avoid}#panel h2{break-after:avoid}
-  .leaflet-popup-pane,.leaflet-control-container .legend{display:none!important}
+  #tip,.leaflet-popup-pane,.leaflet-control-container .legend{display:none!important}
   #pkey{display:block;columns:4;column-gap:14px;font-size:10px;line-height:1.3;margin-top:5px}
   #pkey b{display:block;margin-top:3px;break-after:avoid}
   #pkey .sw{width:14px;margin-right:4px}
@@ -299,6 +300,18 @@ function paintNow(){if(cv._map&&cv._reset&&cv._redraw){cv._reset();cv._redraw();
 function fromPrint(){if(!saved)return;document.body.classList.remove("printing");map.invalidateSize({animate:false});map.setView(saved[0],saved[1],{animate:false});saved=null;draw();}
 $("print").addEventListener("click",()=>{toPrint();setTimeout(()=>window.print(),400);}); // time for the map to redraw at page size
 addEventListener("beforeprint",toPrint);addEventListener("afterprint",fromPrint);
+// Notes drawn by the page: some browsers (Chrome on Wayland) never show native title tooltips.
+// A title moves to data-tip on first hover, so the native one stays quiet; code may set it again.
+(function(){const t=document.body.appendChild(document.createElement("div"));t.id="tip";t.setAttribute("role","tooltip");t.hidden=true;
+function show(e){const el=e.target.closest&&e.target.closest("[title],[data-tip]");if(!el||el.tagName==="OPTION"||el.tagName==="SELECT")return;
+  if(el.hasAttribute("title")){el.dataset.tip=el.title;el.removeAttribute("title");}
+  if(!el.dataset.tip)return;t.textContent=el.dataset.tip;t.hidden=false;const r=el.getBoundingClientRect();
+  t.style.left=Math.max(8,Math.min(r.left,innerWidth-t.offsetWidth-8))+"px";
+  t.style.top=(r.bottom+6+t.offsetHeight>innerHeight?r.top-6-t.offsetHeight:r.bottom+6)+"px";}
+function hide(){t.hidden=true;}
+["mouseover","focusin"].forEach(n=>document.addEventListener(n,show));
+["mouseout","focusout"].forEach(n=>document.addEventListener(n,hide));
+document.addEventListener("scroll",hide,true);addEventListener("wheel",hide,{passive:true});})();
 draw();
 // A link from the report names a place: open it.
 try{const hp=hv[4]&&PLACE[decodeURIComponent(hv[4])];if(hp)hp.layer.openPopup(hp.at||hp.box.getCenter());}catch(e){}

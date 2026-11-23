@@ -91,6 +91,22 @@ def test_the_map_defines_jargon_on_hover(pages: list[Path]) -> None:
     assert _result(pages[0], GLOSS) == ['data-ok="ok"']
 
 
+# The page draws its own notes: Chrome on Wayland never shows native title tooltips.
+HOVER = """
+const el = document.querySelector("label[title]"), note = el.title, tip = $("tip");
+el.dispatchEvent(new MouseEvent("mouseover", {bubbles: true}));
+if (tip.hidden || tip.textContent !== note) throw new Error("no note: " + tip.textContent);
+if (el.hasAttribute("title")) throw new Error("the native tooltip would show too");
+el.dispatchEvent(new MouseEvent("mouseout", {bubbles: true}));
+if (!tip.hidden) throw new Error("note stays after the pointer leaves");
+"""
+
+
+@pytest.mark.skipif(CHROME is None, reason="no Chrome or Chromium to open the map in")
+def test_the_map_draws_its_own_notes_on_hover(pages: list[Path]) -> None:
+    assert _result(pages[0], HOVER) == ['data-ok="ok"']
+
+
 @pytest.mark.skipif(CHROME is None, reason="no Chrome or Chromium to open the map in")
 def test_the_check_notices_a_script_error(pages: list[Path], tmp_path: Path) -> None:
     broken = tmp_path / "map.html"
