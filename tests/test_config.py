@@ -290,6 +290,17 @@ def test_a_band_above_the_shortest_limit_is_refused_and_left_out_of_the_defaults
     assert config.parse(GOOD | {"time_bands_min": [5, 15]}).time_bands_min == (5.0, 15.0)
 
 
+def test_shorter_limits_must_increase_and_stay_under_both_active_limits() -> None:
+    assert config.parse(GOOD).shorter_limits_min == ()
+    assert config.parse(GOOD | {"shorter_limits_min": [5, 10]}).shorter_limits_min == (5.0, 10.0)
+    with pytest.raises(config.ConfigError, match=r"15 is not below time_caps_min.bike \(15\)"):
+        config.parse(GOOD | {"shorter_limits_min": [15]})
+    with pytest.raises(config.ConfigError, match="must increase"):
+        config.parse(GOOD | {"shorter_limits_min": [10, 5]})
+    with pytest.raises(config.ConfigError, match="expected a list"):
+        config.parse(GOOD | {"shorter_limits_min": 10})
+
+
 def test_an_unknown_setting_that_is_not_text_is_named_not_a_crash() -> None:
     with pytest.raises(config.ConfigError, match="unknown setting"):
         raw: dict[Any, Any] = GOOD | {2026: "x", "zzz": "y"}

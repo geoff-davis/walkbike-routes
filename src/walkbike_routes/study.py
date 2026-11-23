@@ -25,6 +25,7 @@ their flows meet.
 from __future__ import annotations
 
 import logging
+from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import replace
 from pathlib import Path
@@ -49,7 +50,7 @@ from walkbike_routes.network.motor import MotorPenaltyProfile
 from walkbike_routes.report import text
 from walkbike_routes.study_active import active_run
 from walkbike_routes.study_car import car_network, car_run
-from walkbike_routes.study_context import SNAP_M, Context, write
+from walkbike_routes.study_context import SNAP_M, Context, limit_folder, write
 from walkbike_routes.study_nearest import nearest_origins
 from walkbike_routes.study_networks import ModeNetwork, mode_network
 
@@ -133,7 +134,8 @@ def analyze(study: settings.Study, town: Town, out: Path) -> list[Path]:
                 ran[destination.id, mode, name] = (files, rows, flow)
     written: list[Path] = []
     summary: list[dict[str, object]] = []
-    together: dict[str, dict[str, exposure.RunFlows]] = {"walk": {}, "bike": {}}
+    # Keyed by mode and time limit (None for the run's own).
+    together: dict[tuple[str, float | None], dict[str, exposure.RunFlows]] = defaultdict(dict)
     for context, destination in zip(contexts, study.destinations, strict=True):
         flows: dict[str, pd.Series] = {}
         for mode in study.modes:
@@ -149,10 +151,30 @@ def analyze(study: settings.Study, town: Town, out: Path) -> list[Path]:
             path = out / destination.id / "overlap.parquet"
             layer.to_parquet(path)
             written.append(path)
+            # Again at each shorter limit, from the walking and cycling trips cut there.
+            for limit in study.shorter_limits_min:
+                cut = {
+                    m: pd.read_parquet(
+                        limit_folder(
+                            out
+                            / destination.id
+                            / f"{m}-{study.presets[cast(settings.Mode, m)][0]}",
+                            limit,
+                        )
+                        / "flows.parquet"
+                    )
+                    .set_index("physical_edge_id")
+                    .potential_flow
+                    for m in active
+                }
+                path = limit_folder(out / destination.id, limit) / "overlap.parquet"
+                path.parent.mkdir(exist_ok=True)
+                overlap(edges, flows["car"], cut).to_parquet(path)
+                written.append(path)
         files, runs = _exposure(context, destination, flows, signal_legs, signal_nodes)
         written.extend(files)
-        for walked_or_cycled, run in runs.items():
-            together[walked_or_cycled][destination.id] = run
+        for key, run in runs.items():
+            together[key][destination.id] = run
     written.extend(_combined(shared, together, signal_legs, signal_nodes))
     path = out / "summary.csv"
     pd.DataFrame(summary).to_csv(path, index=False)
@@ -166,25 +188,42 @@ def _exposure(
     flows: Mapping[str, pd.Series],
     signal_legs: frozenset[str],
     signal_nodes: frozenset[str],
-) -> tuple[list[Path], dict[str, exposure.RunFlows]]:
-    """Where each main walking and cycling run is exposed to traffic today."""
+) -> tuple[list[Path], dict[tuple[str, float | None], exposure.RunFlows]]:
+    """Where each main walking and cycling run is exposed to traffic today.
+
+    Also at each shorter time limit, from the routes split again there.
+    """
     written: list[Path] = []
-    runs: dict[str, exposure.RunFlows] = {}
+    runs: dict[tuple[str, float | None], exposure.RunFlows] = {}
     for mode in ("walk", "bike"):
         if mode not in flows:
             continue
         folder = context.out / destination.id / f"{mode}-{context.study.presets[mode][0]}"
-        shares = pd.read_parquet(folder / "route_shares.parquet")
         unit = context.origins.weight_unit.iloc[0] if len(context.origins) else ""
         weighted = bool(settings.decay_for(context.study, destination, mode))
         noun = text.flow_noun(text.unit_words(unit), weighted)
-        streets, crossings = exposure.exposure(
-            context.edges, context.nodes, flows[mode], shares, mode,
-            flows.get("car"), signal_legs, signal_nodes, context.study.exposure,
-            _lts_column(context.study, mode), noun,
-        )  # fmt: skip
-        written += write(folder, exposure_streets=streets, exposure_crossings=crossings)
-        runs[mode] = exposure.RunFlows(flows[mode], shares, flows.get("car"), noun)
+        cap = context.study.time_caps_min[mode]
+        limits: list[float | None] = [
+            None,
+            *(m for m in context.study.shorter_limits_min if m < cap),
+        ]
+        for limit in limits:
+            where = folder if limit is None else limit_folder(folder, limit)
+            shares = pd.read_parquet(where / "route_shares.parquet")
+            flow = (
+                flows[mode]
+                if limit is None
+                else pd.read_parquet(where / "flows.parquet")
+                .set_index("physical_edge_id")
+                .potential_flow
+            )
+            streets, crossings = exposure.exposure(
+                context.edges, context.nodes, flow, shares, mode,
+                flows.get("car"), signal_legs, signal_nodes, context.study.exposure,
+                _lts_column(context.study, mode), noun,
+            )  # fmt: skip
+            written += write(where, exposure_streets=streets, exposure_crossings=crossings)
+            runs[mode, limit] = exposure.RunFlows(flow, shares, flows.get("car"), noun)
     return written, runs
 
 
@@ -198,21 +237,22 @@ def _lts_column(study: settings.Study, mode: str) -> str:
 
 def _combined(
     context: Context,
-    together: Mapping[str, Mapping[str, exposure.RunFlows]],
+    together: Mapping[tuple[str, float | None], Mapping[str, exposure.RunFlows]],
     signal_legs: frozenset[str],
     signal_nodes: frozenset[str],
 ) -> list[Path]:
     """The exposure lists with every destination's routes added up, when there are several.
 
-    Written to ``all-destinations/<mode>-<preset>/``; each place says how many
-    of its people come from each destination.
+    Written to ``all-destinations/<mode>-<preset>/``, and to its ``limit-<minutes>``
+    folder for a shorter limit; each place says how many of its people come
+    from each destination.
     """
     if any(d.id == exposure.ALL_DESTINATIONS for d in context.study.destinations):
         log.warning("a destination is called %r: lists for all destinations not written",
                     exposure.ALL_DESTINATIONS)  # fmt: skip
         return []
     written: list[Path] = []
-    for mode, runs in together.items():
+    for (mode, limit), runs in together.items():
         if len(runs) < 2:
             continue
         folder = (
@@ -220,6 +260,8 @@ def _combined(
             / exposure.ALL_DESTINATIONS
             / f"{mode}-{context.study.presets[cast(settings.Mode, mode)][0]}"
         )
+        if limit is not None:
+            folder = limit_folder(folder, limit)
         folder.mkdir(parents=True, exist_ok=True)
         streets, crossings = exposure.combined_exposure(
             context.edges, context.nodes, runs, mode, signal_legs, signal_nodes,

@@ -184,6 +184,7 @@ def parse(raw: Mapping[str, Any], base: Path = Path("."), source: Path | None = 
         demand=demand,
         route_choice=_route_choice(top.get("route_choice", {})),
         time_bands_min=_bands(top.get("time_bands_min"), limits),
+        shorter_limits_min=_shorter(top.get("shorter_limits_min"), limits),
         screen_candidates=checks.count(top.get("screen_candidates", 25), "screen_candidates"),
         exposure=_exposure(top.get("exposure")),
         overrides=checks.path(top.get("overrides"), base),
@@ -481,6 +482,28 @@ def _bands(raw: Any, limits: Mapping[Mode, float]) -> tuple[float, ...]:
             "are not searched past the limit"
         )
     return bands
+
+
+def _shorter(raw: object, limits: Mapping[Mode, float]) -> tuple[float, ...]:
+    """Shorter walk and bike limits for the map, each below both modes' limits.
+
+    A shorter limit is worked out from the routes found within the full one,
+    so it must be under the walk and bike limits it is cut from.
+    """
+    if raw is None:
+        return ()
+    if not isinstance(raw, list):
+        raise ConfigError("shorter_limits_min: expected a list of minutes")
+    shorter = tuple(checks.positive(v, "shorter_limits_min") for v in raw)
+    if list(shorter) != sorted(set(shorter)):
+        raise ConfigError("shorter_limits_min: must increase")
+    active = {m: v for m, v in limits.items() if m in ("walk", "bike")}
+    mode, limit = min(active.items(), key=lambda item: item[1], default=(None, math.inf))
+    if shorter and shorter[-1] >= limit:
+        raise ConfigError(
+            f"shorter_limits_min: {shorter[-1]:g} is not below time_caps_min.{mode} ({limit:g})"
+        )
+    return shorter
 
 
 def _demand(raw: Mapping[str, Any]) -> Demand:

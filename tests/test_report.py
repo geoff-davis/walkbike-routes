@@ -393,7 +393,7 @@ def test_files_left_from_an_earlier_run_are_not_shown(tmp_path: Path) -> None:
     cli.build(config.load(path), tmp_path / "out")
     assert (tmp_path / "out" / "school" / "overlap.parquet").exists()  # left behind
     data = _data(report.build_maps(tmp_path / "out")[0].read_text())
-    assert data["overlap"] == []
+    assert data["overlap"] == {}
     assert [r["id"] for r in data["runs"]] == ["walk-shortest"]
 
 
