@@ -273,7 +273,7 @@ def combined_page_data(
         run_data.append(
             {
                 "id": name, "mode": mode, "preset": preset, "main": True, "title": title,
-                "source": source, "limit": limit, "agree": f"{mode}{_at(limit)}",
+                "source": source, "doc": text.model_doc(mode, preset), "limit": limit, "agree": f"{mode}{_at(limit)}",
                 "summary": {"weight_unit": words["unit"], "time_cap_min": limit}, **words,
                 "flow": [[position[e], round(f, 2)] for e, f in sorted(totals[name].items())],
                 "cells": [], "screen": [],
@@ -325,6 +325,7 @@ def combined_page_data(
         },
         "runs": run_data,
         "glossary": text.GLOSSARY,
+        "repo": text.REPO,
         "agreement": {},
         "overlap": {},
         "cells": [],
@@ -411,6 +412,7 @@ def page_data(
                 "agree": run.agreement_key,
                 "title": preset[0],
                 "source": preset[1],
+                "doc": text.model_doc(run.mode, run.preset),
                 "summary": run.summary,
                 **_flow_words(run.summary.get("weight_unit"), run.summary.get("decay_curve")),
                 "flow": [
@@ -467,6 +469,7 @@ def page_data(
         "edges": edges,
         "runs": run_data,
         "glossary": text.GLOSSARY,
+        "repo": text.REPO,
         "agreement": agreement,
         # Keyed by time limit: "" for the full one, else its minutes as the page writes them.
         "overlap": {

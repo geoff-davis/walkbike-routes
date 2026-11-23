@@ -269,6 +269,8 @@ function panel(r,bands){const s=r.summary,u=esc(r.unit),cap=capOf(r);
   if(ALL)how=`<p>Line width: potential flow, the ${u} who would use each street on the way to any of the destinations, added up as each destination's map counts them. It shows where trips would go, not how many happen; these are not counts.</p>`+how;
   else how=`<p>Line width: potential flow, the ${u} who would use each street, ${decayed?`each home counted at the share of trips this long nationally (curve ${esc(s.decay_curve)})`:r.mode==="car"?"counting everyone, there and back":"counting everyone within the time limit"}. It shows where trips would go, not how many happen; these are not counts. Squares: median travel time from the homes in each 150 m square${cap!==null?`, shaded only where it is within the ${dec(cap)}-minute limit`:""}.</p>`+how;
   h+=`<details id="how"${HOW_OPEN||saved?" open":""}><summary>How this map is made</summary><div class="note">${how}</div></details>`;
+  const away=(href,label)=>`<a href="${esc(href)}" target="_blank" rel="noopener">${esc(label)}</a>`;
+  h+=`<p class="note">${r.doc?`Route model: ${tip(r.preset,r.title)}, ${away(r.doc,"how it works")} · `:""}${D.repo?away(D.repo,"About walkbike-routes"):""}</p>`;
   $("panel").innerHTML=h;
   $("how").addEventListener("toggle",e=>{if(!saved)HOW_OPEN=e.target.open;});}
 let HOW_OPEN=false;

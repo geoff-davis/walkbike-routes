@@ -446,3 +446,42 @@ def test_every_fix_first_place_is_on_the_map_with_the_reports_figures(out: Path)
             # Whole people, as text: the page prints what the report prints.
             assert all(isinstance(e["people"], str) and "." not in e["people"] for e in drawn)
         assert run["flow_heading"] and run["unit"]
+
+
+def _slug(heading: str) -> str:
+    """GitHub's anchor for a Markdown heading."""
+    kept = re.sub(r"[^\w\- ]", "", heading.strip().lower())
+    return kept.replace(" ", "-")
+
+
+def test_every_shipped_route_model_links_to_a_section_that_exists() -> None:
+    from walkbike_routes.costs import presets
+
+    methods = Path(__file__).resolve().parents[1] / "docs" / "routing-methods.md"
+    anchors = {_slug(m[1]) for m in re.finditer(r"^#+ (.+)$", methods.read_text(), re.M)}
+    for mode in ("walk", "bike", "car"):
+        for name in presets.names(mode):
+            link = words.model_doc(mode, name)
+            assert link.startswith(words.METHODS_DOC + "#"), (mode, name)
+            assert link.split("#", 1)[1] in anchors, (mode, name, link)
+
+
+def test_the_report_links_the_repository_and_each_route_models_section(out: Path) -> None:
+    from walkbike_routes.report.tables import build_report
+
+    build_report(out)
+    page = (out / "report.html").read_text()
+    md = (out / "report.md").read_text()
+    for link in (words.REPO, words.METHODS_DOC, words.model_doc("walk", "broach-2016")):
+        assert f'href="{html.escape(link, quote=True)}"' in page, link
+        assert f"]({link})" in md, link
+
+
+def test_the_map_links_the_route_model_and_the_repository(out: Path) -> None:
+    data = _data((out / "school" / "map.html").read_text())
+    assert data["repo"] == words.REPO
+    assert {r["doc"] for r in data["runs"] if r["mode"] == "bike"} == {
+        words.model_doc("bike", "broach-2011")
+    }
+    page = (out / "school" / "map.html").read_text()
+    assert "how it works" in page and "About walkbike-routes" in page

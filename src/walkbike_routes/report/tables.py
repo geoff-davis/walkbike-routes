@@ -47,6 +47,11 @@ from walkbike_routes.report.text import (
 
 TOP_STREETS = 10
 ASSUMPTIONS = "docs/assumptions.md"
+# Where the tool lives and how its route models work, under the report's title.
+ABOUT = (
+    ("Made with walkbike-routes (source and docs)", text.REPO),
+    ("How the route models work", text.METHODS_DOC),
+)
 SECTIONS_FILE = "assumption_sections.json"  # shipped in the package: docs/ is not
 NO_DECAY = text.NO_DECAY
 HOW_STREETS = (
@@ -74,6 +79,15 @@ class Link:
 
     text: str
     href: str
+
+
+@dataclass(frozen=True)
+class Away:
+    """A paragraph of text followed by links to pages elsewhere, opened in a new tab."""
+
+    text: str
+    links: tuple[tuple[str, str], ...]
+    note: bool = False
 
 
 @dataclass(frozen=True)
@@ -154,7 +168,7 @@ class Fold:
     blocks: tuple[Block, ...]
 
 
-Block = Heading | Para | Link | Bullets | Table | Scatter | Terms | Fold
+Block = Heading | Para | Link | Away | Bullets | Table | Scatter | Terms | Fold
 
 
 def build_report(out: Path) -> list[Path]:
@@ -211,6 +225,7 @@ def report_blocks(out: Path, manifest: dict[str, Any]) -> list[Block]:
     blocks: list[Block] = [
         Heading(1, _report_title(manifest)),
         Para(" ".join([*caveat, DRAFT, NOT_COUNTS]), warn=True),
+        Away("", ABOUT, note=True),
     ]
     rules = run_rules(manifest)
     has_lists = any(path.name == "exposure_streets.parquet" for path in listed)
@@ -1081,7 +1096,10 @@ def method_blocks(summary: pd.DataFrame, *, screen: bool = False) -> list[Block]
             continue
         where = sections.get(key) or sections.get(f"{mode}/*")
         see = f" See {ASSUMPTIONS}, “{where}”." if where else ""
-        blocks.append(Para(f"{key}: {found.title}. {' '.join(found.source.split())}{see}"))
+        blocks.append(
+            Away(f"{key}: {found.title}. {' '.join(found.source.split())}{see}",
+                 (("How it works", text.model_doc(str(mode), str(preset))),))
+        )  # fmt: skip
     curves = [
         str(c)
         for c in dict.fromkeys(summary.get("decay_curve", pd.Series(dtype=str)).dropna())
@@ -1149,6 +1167,12 @@ def _markdown_parts(blocks: Sequence[Block]) -> list[str]:
             parts.append(f"_{_md(block.text)}_" if block.note else _md(block.text))
         elif isinstance(block, Link):
             parts.append(f"[{_md(block.text)}]({quote(block.href, safe='/%')})")
+        elif isinstance(block, Away):
+            links = " · ".join(f"[{_md(t)}]({href})" for t, href in block.links)
+            said = _md(block.text)
+            parts.append(
+                " ".join(p for p in (f"_{said}_" if block.note and said else said, links) if p)
+            )
         elif isinstance(block, Bullets):
             parts.append("\n".join(f"- {_md(item)}" for item in block.items))
         elif isinstance(block, Terms):
@@ -1288,6 +1312,15 @@ def _html_parts(blocks: Sequence[Block], ids: list[tuple[str, str]] | None = Non
         elif isinstance(block, Link):
             href = html.escape(quote(block.href, safe="/%"), quote=True)
             parts.append(f'<p><a href="{href}">{html.escape(block.text)}</a></p>')
+        elif isinstance(block, Away):
+            links = " · ".join(
+                f'<a href="{html.escape(href, quote=True)}" target="_blank" rel="noopener">'
+                f"{html.escape(t)}</a>"
+                for t, href in block.links
+            )
+            cls = ' class="note"' if block.note else ""
+            said = _glossed(block.text)
+            parts.append(f"<p{cls}>{' '.join(p for p in (said, links) if p)}</p>")
         elif isinstance(block, Bullets):
             items = "".join(f"<li>{_glossed(i)}</li>" for i in block.items)
             parts.append(f"<ul>{items}</ul>")
