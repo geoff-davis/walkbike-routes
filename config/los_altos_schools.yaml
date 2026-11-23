@@ -72,7 +72,6 @@ destinations:
     access_points:
       - [-122.108110, 37.370944]  # drop-off loop entrance, Covington Road
       - [-122.107498, 37.370598]  # loop exit, Covington Road
-      - [-122.105200, 37.371100]  # drive out to Rosita Avenue past the district office (approximate)
     car_access_points:
       - [-122.108110, 37.370944]  # drop-off loop entrance
   - id: gardner-bullis
