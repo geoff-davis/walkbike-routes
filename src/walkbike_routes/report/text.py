@@ -173,10 +173,32 @@ def count(n: int, one: str, many: str | None = None) -> str:
 
 
 ROUTE_COST_SAVED = "Route-cost min saved"
-ROUTE_COST_DOC = (
-    "https://github.com/geoff-davis/walkbike-routes/blob/main/docs/routing-methods.md"
-    "#route-cost-minutes"
-)
+REPO = "https://github.com/geoff-davis/walkbike-routes"
+METHODS_DOC = f"{REPO}/blob/main/docs/routing-methods.md"
+ROUTE_COST_DOC = f"{METHODS_DOC}#route-cost-minutes"
+# Each shipped route model's section of the methods page, by mode and name;
+# "*" stands for any name of the mode not listed.
+MODEL_SECTIONS = {
+    "walk/broach-2016": "walking-broach-2016",
+    "walk/broach-2016-child": "walking-broach-2016",
+    "walk/broach-2016-sidewalks": "walking-broach-2016",
+    "walk/shortest": "walking-shortest-distance-walkshortest",
+    "bike/broach-2011": "cycling-broach-gliebe-and-dill-2011",
+    "bike/broach-2011-child": "cycling-broach-gliebe-and-dill-2011",
+    "bike/broach-2011-lanes": "cycling-broach-gliebe-and-dill-2011",
+    "bike/broach-2011-commute": "cycling-broach-gliebe-and-dill-2011",
+    "bike/furth": "cycling-furths-level-of-traffic-stress-bikefurth",
+    "bike/shortest": "cycling-shortest-distance-bikeshortest",
+    "car/*": "driving-car",
+}
+
+
+def model_doc(mode: str, name: str) -> str:
+    """Where to read how a route model works: its section, or the methods page."""
+    section = MODEL_SECTIONS.get(f"{mode}/{name}") or MODEL_SECTIONS.get(f"{mode}/*")
+    return f"{METHODS_DOC}#{section}" if section else METHODS_DOC
+
+
 ROUTE_COST = (
     "Route cost is what the route model keeps low: travel time plus extra minutes for "
     "traffic stress, crossings and turns (often called generalized cost)"
