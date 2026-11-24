@@ -2,9 +2,9 @@
 
 ## Current state
 
-- Status: ready for reviewer
-- Next action: reviewer reviews round 1
-- Review target: `f92116a` -> `7b1d26e`
+- Status: complete, accepted at `e9a5ef3`
+- Next action: none
+- Review target: `f92116a` -> `e9a5ef3`
 - Open findings: none
 - Decisions needed from the user: none
 
@@ -96,3 +96,14 @@
   and linked. With the round-1 `map.py` and `tables.py` it fails (the map
   draws only S1..S10).
 - `make check`: 1040 passed, 95.74%. `make validation-check`: 58 passed.
+
+## Review, round 2
+
+- Loop: `fix-first-order-1`, round 2; Standard tier.
+- Target reviewed: `7b1d26e..e9a5ef3` (`e9a5ef3d8e746ca349de1be44af144a39cf762fa`). The round-2 handoff was read from `3ed4689` as requested; implementation checks used `e9a5ef3`.
+- Verdict: **accepted** at `e9a5ef3`. FO1 is resolved; no new blocking findings.
+- Reviewed the complete fix diff in an independent detached clone with its own Git metadata. Canonical ranks remain tier-first and contiguous; the saved tier-local rank gives watch places their own budget. Both map inclusion and report-link generation now use the shared `text.on_map` rule, with the previous rank-based rule retained for older saved lists without `tier_rank`.
+- The committed end-to-end FO1 regression passes. An independent synthetic probe with ten fix-first and twelve watch places passes for both streets and crossings: the map and report links agree on S1..S20 / C1..C20, retaining exactly ten watch places under their canonical tags and excluding the last two. The identical probe fails on `7b1d26e`, which retains only S1..S10. Independent checks also pass for legacy missing/NaN tier-rank fallback and a high-rank fix-first place remaining mapped.
+- `git diff --check` and permitted `make check` pass: lint, formatting, types, 1034 tests, four deselected, 95.08% coverage. Two dotenv tests were not collected and four private-config tests were deselected to honor file restrictions. Three pre-existing multithreaded-fork warnings recur.
+- `make validation-check` passes: lint, formatting, types and 58 tests.
+- No repository `data/`, `output/`, `.env`, `*.local.yaml`, or actual count/trip records were read. Additional probes used only fabricated exposure rows outside the repository.
