@@ -66,6 +66,7 @@ from walkbike_routes.network.broach_walk import (
     WalkBroachMovements,
     signalised_crossing,
 )
+from walkbike_routes.routing import local
 from walkbike_routes.routing.turns import SINK, STATE, Transition, sink, turn_graph
 
 
@@ -358,6 +359,55 @@ def movement_screen_graph(
     return expanded
 
 
+class NotExact(Exception):
+    """A screen near the destination might differ from the whole network's."""
+
+    def __init__(self, radius_m: float) -> None:
+        super().__init__(f"needs a radius of {radius_m:.0f} m")
+        self.radius_m = radius_m
+
+
+def screen_cost_per_metre(graph: nx.DiGraph[str], xy: Mapping[str, tuple[float, float]]) -> float:
+    """The least cost per metre of straight line of any link in a screen graph, today or treated.
+
+    Turn and crossing costs only add to a link's (they may not be negative),
+    so this bounds the movement graph too.
+    """
+    least = math.inf
+    for u, v, attrs in graph.edges(data=True):
+        cost = min(float(attrs["generalized_cost_s"]), float(attrs["treated_cost_s"]))
+        a, b = xy.get(str(u)), xy.get(str(v))
+        if not cost >= 0 or a is None or b is None:
+            return math.nan
+        metres = math.hypot(a[0] - b[0], a[1] - b[1])
+        if metres > 0:
+            least = min(least, cost / metres)
+    return least
+
+
+def _check_near(
+    near: local.Near,
+    search: nx.DiGraph[str],
+    targets: list[str],
+    origins: pd.DataFrame,
+    reachable: set[str] | None,
+) -> None:
+    """Raise :class:`NotExact` unless every origin's cost today is below its bound."""
+    present = [t for t in targets if t in search]
+    costs: Mapping[str, float] = {}
+    if present:
+        costs = nx.multi_source_dijkstra_path_length(
+            search.reverse(copy=False),
+            present,
+            weight=lambda _u, _v, a: (
+                float(a["generalized_cost_s"]) if a.get("baseline_available", True) else None
+            ),
+        )
+    ok, needed = local.exact_homes(near, costs, origins.node_id.astype(str), reachable)
+    if not ok:
+        raise NotExact(needed)
+
+
 def treated_flows(
     graph: nx.DiGraph[str], destination_nodes: Iterable[str], origins: pd.DataFrame
 ) -> dict[str, float]:
@@ -527,6 +577,8 @@ def improvement_screen(
     movements: Transition | None = None,
     treatment: Treatment | None = None,
     junction: JunctionCost | None = None,
+    near: local.Near | None = None,
+    reachable: set[str] | None = None,
 ) -> gpd.GeoDataFrame:
     """Rank the places where ``treatment`` saves the most route-cost minutes (generalized cost).
 
@@ -551,13 +603,28 @@ def improvement_screen(
     preset's turn and crossing costs), sections are found on ``graph`` but
     routes are found on its movement graph, so those costs count in the
     minutes saved.
+
+    With ``near`` (from :func:`walkbike_routes.routing.local.near`, its
+    ``per_m`` from :func:`screen_cost_per_metre`), routes are found only on
+    the streets in its circle; candidates are still drawn from ``graph``, and
+    each holds a street some route uses, so it is in the circle.  A treatment only lowers costs, so when every
+    origin's cost today is below its bound, every candidate's is too, and the
+    result is the whole network's; otherwise :class:`NotExact` is raised with
+    the radius asked for.  ``reachable`` (street nodes that reach the
+    destination on the whole network, by :func:`~walkbike_routes.routing.local.reaches`)
+    lets an origin that reaches nothing anywhere pass.
     """
     treatment = treatment or treatments(mode)[0]
     destinations = [str(n) for n in destination_nodes]  # read once; it may be an iterator
-    search, targets = graph, destinations
+    # Routes are found near the destination; places are drawn from the whole
+    # network, so a street's sections and their names are the same either way.
+    routed = graph if near is None else cast("nx.DiGraph[str]", near.graph)
+    search, targets = routed, [n for n in destinations if n in routed]
     if movements is not None:
-        search = movement_screen_graph(graph, movements, junction)
-        targets = [sink(n) for n in destinations if n in graph]
+        search = movement_screen_graph(routed, movements, junction)
+        targets = [sink(n) for n in destinations if n in routed]
+    if near is not None:
+        _check_near(near, search, targets, origins, reachable)
     empty = gpd.GeoDataFrame(columns=SCREEN_COLUMNS, geometry="geometry", crs=edges.crs)
     if candidates <= 0 or not (improved or (junction is not None and movements is not None)):
         return empty

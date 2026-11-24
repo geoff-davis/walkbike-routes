@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import dataclasses
+import functools
 import logging
 import math
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from pathlib import Path
 
 import geopandas as gpd
@@ -139,7 +140,10 @@ def active_run(
     if screen and context.study.screen_candidates and preset.objective == "generalized_cost_s":
         # Weighted at today's route length.  Only homes within the limit today count.
         decayed = routes.assign(demand_weight=routes.demand_weight * routes.decay_factor)
-        frames["screen"] = _screen(context, preset, links, decayed, access, core_mode, cap)
+        frames["screen"] = _screen(
+            context, preset, links, decayed, access, core_mode, cap, built.nodes,
+            label=f"{destination.id} by {mode} ({preset.name})",
+        )  # fmt: skip
     files = write(folder, **frames)
     row = summary(context, destination, mode, preset.name, routes, shares, cap)
     row["decay_curve"] = curve_name or settings.NO_DECAY
@@ -172,6 +176,26 @@ def active_run(
     return files, [row], flows.set_index("physical_edge_id").potential_flow
 
 
+def _positions(nodes: gpd.GeoDataFrame) -> dict[str, tuple[float, float]]:
+    """Each street node's position."""
+    points = nodes.geometry
+    return {
+        str(n): (float(x), float(y))
+        for n, x, y in zip(nodes.node_id, points.x, points.y, strict=True)
+    }
+
+
+def _first_circle(costs: Iterable[float], spans: Iterable[float], per_m: float) -> float:
+    """A radius whose bound is above each cost at its straight-line distance (inf if none)."""
+    if not (per_m > 0 and math.isfinite(per_m)):
+        return math.inf
+    radius = 0.0
+    for cost, d in zip(costs, spans, strict=True):
+        if math.isfinite(cost):
+            radius = max(radius, (cost / per_m + d) / 2, d)
+    return radius * local.MARGIN + 1.0
+
+
 Routed = tuple[AccessibilityResult, dict[str, tuple[Alternative, ...]]]
 START = 1.5  # the first circle: this many times the farthest home's distance from an entrance
 TRIES = 3  # circles tried before the whole network
@@ -194,11 +218,7 @@ def _nearby(
     farthest home and widens to the radius a failed check asks for.
     """
     search = built.search
-    points = built.nodes.geometry
-    xy = {
-        str(n): (float(x), float(y))
-        for n, x, y in zip(built.nodes.node_id, points.x, points.y, strict=True)
-    }
+    xy = _positions(built.nodes)
     per_m = local.cost_per_metre(search, xy, weight)
     away = local.distances(xy, access.node_id.astype(str))
     ends = local.home_ends(built.attachments, origins.origin_id)
@@ -243,8 +263,15 @@ def _screen(
     access: gpd.GeoDataFrame,
     mode: Mode,
     cap: float,
+    nodes: gpd.GeoDataFrame,
+    label: str = "",
 ) -> gpd.GeoDataFrame:
-    """Where each of the mode's treatments would save the most time, one table."""
+    """Where each of the mode's treatments would save the most time, one table.
+
+    Each screen searches the streets near the destination when that provably
+    gives the whole network's result (:func:`screens.improvement_screen`),
+    widening as :func:`_nearby` does.
+    """
     attached = routes[routes.attached_node_id.notna()]
     origins = pd.DataFrame(
         {
@@ -255,6 +282,12 @@ def _screen(
         }
     )
     profile = preset.profile()
+    xy = _positions(nodes)
+    entrances = sorted(set(access.node_id.astype(str)))
+    away = local.distances(xy, entrances)
+    # Today's route costs give the first circle each screen's check asks for.
+    costs = attached.generalized_cost_s.astype(float).to_numpy()
+    spans = [away.get(n, math.inf) for n in origins.node_id]
     tables = []
     for treatment in screens.treatments(mode):
         # The walking model as printed has no sidewalk term, so a sidewalk
@@ -271,22 +304,35 @@ def _screen(
             in_cost = not isinstance(profile, WalkBroachProfile)
             treated = screens.add_signal_wait(treated, context.edges, edges, wait, in_cost)
         graph, improved = screens.screen_graph(links, treated, preferred_cost=preset.objective)
-        movements = turn_costs(context, preset, graph)
-        tables.append(
-            screens.improvement_screen(
-                graph,
-                sorted(set(access.node_id.astype(str))),
-                origins,
-                improved=improved,
-                edges=context.edges,
-                mode=mode,
-                candidates=context.study.screen_candidates,
-                time_limit_min=cap,
-                movements=movements,
-                treatment=treatment,
-                junction=screens.junction_cost(movements, treatment),
+        movements = turn_costs(context, preset, graph)  # from the whole network's junctions
+
+        screen = functools.partial(
+            screens.improvement_screen, graph, entrances, origins, improved=improved,
+            edges=context.edges, mode=mode, candidates=context.study.screen_candidates,
+            time_limit_min=cap, movements=movements, treatment=treatment,
+            junction=screens.junction_cost(movements, treatment),
+        )  # fmt: skip
+
+        per_m = screens.screen_cost_per_metre(graph, xy)
+        radius, reachable, table = _first_circle(costs, spans, per_m), None, None
+        for _ in range(TRIES):
+            cut = local.near(graph, away, per_m, radius) if math.isfinite(radius) else None
+            if cut is None:
+                break
+            try:
+                table = screen(near=cut, reachable=reachable)
+            except screens.NotExact as failed:
+                if math.isinf(failed.radius_m) and reachable is None:
+                    reachable = local.reaches(graph, entrances)
+                else:
+                    radius = failed.radius_m
+                continue
+            logging.info(
+                "%s: %s screened within %.1f km of the entrances",
+                label, treatment.key, radius / 1000,
             )  # fmt: skip
-        )
+            break
+        tables.append(table if table is not None else screen())
     tables = [t for t in tables if not t.empty]
     if not tables:
         return gpd.GeoDataFrame(columns=screens.SCREEN_COLUMNS, geometry="geometry",
