@@ -25,13 +25,13 @@ ALL_DESTINATIONS = "all-destinations"
 
 STREET_COLUMNS = [
     "rank", "place_id", "label", "people", "person_km", "risk_points", "risk_factors",
-    "exposure", "tier", "tier_reason", "people_by_destination", "physical_edge_ids", "geometry",
+    "exposure", "tier", "tier_rank", "tier_reason", "people_by_destination", "physical_edge_ids", "geometry",
 ]  # fmt: skip
 
 
 CROSSING_COLUMNS = [
     "rank", "place_id", "label", "people", "risk_points", "risk_factors",
-    "exposure", "tier", "tier_reason", "people_by_destination", "physical_edge_ids", "geometry",
+    "exposure", "tier", "tier_rank", "tier_reason", "people_by_destination", "physical_edge_ids", "geometry",
 ]  # fmt: skip
 
 
@@ -91,6 +91,7 @@ def ranked(
     table = table.sort_values(["_later", "exposure", "place_id"], ascending=[True, False, True])
     table = table.reset_index(drop=True)
     table["rank"] = range(1, len(table) + 1)
+    table["tier_rank"] = table.groupby("_later").cumcount() + 1  # 1, 2 ... within its tier
     return gpd.GeoDataFrame(table.reindex(columns=columns), geometry="geometry", crs=crs)
 
 

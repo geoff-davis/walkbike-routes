@@ -11,6 +11,7 @@ import json
 import math
 import re
 from collections.abc import Mapping
+from typing import Any, cast
 
 from walkbike_routes.analysis.exposure_rules import (
     ExposureRules,
@@ -131,6 +132,20 @@ def from_each(value: object, labels: Mapping[str, str]) -> str:
     return "; ".join(
         f"{labels.get(d, d)} {people(v)} ({percent(v / total)})" for d, v in found.items()
     )
+
+
+MAP_WATCH_ROWS = 10
+
+
+def on_map(row: Mapping[Any, Any]) -> bool:
+    """Whether the map draws a place: every fix-first place and the first
+    ``MAP_WATCH_ROWS`` watch places.  Lists saved before ``tier_rank`` existed
+    ranked every place together, so there the rank decides, as it did then."""
+    if str(row.get("tier", "")) == FIX_FIRST:
+        return True
+    within = row.get("tier_rank")
+    missing = within is None or (isinstance(within, float) and math.isnan(within))
+    return int(row["rank"] if missing else cast("float", within)) <= MAP_WATCH_ROWS
 
 
 def tag(kind: str, rank: int) -> str:

@@ -774,9 +774,6 @@ def _today(row: Mapping[Any, Any], flows: gpd.GeoDataFrame | None) -> str | None
     return text.people(busiest) if busiest is not None else None
 
 
-EXPOSURE_ROWS = 10
-
-
 def _exposure(
     folder: Path,
     to_degrees: Transformer,
@@ -799,8 +796,9 @@ def _exposure(
         read = gpd.read_parquet(path).sort_values("rank")
         is_first = read.tier.astype(str).eq(text.FIX_FIRST)
         first[kind] = int(is_first.sum())
-        shown = read[is_first | read["rank"].le(EXPOSURE_ROWS)]
-        for row in shown.to_dict("records"):
+        for row in read.to_dict("records"):
+            if not text.on_map(row):
+                continue
             geometry = row["geometry"]
             parts = list(getattr(geometry, "geoms", [geometry]))
             rows.append(
