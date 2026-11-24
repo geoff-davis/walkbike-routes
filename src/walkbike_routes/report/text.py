@@ -144,8 +144,8 @@ def how_to_read(rules: ExposureRules) -> str:
         "Where a walking or cycling route runs along or across traffic, the place gets risk "
         "points for each factor it has: traffic, speed, lanes, a missing sidewalk, an unmarked "
         "crossing, and drop-off traffic. A signal at a crossing: "
-        f"{signal_words(rules.points.signal_factor)}. Places are ranked by flow × risk points "
-        f"(streets: also × length). {fix_first_rule(rules.fix_first)} Every other place with "
+        f"{signal_words(rules.points.signal_factor)}. Places are ranked by flow × risk points, "
+        f"fix-first places first. {fix_first_rule(rules.fix_first)} Every other place with "
         "points is “watch”. Points come from the systemic safety guides and the level "
         "of traffic stress; they are not crash rates, and flows are potential, not counts."
     )
@@ -238,8 +238,8 @@ def key_terms(
         ("Watch", "Every other place with risk points."),
         (
             "S1, C1",
-            "A street (S) or crossing (C), numbered by flow × risk points (streets: also "
-            "× length), highest first. The map uses the same labels.",
+            "A street (S) or crossing (C), numbered by flow × risk points, highest first: "
+            "fix-first places first, then the rest. The map uses the same labels.",
         ),
     ]
     if route_cost:

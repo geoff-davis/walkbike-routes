@@ -151,7 +151,7 @@ def test_streets_join_same_named_neighbours_and_skip_places_without_risk() -> No
     assert streets.label.tolist() == ["Main Street"]  # its two ends meet no other street
     row = streets.iloc[0]
     assert row.people == 10.0 and row.person_km == pytest.approx(1.4)
-    assert row.exposure == pytest.approx(4.2) and row.tier == "fix first"
+    assert row.exposure == pytest.approx(30.0) and row.tier == "fix first"  # people × points
 
 
 def test_tiers() -> None:
@@ -545,3 +545,23 @@ def test_together_with_no_runs_gives_empty_lists() -> None:
     streets, crossings = exposure.combined_exposure(_edges(), _nodes(), {}, "walk")
     assert streets.empty and list(streets.columns) == exposure.STREET_COLUMNS
     assert crossings.empty and list(crossings.columns) == exposure.CROSSING_COLUMNS
+
+
+def test_fix_first_places_are_numbered_first_without_gaps() -> None:
+    """A watch place outranks no fix-first place, whatever its exposure."""
+    table = pd.DataFrame(
+        {
+            "place_id": ["a", "b", "c", "d"],
+            "people": [100.0, 6.0, 50.0, 8.0],
+            "risk_points": [2.0, 3.0, 1.0, 4.0],
+            "geometry": [Point(0, 0)] * 4,
+        }
+    )
+    table["exposure"] = table.people * table.risk_points
+    out = exposure_lists.ranked(
+        table, ["rank", "place_id", "tier", "exposure", "geometry"], None, 200.0,
+        exposure_rules.FixFirst(),
+    )  # fmt: skip
+    assert out.place_id.tolist() == ["d", "b", "a", "c"]
+    assert out.tier.tolist() == ["fix first", "fix first", "watch", "watch"]
+    assert out["rank"].tolist() == [1, 2, 3, 4]

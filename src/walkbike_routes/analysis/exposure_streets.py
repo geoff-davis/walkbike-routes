@@ -109,7 +109,7 @@ def exposed_streets(
     rule: FixFirst | None = None,
     flow_noun: str = "people",
 ) -> gpd.GeoDataFrame:
-    """Same-street runs of risky links that carry flow, ranked by flow × length × points.
+    """Same-street runs of risky links that carry flow, ranked by flow × points.
 
     Neighbouring links join when they share a name and their points.  When
     ``flow`` adds up several destinations' flows, ``by_source`` holds each
@@ -167,7 +167,7 @@ def exposed_streets(
                 "place_id": "E" + root, "label": section_label(name, cross), "people": people,
                 "person_km": person_km, "risk_points": points,
                 "risk_factors": str(risk.risk_factors[pids[0]]),
-                "exposure": person_km * points,
+                "exposure": people * points,  # length is shown, not ranked on
                 "people_by_destination": shares_text(
                     {d: f.get(busiest, 0.0) for d, f in sources.items()}
                 ),
