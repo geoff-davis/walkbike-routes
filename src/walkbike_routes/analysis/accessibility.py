@@ -31,10 +31,11 @@ class AccessibilityResult:
     """Pure in-memory outputs for one destination/profile/scenario run."""
 
     routes: pd.DataFrame
-    node_accessibility: pd.DataFrame
     summary: pd.DataFrame
     access_point_usage: pd.DataFrame
     unreachable_origins: pd.DataFrame
+    # The best route from every node; :func:`node_accessibility` measures them.
+    tree: PathTree
 
 
 def prepare_accessibility_origins(origins: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
@@ -234,7 +235,7 @@ def calculate_accessibility(
     unreachable = routes[~routes.route_reachable.astype(bool)].copy()
     return AccessibilityResult(
         routes=routes,
-        node_accessibility=node_accessibility(graph, tree, thresholds_min=thresholds),
+        tree=tree,
         summary=summary,
         access_point_usage=usage,
         unreachable_origins=unreachable,

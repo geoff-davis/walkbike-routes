@@ -4,14 +4,19 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+import math
+from collections.abc import Callable
 from pathlib import Path
 
 import geopandas as gpd
+import networkx as nx
 import pandas as pd
 
 from walkbike_routes import config as settings
 from walkbike_routes.analysis import calculate_accessibility, screens
+from walkbike_routes.analysis.accessibility import AccessibilityResult
 from walkbike_routes.choice import bound_to_best, near_best_alternatives, split_routes
+from walkbike_routes.choice.path_size import Alternative
 from walkbike_routes.costs import presets
 from walkbike_routes.demand import decay
 from walkbike_routes.destinations.virtual_nodes import access_point_node_map
@@ -20,6 +25,7 @@ from walkbike_routes.network.broach import BroachProfile
 from walkbike_routes.network.broach_walk import (
     WalkBroachProfile,
 )
+from walkbike_routes.routing import local
 from walkbike_routes.routing.flows import shared_route_flows
 from walkbike_routes.routing.turns import place, sink
 from walkbike_routes.study_context import (
@@ -57,18 +63,6 @@ def active_run(
     )
     cap = context.study.time_caps_min[mode]
     speed = float(preset.parameters["speed_mph"]) * MPS_PER_MPH
-    result = calculate_accessibility(
-        search, context.origins, attachments, search_access,
-        study_id=context.study.study, destination_id=destination.id, profile_id=preset.name,
-        scenario_id=f"{mode}:{preset.name}", mode=core_mode,
-        direction=TravelDirection.TO_DESTINATION, route_weight=preset.objective,
-        thresholds_min=tuple(b for b in context.study.time_bands_min if b < cap) + (cap,),
-        time_limit_min=cap, snap_speed_mps=speed,
-    )  # fmt: skip
-    curve_name = settings.decay_for(context.study, destination, mode)
-    curve = decay.load(curve_name) if curve_name else None
-    routes = decay.apply(result.routes, curve)
-    weighted = routes.assign(demand_weight=routes.expected_weight)
     lengths = dict(zip(context.edges.physical_edge_id, context.edges.length_m, strict=True))
     choice = context.study.route_choice
     profile = preset.profile()
@@ -85,20 +79,46 @@ def active_run(
             logit_scale_s=profile.logit_scale_s,
             log_cost_exponent=None,
         )
-    eligible = routes[routes.route_reachable.astype(bool) & routes.within_time_limit.astype(bool)]
-    alternatives = (
-        near_best_alternatives(
-            search,
-            access_point_node_map(search_access),
-            weight=preset.objective,
-            settings=choice,
-            nodes=set(eligible.attached_node_id.astype(str)),
-            weight_per_second=speed if preset.objective == "physical_length_m" else 1.0,
-            place=place if search is not graph else None,
+    per_second = speed if preset.objective == "physical_length_m" else 1.0
+
+    def route(on: nx.Graph[str]) -> tuple[AccessibilityResult, dict[str, tuple[Alternative, ...]]]:
+        """The best route from each home, and the near-best ones from those within the limit."""
+        found = calculate_accessibility(
+            on, context.origins, attachments, search_access,
+            study_id=context.study.study, destination_id=destination.id, profile_id=preset.name,
+            scenario_id=f"{mode}:{preset.name}", mode=core_mode,
+            direction=TravelDirection.TO_DESTINATION, route_weight=preset.objective,
+            thresholds_min=tuple(b for b in context.study.time_bands_min if b < cap) + (cap,),
+            time_limit_min=cap, snap_speed_mps=speed,
         )  # fmt: skip
-        if choice.routes > 1 and not eligible.empty
-        else {}
-    )
+        ok = found.routes[
+            found.routes.route_reachable.astype(bool) & found.routes.within_time_limit.astype(bool)
+        ]
+        near_best = (
+            near_best_alternatives(
+                on,
+                access_point_node_map(search_access),
+                weight=preset.objective,
+                settings=choice,
+                nodes=set(ok.attached_node_id.astype(str)),
+                weight_per_second=per_second,
+                place=place if search is not graph else None,
+            )  # fmt: skip
+            if choice.routes > 1 and not ok.empty
+            else {}
+        )
+        return found, near_best
+
+    result, alternatives = _nearby(
+        route, built, access, search_access, context.origins,
+        weight=preset.objective, gap=choice.maximum_cost_gap_s * per_second,
+        label=f"{destination.id} by {mode} ({preset.name})",
+    )  # fmt: skip
+    curve_name = settings.decay_for(context.study, destination, mode)
+    curve = decay.load(curve_name) if curve_name else None
+    routes = decay.apply(result.routes, curve)
+    weighted = routes.assign(demand_weight=routes.expected_weight)
+    eligible = routes[routes.route_reachable.astype(bool) & routes.within_time_limit.astype(bool)]
     if search is not graph:
         cost = (
             eligible.physical_length_m / speed
@@ -150,6 +170,69 @@ def active_run(
             sub / "summary.csv",
         ]  # fmt: skip
     return files, [row], flows.set_index("physical_edge_id").potential_flow
+
+
+Routed = tuple[AccessibilityResult, dict[str, tuple[Alternative, ...]]]
+START = 1.5  # the first circle: this many times the farthest home's distance from an entrance
+TRIES = 3  # circles tried before the whole network
+
+
+def _nearby(
+    route: Callable[[nx.Graph[str]], Routed],
+    built: ModeNetwork,
+    access: gpd.GeoDataFrame,
+    search_access: gpd.GeoDataFrame,
+    origins: pd.DataFrame,
+    *,
+    weight: str,
+    gap: float,
+    label: str,
+) -> Routed:
+    """``route`` on the network near the destination when that is provably exact, else on all.
+
+    See :mod:`walkbike_routes.routing.local`.  The circle starts from the
+    farthest home and widens to the radius a failed check asks for.
+    """
+    search = built.search
+    points = built.nodes.geometry
+    xy = {
+        str(n): (float(x), float(y))
+        for n, x, y in zip(built.nodes.node_id, points.x, points.y, strict=True)
+    }
+    per_m = local.cost_per_metre(search, xy, weight)
+    away = local.distances(xy, access.node_id.astype(str))
+    ends = local.home_ends(built.attachments, origins.origin_id)
+    radius = START * max((away.get(e, math.inf) for e in ends), default=0.0)
+    reachable: set[str] | None = None
+    for _ in range(TRIES):
+        cut = local.near(search, away, per_m, radius) if math.isfinite(radius) else None
+        if cut is None:
+            break
+        result, alternatives = route(cut.graph)
+        ok, needed = local.exact_homes(cut, result.tree.cost_by_node, ends, reachable)
+        if not ok and reachable is None and math.isinf(needed):
+            targets = access_point_node_map(search_access).values()
+            reachable = local.reaches(search, map(str, targets))
+            ok, needed = local.exact_homes(cut, result.tree.cost_by_node, ends, reachable)
+        if ok:
+            best = {
+                node: (found[0].physical_length_m if weight == "physical_length_m"
+                       else found[0].generalized_cost_s)
+                for node, found in alternatives.items() if found
+            }  # fmt: skip
+            missing = {n for n, found in alternatives.items() if not found}
+            ok, needed = local.exact_alternatives(cut, best, gap)
+            if ok and not missing:
+                logging.info(
+                    "%s: routed within %.1f km of the entrances (%d%% of the network)",
+                    label, radius / 1000,
+                    round(100 * cut.graph.number_of_nodes() / search.number_of_nodes()),
+                )  # fmt: skip
+                return result, alternatives
+            if missing:
+                needed = math.inf
+        radius = needed
+    return route(search)
 
 
 def _screen(
