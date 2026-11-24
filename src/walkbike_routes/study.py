@@ -132,10 +132,8 @@ def analyze(study: settings.Study, town: Town, out: Path, *, workers: int = 1) -
     for mode in study.modes:
         for index, name in enumerate(study.presets[mode]):
             network: Network | None = None
-            pairs = list(zip(contexts, study.destinations, strict=True))
             # The first preset is the mode's main case: it feeds overlap and screens.
-            # The first destination builds the network the rest reuse.
-            first, rest = pairs[:1], pairs[1:]
+            first, rest = _order(list(zip(contexts, study.destinations, strict=True)))
             for context, destination in first:
                 files, rows, flow, network = _run(
                     context, destination, mode, name, network, main=index == 0
@@ -285,6 +283,22 @@ def _combined(
 
 
 type Network = ModeNetwork | cars.CarNetwork
+type Pair = tuple[Context, settings.Destination]
+
+
+def _order(pairs: list[Pair]) -> tuple[list[Pair], list[Pair]]:
+    """The destination that builds a preset's network, and the rest, in running order.
+
+    The first is routed alone while the network is built, so it is the one with
+    fewest homes; the rest start with the most homes, so a long one is not left
+    running by itself at the end.  Ties keep the study's order.
+    """
+    if not pairs:
+        return [], []
+    smallest = min(range(len(pairs)), key=lambda i: len(pairs[i][0].origins))
+    rest = [p for i, p in enumerate(pairs) if i != smallest]
+    rest.sort(key=lambda p: len(p[0].origins), reverse=True)
+    return [pairs[smallest]], rest
 
 
 # What forked workers read: set just before the pool starts, so they inherit it.

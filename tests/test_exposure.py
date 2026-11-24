@@ -565,3 +565,14 @@ def test_fix_first_places_are_numbered_first_without_gaps() -> None:
     assert out.place_id.tolist() == ["d", "b", "a", "c"]
     assert out.tier.tolist() == ["fix first", "fix first", "watch", "watch"]
     assert out["rank"].tolist() == [1, 2, 3, 4]
+
+
+def test_the_network_tables_are_built_once_for_the_same_edges_and_nodes() -> None:
+    edges, nodes = _edges(), _nodes()
+    first = exposure_crossings._tables(edges, nodes)
+    assert exposure_crossings._tables(edges, nodes) is first
+    # Another table, or the same one changed in shape, is built again.
+    assert exposure_crossings._tables(edges.copy(), nodes) is not first
+    again = exposure_crossings._tables(edges, nodes)
+    edges["extra"] = 1
+    assert exposure_crossings._tables(edges, nodes) is not again
