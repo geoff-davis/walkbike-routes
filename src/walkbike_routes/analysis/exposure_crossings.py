@@ -280,6 +280,55 @@ def _shared_node(net: _Network, a: str, b: str) -> str | None:
     return next(iter(common)) if len(common) == 1 else None
 
 
+@dataclass(frozen=True)
+class _Tables:
+    """What the crossing lists read from the whole network, whatever the routes."""
+
+    net: _Network
+    places: Places
+    records: dict[str, dict[str, object]]
+    across: frozenset[str]
+    groups: Mapping[str, list[str]]
+
+
+# The last network's tables, with the edges and nodes they came from (held, so the
+# identity check cannot match a new table at a reused address) and their shape.
+_LAST: tuple[gpd.GeoDataFrame, gpd.GeoDataFrame, tuple[object, ...], _Tables] | None = None
+
+
+def _shape(edges: gpd.GeoDataFrame, nodes: gpd.GeoDataFrame) -> tuple[object, ...]:
+    return (len(edges), tuple(edges.columns), len(nodes), tuple(nodes.columns))
+
+
+def _tables(edges: gpd.GeoDataFrame, nodes: gpd.GeoDataFrame) -> _Tables:
+    """The network's tables, built once for a study's edges and nodes.
+
+    A study passes the same unchanged edges and nodes for every destination, mode
+    and time limit, and building these took two-thirds of each list's time. They
+    are rebuilt when either table is a different object or has changed shape.
+    """
+    global _LAST
+    shape = _shape(edges, nodes)
+    if _LAST is not None and _LAST[0] is edges and _LAST[1] is nodes and _LAST[2] == shape:
+        return _LAST[3]
+    places = Places(edges)
+    groups: defaultdict[str, list[str]] = defaultdict(list)
+    for pid in edges.physical_edge_id.astype(str):
+        groups[places.crossing_of.get(pid, pid)].append(pid)
+    built = _Tables(
+        net=_Network(edges, nodes),
+        places=places,
+        records={
+            str(r["physical_edge_id"]): {str(k): v for k, v in r.items()}
+            for r in edges.drop(columns="geometry").to_dict("records")
+        },
+        across=frozenset(edges.physical_edge_id[crossing_ways(edges)].astype(str)),
+        groups=dict(groups),
+    )
+    _LAST = (edges, nodes, shape, built)
+    return built
+
+
 def crossing_events(
     shares: pd.DataFrame,
     edges: gpd.GeoDataFrame,
@@ -291,12 +340,8 @@ def crossing_events(
     at a junction (``J:<node>``) where it goes straight across a named road of
     band 1+ or turns left onto or off it.  Each route counts once per place.
     """
-    net = _Network(edges, nodes)
-    places = Places(edges)
-    across = set(edges.physical_edge_id[crossing_ways(edges)].astype(str))
-    groups: defaultdict[str, list[str]] = defaultdict(list)
-    for pid in edges.physical_edge_id.astype(str):
-        groups[places.crossing_of.get(pid, pid)].append(pid)
+    tables = _tables(edges, nodes)
+    net, places, across, groups = tables.net, tables.places, tables.across, tables.groups
     rows: list[dict[str, object]] = []
     for route, (ids, weight) in enumerate(
         zip(shares.physical_edge_ids, shares.assigned_weight, strict=True)
@@ -312,7 +357,7 @@ def crossing_events(
             # as the crossing; another road there is still a junction crossing.
             ways = [p for p in (a, b) if p in net.crosses]
             for road, legs in net.roads_through(node):
-                if any(_spans(net, groups[places.crossing_of.get(p, p)], node, legs)
+                if any(_spans(net, groups.get(places.crossing_of.get(p, p), []), node, legs)
                        for p in ways):  # fmt: skip
                     continue
                 # A crossing way that ends on the road it crosses, with the route then
@@ -412,12 +457,8 @@ def exposed_crossings(
     if events.empty:
         return ranked(pd.DataFrame(columns=CROSSING_COLUMNS[1:]), CROSSING_COLUMNS, edges.crs,
                        counted, rules.fix_first, flow_noun)  # fmt: skip
-    net = _Network(edges, nodes)
-    places = Places(edges)
-    records = {
-        str(r["physical_edge_id"]): {str(k): v for k, v in r.items()}
-        for r in edges.drop(columns="geometry").to_dict("records")
-    }
+    tables = _tables(edges, nodes)
+    net, places, records = tables.net, tables.places, tables.records
     roads = edges[[e.motor for e in net.edges.values()]]
     people = events.drop_duplicates(["route", "place"]).groupby("place").weight.sum()
     rows = []

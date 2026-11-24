@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
+import types
 from pathlib import Path
 
 import pandas as pd
@@ -10,6 +11,7 @@ import pytest
 
 from walkbike_routes import __main__ as cli
 from walkbike_routes import config
+from walkbike_routes import study as study_module
 
 DEMO = Path(__file__).resolve().parents[1] / "config" / "demo.yaml"
 
@@ -40,3 +42,18 @@ def test_jobs_below_one_is_refused(tmp_path: Path, capsys: pytest.CaptureFixture
     with pytest.raises(SystemExit):
         cli.main(["run", "--config", str(DEMO), "--out", str(tmp_path), "--jobs", "0"])
     assert "--jobs: expected 1 or more" in capsys.readouterr().err
+
+
+def test_each_preset_builds_on_the_smallest_destination_then_routes_the_largest_first() -> None:
+    """The first destination builds the network alone, so it is the quickest; the rest
+    start with the most homes, so a long one does not run by itself at the end."""
+    study = _study()
+    homes = {"a": 5, "b": 40, "c": 2, "d": 40, "e": 9}
+    pairs = [
+        (types.SimpleNamespace(origins=range(n)), dataclasses.replace(study.destinations[0], id=k))
+        for k, n in homes.items()
+    ]
+    first, rest = study_module._order(pairs)  # type: ignore[arg-type]
+    assert [d.id for _, d in first] == ["c"]
+    assert [d.id for _, d in rest] == ["b", "d", "e", "a"]  # ties keep the study's order
+    assert study_module._order([]) == ([], [])
