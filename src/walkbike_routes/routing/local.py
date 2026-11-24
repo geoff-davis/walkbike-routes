@@ -106,7 +106,35 @@ def near(
     keep = [n for n in graph if away_m.get(at(str(n)), math.inf) <= radius_m]
     if len(keep) == graph.number_of_nodes():
         return None
-    return Near(graph.subgraph(keep).copy(), radius_m, per_m, away_m)
+    return Near(_ordered_subgraph(graph, set(keep)), radius_m, per_m, away_m)
+
+
+def _ordered_subgraph(graph: nx.Graph[str], keep: set[str]) -> nx.Graph[str]:
+    """The subgraph on ``keep``, with every node's successors and predecessors in
+    ``graph``'s order.
+
+    ``subgraph(...).copy()`` rebuilds edges source by source and can reorder a
+    node's predecessors; NetworkX's searches break ties between equally cheap
+    paths by that order, so a reordered copy could pick a different route.
+    """
+    out = graph.__class__()
+    out.graph.update(graph.graph)
+    out.add_nodes_from((n, dict(graph.nodes[n])) for n in graph if n in keep)
+    data: dict[tuple[str, str], dict[str, object]] = {}
+
+    def attrs(u: str, v: str, d: dict[str, object]) -> dict[str, object]:
+        key = (u, v) if graph.is_directed() else (min(u, v), max(u, v))
+        return data.setdefault(key, dict(d))
+
+    adj = graph._succ if graph.is_directed() else graph._adj  # type: ignore[attr-defined]
+    for u in out:
+        out._adj[u] = {v: attrs(u, v, d) for v, d in adj[u].items() if v in keep}  # type: ignore[attr-defined]
+    if graph.is_directed():
+        pred = graph._pred  # type: ignore[attr-defined]
+        out_pred = out._pred  # type: ignore[attr-defined]
+        for v in out:
+            out_pred[v] = {u: attrs(u, v, d) for u, d in pred[v].items() if u in keep}
+    return out
 
 
 def reaches(graph: nx.Graph[str], targets: Iterable[str]) -> set[str]:

@@ -76,3 +76,44 @@
   neighbours).
 - Known limitations: building each treatment's whole screen graph and turn
   costs is now most of a screen's time.
+
+## Review, round 1
+
+- Loop: `screen-cut-1`, round 1; Standard tier.
+- Target reviewed: `f92116a..b08465a` (`b08465ad0b81b3fa4eb8e606e80a39583e8aa258`). The handoff was read from `ad4b67c` as requested; implementation checks used `b08465a`.
+- Verdict: **changes required** for `b08465a`.
+
+### SC1 — P2, blocking: certified cuts can change tied treated routes and select a different barrier
+
+- Location: `src/walkbike_routes/analysis/screens.py:621-634` (the new use of `near.graph` for screen searches), interacting with `routing/local.py`'s subgraph copy and `treated_flows`' NetworkX Dijkstra traversal.
+- Trigger: two equal-cost routes to the destination, with predecessor insertion order different from the source-node iteration order. This can occur in the plain screen graphs used by presets without turn movements, including Furth.
+- Defect: `local.near` copies the induced subgraph. Rebuilding its edges groups them by source node and can reorder a node's predecessors. `treated_flows` searches the reversed graph using NetworkX's insertion-order tie choice. Thus a cut can select a different equally cheap route, even though all route nodes remain inside the circle and `_check_near` certifies the costs. Candidate generation uses that treated flow, so retaining the whole graph for section numbering does not preserve the screen output.
+- Confirmed reproduction, run on base and head: insert directed edges in this order: `ha: H->A`, `hb: H->B`, `bd: B->D`, `ad: A->D`, then an isolated `far` node. Give every edge baseline cost 200, treated cost 100, physical time/length 100, `baseline_available=True`, and mark all four routable IDs improved. The `ha/ad` physical edges are named East Street; `hb/bd` are named West Street. One origin at H has weight 10 and access time 0; screen to D with 10 candidates and no time cap. Coordinates are H=(0,2), A=(-1,1), B=(1,1), D=(0,0), far=(100,0). Use `screen_cost_per_metre` and a radius-10 `local.near`.
+- Evidence: the baseline cost at H is 400, below its bound (approximately 1272.79), and the cut is accepted without `NotExact`. On base `f92116a` and head without a cut, treated flow uses `bd/hb` and the screen returns **S0002, West Street**, saving 33.333333333333336 weighted route-cost minutes. On head with the certified cut, treated flow uses `ad/ha` and the screen instead returns **S0001, East Street**, with the same savings. The predecessor order at D changes from B,A to A,B. This is a different intervention/location, not just renumbering.
+- Violated invariant: the handoff requires screen outputs to equal the whole-network run. A cost certificate does not by itself preserve insertion-order path ties, which control candidate selection and can also affect physical-time cohorts in the counterfactual engine.
+- Requested fix: preserve the original search traversal/tie order when filtering the screen graph (an order-preserving filtered view is one possible approach), and ensure both treated-flow and counterfactual searches retain their whole-graph path choices. Add this tied-route screen as a regression, asserting the entire screen table equals the whole-network result.
+
+### Verification and limits
+
+- Reviewed the complete three-file diff in an independent detached clone with its own Git metadata; used a separate detached base clone for the identical synthetic input.
+- `git diff --check` and permitted `make check` pass: lint, formatting, types, 1033 tests, four deselected, 95.10% coverage. Two dotenv tests were not collected and four private-config tests were deselected to honor file restrictions. Three pre-existing multithreaded-fork warnings recur.
+- `make validation-check` passes: lint, formatting, types and 58 tests. The committed screen widening/equivalence tests pass but do not catch SC1's tie-order case.
+- No repository `data/`, `output/`, `.env`, `*.local.yaml`, or actual count/trip records were read. The private real-area evidence was not inspected. The independent reproduction uses only a made-up graph and the existing synthetic screen-edge fixture.
+
+## Handoff, round 2
+
+- Target: `b08465a` -> `ad4b67c`.
+- SC1 fixed: `local.near` now builds the cut with `_ordered_subgraph`,
+  keeping every node's successors and predecessors in the whole graph's
+  order (shared edge-data copies, so succ and pred agree). This covers the
+  route searches as well as the screens.
+- Regression: `test_the_cut_keeps_each_nodes_link_order_so_ties_break_the_same_way`
+  uses the round-1 diamond insertion order (H-A, H-B, B-D, A-D, plus a far
+  node): it checks every node's succ and pred order and that the
+  reversed-graph `nx.multi_source_dijkstra` (the call `treated_flows` and
+  the counterfactual engine make) picks D-B-H on the cut as on the whole
+  graph. With the old `subgraph().copy()`, D's predecessors read
+  `[A, B]` instead of `[B, A]` and the path is D-A-H (shown by a probe
+  on the old code). It does not run the whole screen table; please say if
+  that is still required.
+- `make check`: 1040 passed, 95.76%. `make validation-check`: 58 passed.
