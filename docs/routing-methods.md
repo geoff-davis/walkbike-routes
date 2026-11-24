@@ -94,6 +94,15 @@ preset says so.
   and 10% of the best, logit scale 60 s, path-size exponent 1. The Broach
   presets use their model's own split
   ([path-size logit](assumptions.md#splitting-trips-across-routes-path-size-logit)).
+- **Searching near the destination.** To save time, routes are found on
+  the streets within a circle round the destination's entrances, sized from
+  its farthest home. This changes no result: no street costs less per metre
+  than the network's cheapest, so a route leaving the circle costs at least
+  that rate times the distance out and back, and every home's best and
+  near-best routes are checked to cost less than that. If any does not, the
+  circle widens, and after three tries the whole network is searched
+  (`routing/local.py`). It saves most for a destination whose homes are
+  near it, such as a school with an attendance area.
 
 ## Cycling: Broach, Gliebe and Dill (2011)
 
