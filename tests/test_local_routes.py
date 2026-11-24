@@ -15,6 +15,7 @@ import pytest
 
 from walkbike_routes import __main__ as cli
 from walkbike_routes import config, demo, study_active
+from walkbike_routes.analysis import screens
 from walkbike_routes.models import TravelDirection
 from walkbike_routes.routing import local
 from walkbike_routes.routing.paths import multi_source_k_paths, multi_source_paths
@@ -135,7 +136,7 @@ def _served(tmp_path: Path) -> config.Study:
     """The demo, with the school taking homes only from round it: a cut is worth making."""
     school = demo.build().destinations.set_index("destination_id").geometry["school"]
     area = tmp_path / "area.geojson"
-    gpd.GeoSeries([school.buffer(350)], crs=demo.CRS).to_crs(4326).to_file(area)
+    gpd.GeoSeries([school.buffer(700)], crs=demo.CRS).to_crs(4326).to_file(area)
     study = config.load(DEMO)
     destinations = tuple(
         dataclasses.replace(d, serves=area) if d.id == "school" else d for d in study.destinations
@@ -143,15 +144,36 @@ def _served(tmp_path: Path) -> config.Study:
     return dataclasses.replace(study, destinations=destinations, shorter_limits_min=(5.0,))
 
 
+@pytest.mark.parametrize("start", [study_active.START, 0.4])
 def test_a_run_near_the_destination_writes_what_a_whole_network_run_does(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, start: float
 ) -> None:
+    """Also when the first circle is too small and has to widen (``start`` 0.4)."""
     near, whole = tmp_path / "near", tmp_path / "whole"
+    monkeypatch.setattr(study_active, "START", start)
+    if start < 1:  # and each screen's first circle too small as well
+        monkeypatch.setattr(study_active, "_first_circle", lambda *_: 150.0)
+    widened = []
+    real = screens.improvement_screen
+
+    def watched(*args: object, **kwargs: object) -> object:
+        try:
+            return real(*args, **kwargs)  # type: ignore[arg-type]
+        except screens.NotExact:
+            widened.append(1)
+            raise
+
+    monkeypatch.setattr(screens, "improvement_screen", watched)
     with caplog.at_level(logging.INFO):
         cli.build(_served(tmp_path), near)
     used = [r.getMessage() for r in caplog.records if "routed within" in r.getMessage()]
-    assert any(m.startswith("school by walk") for m in used)
-    assert any(m.startswith("school by bike") for m in used)
+    screened = [r.getMessage() for r in caplog.records if "screened within" in r.getMessage()]
+    if start < 1:
+        assert widened  # a screen's first circle failed its check and was widened
+    else:
+        for mode in ("walk", "bike"):
+            assert any(m.startswith(f"school by {mode}") for m in used), mode
+            assert any(m.startswith(f"school by {mode}") for m in screened), mode
     monkeypatch.setattr(study_active, "TRIES", 0)
     cli.build(_served(tmp_path), whole)
     found = sorted(p.relative_to(near) for p in near.rglob("*.parquet"))
@@ -163,3 +185,5 @@ def test_a_run_near_the_destination_writes_what_a_whole_network_run_does(
     pd.testing.assert_frame_equal(
         pd.read_csv(near / "summary.csv"), pd.read_csv(whole / "summary.csv")
     )
+    listed = [p for p in found if p.name == "screen.parquet" and p.parts[0] == "school"]
+    assert listed and all(len(pd.read_parquet(near / p)) for p in listed)
