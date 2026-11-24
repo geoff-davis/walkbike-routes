@@ -16,7 +16,9 @@ from shapely.geometry import LineString
 
 from walkbike_routes import __main__ as cli
 from walkbike_routes import config
+from walkbike_routes.analysis import exposure_lists, exposure_rules
 from walkbike_routes.costs import presets
+from walkbike_routes.report import map as page_map
 from walkbike_routes.report import tables
 from walkbike_routes.report import text as words
 from walkbike_routes.report.map import build_maps
@@ -524,3 +526,34 @@ def test_glossary_notes_do_not_fix_what_a_study_can_set() -> None:
     assert not re.search(r"\d", words.GLOSSARY["drop-off"])
     assert "set by hand" in words.GLOSSARY["uncalibrated"]
     assert "Not fitted to observed trips" in words.GLOSSARY["uncalibrated"]
+
+
+def test_watch_places_after_ten_fix_first_places_are_still_mapped_and_linked(
+    tmp_path: Path,
+) -> None:
+    """Fix-first places are numbered first; the busiest watch place keeps its map
+    entry and its link (review FO1)."""
+    made = gpd.GeoDataFrame(
+        {
+            "place_id": [f"f{i:02d}" for i in range(10)] + ["watch"],
+            "label": [f"Made-up Street {i}" for i in range(11)],
+            "people": [6.0] * 10 + [100.0], "risk_points": [3.0] * 10 + [2.0],
+            "risk_factors": "a made-up factor", "people_by_destination": "",
+        },
+        geometry=[LineString([(0, 0), (118, 0)])] * 11, crs=CRS,
+    )  # fmt: skip
+    made["exposure"] = made.people * made.risk_points
+    ranked = exposure_lists.ranked(
+        made, exposure_lists.STREET_COLUMNS, CRS, 200.0, exposure_rules.FixFirst()
+    )
+    last = ranked.iloc[-1]
+    assert (last.place_id, last["rank"], last.tier_rank, last.tier) == ("watch", 11, 1, "watch")
+    ranked.to_parquet(tmp_path / "exposure_streets.parquet")
+    to_degrees = Transformer.from_crs(CRS, 4326, always_xy=True)
+    drawn = page_map._exposure(tmp_path, to_degrees, Path.exists)["exposure"]
+    assert [r["tag"] for r in drawn] == [f"S{i}" for i in range(1, 12)]
+    cells = [
+        r[0] for r in tables.exposure_table(ranked, "People", streets=True, where=("m", "r")).rows
+    ]
+    linked = [c for c in cells if isinstance(c, tables.Linked)]
+    assert len(linked) == 11 and linked[10].text == "S11"

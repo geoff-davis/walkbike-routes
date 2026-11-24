@@ -934,7 +934,8 @@ Only each mode's first preset is listed, as for the screen. Streets and
 crossings are ranked separately:
 
 - **Streets:** neighbouring links of one street with the same points, for
-  the same reasons, form a stretch. Its exposure is flow × length (person-kilometres) × points, and
+  the same reasons, form a stretch. Its exposure is flow × points (length is shown but not ranked on, so a
+  short, busy, risky gap counts as much as a long one), and
   "people" is its busiest link's flow.
 - **Crossings:** a route crosses at a mapped crossing way, or at a junction
   where it goes straight across a named road with 5,000 or more vehicles a

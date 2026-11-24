@@ -518,7 +518,6 @@ def who_table(main: pd.DataFrame) -> Table:
     )  # fmt: skip
 
 
-EXPOSURE_ROWS = 10  # kept for the maps' lists
 WATCH_ROWS = 3
 FIRST_ROWS = 5  # of each destination's own fix-first places, beside the lists for all together
 MORE_SLACK = 2  # a list this much longer than FIRST_ROWS is shown whole
@@ -562,7 +561,7 @@ def exposure_table(
     for r, shape, spot in zip(top.to_dict("records"), _shapes(top), _spots(top), strict=True):
         tag = text.tag("street" if streets else "crossing", int(r["rank"]))
         # The map draws every fix-first place and the highest-ranked of the rest.
-        drawn = str(r.get("tier", "")) == text.FIX_FIRST or int(r["rank"]) <= EXPOSURE_ROWS
+        drawn = text.on_map(r)
         row: list[Cell] = [
             _on_map(tag, where if drawn else None, spot),
             _place(str(r["label"]), spot),

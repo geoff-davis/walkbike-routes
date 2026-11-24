@@ -314,7 +314,7 @@ over one for what it shows.
   the shading roughly matches the homes whose trips are drawn (a square can
   hold homes on both sides of the limit).
 - **Fix first and watch.** Where routes meet traffic today: every fix-first
-  street (S) and crossing (C), in black and marked "!", and the top watch
+  street (S) and crossing (C), in black and marked "!", and the ten highest-ranked watch
   places, in amber. A popup gives the factors behind each place's points.
 - **Barriers** (off at first): where a change would open new routes. The
   improvement screen's top places for each treatment, in its own colour, with

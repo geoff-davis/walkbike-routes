@@ -11,6 +11,7 @@ import json
 import math
 import re
 from collections.abc import Mapping
+from typing import Any, cast
 
 from walkbike_routes.analysis.exposure_rules import (
     ExposureRules,
@@ -133,6 +134,20 @@ def from_each(value: object, labels: Mapping[str, str]) -> str:
     )
 
 
+MAP_WATCH_ROWS = 10
+
+
+def on_map(row: Mapping[Any, Any]) -> bool:
+    """Whether the map draws a place: every fix-first place and the first
+    ``MAP_WATCH_ROWS`` watch places.  Lists saved before ``tier_rank`` existed
+    ranked every place together, so there the rank decides, as it did then."""
+    if str(row.get("tier", "")) == FIX_FIRST:
+        return True
+    within = row.get("tier_rank")
+    missing = within is None or (isinstance(within, float) and math.isnan(within))
+    return int(row["rank"] if missing else cast("float", within)) <= MAP_WATCH_ROWS
+
+
 def tag(kind: str, rank: int) -> str:
     """A place's short name, the same on the map and in the report: S3, C1."""
     return f"{'S' if kind.startswith('street') else 'C'}{rank}"
@@ -144,8 +159,8 @@ def how_to_read(rules: ExposureRules) -> str:
         "Where a walking or cycling route runs along or across traffic, the place gets risk "
         "points for each factor it has: traffic, speed, lanes, a missing sidewalk, an unmarked "
         "crossing, and drop-off traffic. A signal at a crossing: "
-        f"{signal_words(rules.points.signal_factor)}. Places are ranked by flow × risk points "
-        f"(streets: also × length). {fix_first_rule(rules.fix_first)} Every other place with "
+        f"{signal_words(rules.points.signal_factor)}. Places are ranked by flow × risk points, "
+        f"fix-first places first. {fix_first_rule(rules.fix_first)} Every other place with "
         "points is “watch”. Points come from the systemic safety guides and the level "
         "of traffic stress; they are not crash rates, and flows are potential, not counts."
     )
@@ -238,8 +253,8 @@ def key_terms(
         ("Watch", "Every other place with risk points."),
         (
             "S1, C1",
-            "A street (S) or crossing (C), numbered by flow × risk points (streets: also "
-            "× length), highest first. The map uses the same labels.",
+            "A street (S) or crossing (C), numbered by flow × risk points, highest first: "
+            "fix-first places first, then the rest. The map uses the same labels.",
         ),
     ]
     if route_cost:
