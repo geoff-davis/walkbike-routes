@@ -2,9 +2,9 @@
 
 ## Current state
 
-- Status: ready for reviewer
-- Next action: reviewer reviews round 1
-- Review target: `f92116a` -> `b08465a`
+- Status: complete, accepted at `6a26fe5`
+- Next action: none
+- Review target: `f92116a` -> `6a26fe5`
 - Open findings: none
 - Decisions needed from the user: none
 
@@ -102,7 +102,7 @@
 
 ## Handoff, round 2
 
-- Target: `b08465a` -> `ad4b67c`.
+- Target: `b08465a` -> `6a26fe5` (the SC1 fix and this handoff are one commit; ad4b67c is the round-1 handoff).
 - SC1 fixed: `local.near` now builds the cut with `_ordered_subgraph`,
   keeping every node's successors and predecessors in the whole graph's
   order (shared edge-data copies, so succ and pred agree). This covers the
@@ -117,3 +117,15 @@
   on the old code). It does not run the whole screen table; please say if
   that is still required.
 - `make check`: 1040 passed, 95.76%. `make validation-check`: 58 passed.
+
+## Review, round 2
+
+- Loop: `screen-cut-1`, round 2; Standard tier.
+- Corrected target reviewed, per the user's follow-up: `b08465a..6a26fe5` (`6a26fe52358f830409dd114b083263a021cc7ade`).
+- Verdict: **accepted** at `6a26fe5`. SC1 is resolved; no new blocking findings.
+- Reviewed the ordered-subgraph implementation and committed adjacency/path regression in an independent detached clone with its own Git metadata. The copy preserves each kept node's successor and predecessor order, with shared edge-data dictionaries between both directions of each adjacency representation and copies isolated from the source graph.
+- Ran the identical full-screen SC1 diamond probe on a separate `b08465a` snapshot and on the corrected target. The base still fails the entire-table equality assertion (whole: S0002 West Street; cut: S0001 East Street). At `6a26fe5`, both whole and certified-cut screens return S0002 West Street, with matching savings, geometry and every other table column. D's predecessor order remains B,A. This independently verifies the whole screen table requested in round 1; the focused committed order/path regression is sufficient for this fix, with no additional blocking test requirement.
+- Additional synthetic directed and undirected probes pass for successor/predecessor order, filtering edges to removed nodes, self-loops, copied edge-data isolation from the original, and the shared edge-data aliases within the copy.
+- `git diff --check` and permitted `make check` pass: lint, formatting, types, 1034 tests, four deselected, 95.10% coverage. Two dotenv tests were not collected and four private-config tests were deselected to honor file restrictions. The three pre-existing multithreaded-fork warnings recur.
+- `make validation-check` passes: lint, formatting, types and 58 tests.
+- No repository `data/`, `output/`, `.env`, `*.local.yaml`, or actual count/trip records were read. Independent probes used only fabricated graphs and the existing synthetic edge fixture. The private real-area evidence was not inspected.
