@@ -2,8 +2,8 @@
 
 ## Current state
 
-- Status: ready for reviewer
-- Next action: reviewer reviews round 1
+- Status: complete, accepted at `1fa29c3`
+- Next action: none
 - Review target: `d30f928` -> `1fa29c3`
 - Open findings: none
 - Decisions needed from the user: none
@@ -70,3 +70,16 @@
   nodes they came from until the next network or the end of the process.
   An in-place change to a cell that keeps the shape is not detected; the
   study code does not change these tables after preparing them.
+
+## Review, round 1
+
+- Loop: `largest-first-1`, round 1; Standard tier.
+- Target reviewed: `d30f928..1fa29c3` (`1fa29c3d910abbe6e0ff8d71800fa93815481026`). The handoff was read from `fe86228` as requested; implementation checks used `1fa29c3`.
+- Verdict: **accepted** at `1fa29c3`. No confirmed blocking findings.
+- Reviewed the complete four-file diff in an independent detached clone with its own Git metadata. The scheduling helper picks the first smallest origin set and sorts the rest descending with stable ties. Results remain keyed by destination and aggregated in the study's order. Network construction reads shared streets/nodes/signals rather than destination-specific origins; attachments are rebuilt for each destination.
+- The crossing cache retains the source objects to avoid reused-identity matches, checks both objects and their lengths/column lists, and shares network-only records and geometry/road information. Route weights, signal arguments, risk settings and per-destination grouping remain outside the cached tables. The committed scheduling and cache reuse/invalidation tests pass.
+- Independent end-to-end probe: three synthetic destinations have 278, 48 and 111 origins, with the 278-origin destination first in the study. For each walking, cycling and driving preset, the new serial schedule actually runs 48, 278, 111; the control restores the original 278, 48, 111 order and forces crossing-table rebuilds before each use. All 89 Parquet files and every CSV, including shorter-limit summaries and all-destination results, match. A third run with `workers=8` (capped to the remaining destinations) also matches every table; the parent builds on the 48-origin destination. These are controls in the target snapshot, not a real-area timing comparison.
+- `git diff --check` and permitted `make check` pass: lint, formatting, types, 1038 tests, four deselected, 95.12% coverage. Two dotenv tests were not collected and four private-config tests were deselected to honor file restrictions. Three pre-existing multithreaded-fork warnings recur.
+- `make validation-check` passes: lint, formatting, types and 58 tests.
+- Limits: acceptance uses the handoff's unchanged-network scope; same-shape in-place cell edits remain undetected as declared. The private-area timing/equivalence evidence was not inspected, and no whole-real-study speedup is independently claimed.
+- No repository `data/`, `output/`, `.env`, `*.local.yaml`, or actual count/trip records were read. Additional builds used the made-up demo with temporary synthetic attendance polygons outside the repository.
