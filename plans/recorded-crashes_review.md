@@ -88,3 +88,60 @@
 - Known limitations: no injured-party table, so "severe injury" is the
   crash's worst injury, not necessarily the rider's; a crash with a rider
   but `BICYCLE_ACCIDENT` blank is left out.
+
+## Review, round 1
+
+- Loop: `recorded-crashes-1`, round 1; Standard tier.
+- Target reviewed: `9fa5d79..4308084` (`43080849da186ee9b77c2ce7157712e124c9f3b3`). The handoff was read from `bafec34` as requested; implementation checks used `4308084`.
+- Verdict: **changes required** for `4308084`.
+
+### RC1 — P2, blocking: a valid source with no bicycle crashes crashes the adapter
+
+- Location: `src/walkbike_routes/switrs.py:45-47`.
+- Trigger: a spatial source has all required fields but no `BICYCLE_ACCIDENT == Y` rows, or it is empty with its schema intact.
+- Confirmed evidence: fabricated GeoParquet with CASE_ID=`made-up`, ACCIDENT_YEAR=2020, COLLISION_SEVERITY=`4`, BICYCLE_ACCIDENT=`N`, and a Point with EPSG:4326 raises `AttributeError: 'DataFrame' object has no attribute 'ACCIDENT_YEAR'`. An empty GeoParquet with the same columns and CRS raises the same error.
+- Cause: after the bicycle filter leaves zero rows, the geometry-filter list is `[]`. `read[[]]` selects zero columns rather than filtering rows, removing ACCIDENT_YEAR and the active geometry. This aborts a run instead of producing the valid empty recorded-crashes layer.
+- Requested fix: use an empty-safe boolean Series/row selection or otherwise preserve the required schema and CRS when there are no retained rows. Add tests for an empty source and a nonempty source containing only non-bike crashes; also cover a plain table whose coordinate filter removes every row.
+
+### RC2 — P2, blocking: a spatial file without point geometries is accepted and fails during map generation
+
+- Location: `src/walkbike_routes/switrs.py:56-69` (spatial geometry validation).
+- Trigger: a spatial file has the required crash columns and a CRS but contains LineString or other unsupported non-point geometry.
+- Confirmed evidence: a fabricated one-row GeoParquet with CASE_ID=`made-up`, year=2020, severity=`4`, bicycle flag=`Y`, EPSG:4326 and `LineString([(0,0),(1,1)])` is returned by `bike_crashes` with its LineString unchanged. Writing that result as recorded_crashes.parquet and calling `map.recorded_points` raises `ValueError: x attribute access only provided for Point geometries`.
+- Violated invariant: the handoff promises a point layer and refusal of sources without points. Checking CRS alone allows invalid spatial input through the adapter, potentially wasting a full routing run before the map fails.
+- Requested fix: validate spatial geometry at the adapter boundary and raise a clear ConfigError for unsupported non-point input. Test that a spatial line/polygon source cannot reach map serialization. Keep genuinely empty point-source results working as required by RC1.
+
+### RC3 — P2, blocking: an explicitly empty recorded_crashes setting bypasses the required-file guard
+
+- Location: `src/walkbike_routes/config.py:101`.
+- Trigger: the private settings contain `recorded_crashes: {}`.
+- Confirmed evidence: with fabricated mappings returned at the YAML-read boundary (no private file created or read), `config.load` accepts that setting and returns `recorded_crashes=None`. The absent-key case also returns None, so an incomplete explicit setting is silently treated as disabled.
+- Cause and violated invariant: `if recorded and crashes is None` checks whether the mapping is truthy, rather than whether the key was supplied. The handoff requires crashes whenever recorded_crashes is given.
+- Requested fix: distinguish absence of the top-level key from an explicitly empty mapping and refuse the latter with the existing needs-crashes error. Add the empty-mapping case to the required-file checks.
+
+### Verification and limits
+
+- Reviewed the complete eleven-file diff in an independent detached clone with its own Git metadata. RC1–RC3 are confirmed input/validation defects in the new feature; no existing base-version adapter API is claimed.
+- Independent fabricated-record integration probe passes for valid data on school, downtown and all-destinations maps in Chromium: grouping, worst-last ordering, year legend, popup, toggling and removal work. All pre-existing Parquet/CSV route/list/summary outputs equal a run without records, and rerunning without records removes the stale layer file.
+- `git diff --check` and permitted `make check` pass: lint, formatting, types, 1047 tests, thirteen deselected, 94.63% coverage. Two dotenv tests were not collected. Deselections cover four existing private-config cases, three forecast cases, and six recorded-crash/private-config cases that read synthetic `.local.yaml` files. Adapter and browser tests using fabricated rows ran. Three pre-existing multithreaded-fork warnings recur.
+- `make validation-check` passes: lint, formatting, types and 58 tests.
+- No repository `data/`, `output/`, `.env`, `*.local.yaml`, or actual count/trip/crash records were read. All independent inputs were fabricated; private-setting checks substituted in-memory YAML results. Private real-area evidence was not inspected.
+
+## Handoff, round 2
+
+- Target: `4308084` -> `0bb32b9` (this handoff is in the next commit).
+- RC1 fixed: the placed-row filter in `switrs.bike_crashes` is a boolean
+  Series on the frame's index, so an empty selection keeps the columns and
+  CRS. `test_a_source_with_no_bike_crashes_gives_an_empty_layer` covers an
+  empty source, a car-only source, and a CSV whose every point is 0 or
+  blank, and `layers.recorded_crashes` on the car-only one.
+- RC2 fixed: `bike_crashes` refuses a source with any non-point shape
+  ("holds LineString shapes; each crash must be a point") before
+  filtering. `test_a_spatial_file_of_lines_is_refused`.
+- RC3 fixed: `config.load` refuses `recorded_crashes` whenever the key is
+  present without `crashes`, so `{}` gets the needs-crashes error. A
+  bare `recorded_crashes:` (null) was and is refused as "expected a
+  mapping". Both are now cases in
+  `test_the_private_file_is_checked_when_the_config_loads`.
+- Each new test fails with the round-1 `src/` and passes on `0bb32b9`.
+- `make check`: 1066 passed, 95.76%. `make validation-check`: 58 passed.
