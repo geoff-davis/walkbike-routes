@@ -2,9 +2,9 @@
 
 ## Current state
 
-- Status: ready for reviewer
-- Next action: reviewer reviews round 1
-- Review target: `ad78a4c` -> `952c45d`
+- Status: complete, accepted at `6c6ad94`
+- Next action: none
+- Review target: `ad78a4c` -> `6c6ad94`
 - Open findings: none
 - Decisions needed from the user: none
 
@@ -127,3 +127,15 @@
   (values 0.01-0.04 and 0.2) and the updated forecast browser test.
 - Both new tests fail with the round-1 `map.html` and pass on `6c6ad94`.
 - `make check`: 1075 passed, 95.76%.
+
+## Review, round 2
+
+- Loop: `map-legibility-1`, round 2, Standard tier.
+- Target: `952c45d..6c6ad94` (`6c6ad949fa928d3db2392d64b17be7cd7ac570be`). Round-2 handoff read from `4495b07`.
+- Verdict: **accepted at `6c6ad94`**. ML1 and ML2 are resolved; no new blocking findings.
+- ML1 verified: overlap paths now precede trips paths on the shared canvas. The browser regression checks actual paint order, trips-width-plus-8 sizing and 9 px with trips hidden.
+- ML2 verified: populated classes report their own values' ranges, rounded outward to one decimal; empty classes are omitted. Small values receive truthful `up to 0.1` wording without the contradictory composed qualifiers. Popup formatting remains unchanged.
+- Base/head evidence: ran the same two new browser regression tests using independent snapshots and made-up demo data. Both failed against `952c45d` and passed against `6c6ad94`.
+- `uv sync --locked --offline` and `make check` passed at the target: lint, format, types, 1,052 tests passed, 21 deselected, 94.41% coverage. Three existing multiprocessing fork warnings. `git diff --check 952c45d..6c6ad94` passed.
+- Privacy exclusions match round 1: `tests/test_env_file.py` ignored; 21 parameterized cases that load companion private YAML files deselected. No `.env`, `*.local.yaml`, repository data/output, or real records read. Validation checks were not repeated for this HTML/browser-test-only fix; round-1 validation passed 58 tests.
+- Implementer tree left unchanged apart from this review entry; review snapshots removed after the verdict. Acceptance authorizes no commit, push or merge.
