@@ -243,7 +243,15 @@ def crash_forecast(study: settings.Study, crs: str, bounds: BaseGeometry) -> gpd
     ``rank`` and ``expected_bike_crashes``, and ``streets`` and
     ``observed_bike_crashes`` when present.  Drawn on the maps only.
     """
-    columns = ["rank", "streets", "expected_bike_crashes", "observed_bike_crashes", "geometry"]
+    columns = [
+        "rank",
+        "streets",
+        "expected_bike_crashes",
+        "observed_bike_crashes",
+        "first_year",
+        "last_year",
+        "geometry",
+    ]
     if study.crash_forecast is None:
         return gpd.GeoDataFrame(columns=columns, geometry="geometry", crs=crs)
     name = study.crash_forecast.name
@@ -261,6 +269,10 @@ def crash_forecast(study: settings.Study, crs: str, bounds: BaseGeometry) -> gpd
     read["streets"] = read.get("streets", pd.Series("", index=read.index)).fillna("").astype(str)
     read = read.dropna(subset=["expected_bike_crashes"])
     read = read.sort_values(["expected_bike_crashes", "rank"], ascending=[False, True])
+    # The years its expected crashes cover, when the private file gives them.
+    years = study.crash_forecast_years or (None, None)
+    read["first_year"] = pd.Series(years[0], index=read.index, dtype="Int64")
+    read["last_year"] = pd.Series(years[1], index=read.index, dtype="Int64")
     logging.info("crash forecast: %d corners within the streets", len(read))
     return gpd.GeoDataFrame(read[columns], geometry="geometry", crs=crs)
 

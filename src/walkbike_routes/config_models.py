@@ -212,6 +212,8 @@ class Study:
     # and ``expected_bike_crashes``, as bike-safety-ca writes them), drawn as a
     # map layer only; it changes no route or list.  Set in the private file.
     crash_forecast: Path | None = None
+    # The years the forecast's expected crashes cover (first, last), if given.
+    crash_forecast_years: tuple[int, int] | None = None
     # Police crash records in the California SWITRS/TIMS layout (crashes, and
     # parties for the rider's age), drawn as a map layer only.  Private file.
     recorded_crashes: Path | None = None

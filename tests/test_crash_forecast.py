@@ -118,3 +118,51 @@ def test_a_missing_forecast_file_is_refused_when_the_config_loads(tmp_path: Path
     with pytest.raises(config.ConfigError, match=r"crash_forecast: .*forecast\.geojson not found"):
         config.load(study, local=True)
     assert config.load(study, local=False).crash_forecast is None
+
+
+def test_the_forecast_years_reach_the_map(tmp_path: Path) -> None:
+    path = _study(tmp_path, forecast=True)
+    private = "crash_forecast:\n  file: forecast.geojson\n  years: [2014, 2026]\n"
+    (tmp_path / "study.local.yaml").write_text(private)
+    study = config.load(path)
+    assert study.crash_forecast_years == (2014, 2026)
+    out = tmp_path / "out"
+    cli.build(study, out)
+    report.build_maps(out)
+    found = re.search(
+        r"const D=(\{.*?\});const CREDITS=", (out / "school" / "map.html").read_text(), re.S
+    )
+    assert found and json.loads(found.group(1))["crashYears"] == [2014, 2026]
+    # Without years the map says only "expected", with no time frame.
+    (tmp_path / "study.local.yaml").write_text("crash_forecast: forecast.geojson\n")
+    cli.build(config.load(path), out)
+    report.build_maps(out)
+    found = re.search(
+        r"const D=(\{.*?\});const CREDITS=", (out / "school" / "map.html").read_text(), re.S
+    )
+    assert found and json.loads(found.group(1))["crashYears"] is None
+
+
+@pytest.mark.parametrize(
+    ("private", "message"),
+    [
+        ("crash_forecast:\n  years: [2014, 2026]\n", "needs file"),
+        ("crash_forecast:\n  file: forecast.geojson\n  years: [2026, 2014]\n", "years should be"),
+        ("crash_forecast:\n  file: forecast.geojson\n  years: 2014\n", "years should be"),
+        ("crash_forecast:\n  file: forecast.geojson\n  span: 13\n", "'span'"),
+        ("crash_forecast:\n  file: gone.geojson\n", r"crash_forecast\.file: .*gone"),
+    ],
+)
+def test_a_forecast_setting_is_checked_when_the_config_loads(
+    tmp_path: Path, private: str, message: str
+) -> None:
+    path = _study(tmp_path, forecast=True)
+    (tmp_path / "study.local.yaml").write_text(private)
+    with pytest.raises(config.ConfigError, match=message):
+        config.load(path)
+
+
+def test_the_main_config_may_not_name_forecast_years() -> None:
+    raw = yaml.safe_load(DEMO.read_text())
+    with pytest.raises(config.ConfigError, match="unknown setting 'crash_forecast_years'"):
+        config.parse({**raw, "crash_forecast_years": [2014, 2026]}, base=DEMO.parent)

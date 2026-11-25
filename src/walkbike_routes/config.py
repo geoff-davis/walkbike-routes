@@ -89,7 +89,7 @@ def load(path: str | Path, local: bool = True) -> Study:
             f"{private.name}: only local_layers, outlines, crash_forecast and "
             f"recorded_crashes may go here, not {unknown[0]!r}"
         )
-    forecast = _private_file(extra.get("crash_forecast"), private, "crash_forecast")
+    forecast, forecast_years = _forecast(extra.get("crash_forecast"), private)
     recorded = checks.mapping(
         extra.get("recorded_crashes", {}), f"{private.name}: recorded_crashes"
     )
@@ -126,9 +126,35 @@ def load(path: str | Path, local: bool = True) -> Study:
         destinations=tuple(known.values()),
         local_source=private,
         crash_forecast=forecast,
+        crash_forecast_years=forecast_years,
         recorded_crashes=crashes,
         crash_parties=parties,
     )
+
+
+def _forecast(raw: Any, private: Path) -> tuple[Path | None, tuple[int, int] | None]:
+    """``crash_forecast``: a file, or ``{file: ..., years: [first, last]}`` giving
+    the years its expected crashes cover, so the map can say how many a year."""
+    if not isinstance(raw, Mapping):
+        return _private_file(raw, private, "crash_forecast"), None
+    where = f"{private.name}: crash_forecast"
+    stray = sorted(set(raw) - {"file", "years"}, key=str)
+    if stray:
+        raise ConfigError(f"{where}: unknown setting {stray[0]!r}")
+    if raw.get("file") is None:
+        raise ConfigError(f"{where}: needs file, the forecast")
+    found = _private_file(raw["file"], private, "crash_forecast.file")
+    if raw.get("years") is None:
+        return found, None
+    years = raw["years"]
+    if (
+        not isinstance(years, list)
+        or len(years) != 2
+        or not all(isinstance(y, int) and not isinstance(y, bool) for y in years)
+        or not 1900 <= years[0] <= years[1] <= 2100
+    ):
+        raise ConfigError(f"{where}: years should be [first, last], such as [2014, 2026]")
+    return found, (years[0], years[1])
 
 
 def _private_file(raw: Any, private: Path, key: str) -> Path | None:
@@ -179,7 +205,14 @@ def parse(raw: Mapping[str, Any], base: Path = Path("."), source: Path | None = 
         raw,
         Study,
         "study config",
-        skip={"source", "local_source", "crash_forecast", "recorded_crashes", "crash_parties"},
+        skip={
+            "source",
+            "local_source",
+            "crash_forecast",
+            "crash_forecast_years",
+            "recorded_crashes",
+            "crash_parties",
+        },
     )
     area = _area(checks.mapping(top["area"], "area"), base)
     modes = _modes(top["modes"])

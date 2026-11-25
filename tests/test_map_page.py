@@ -68,11 +68,21 @@ def _result(page: Path, exercise: str = EXERCISE) -> list[str]:
     text = text.replace("<script>\nconst D=", WATCH + "<script>\nconst D=", 1)
     copy = page.with_name("_smoke.html")
     copy.write_text(text.replace("</body>", RUN % exercise, 1))
-    dom = subprocess.run(
-        [CHROME, "--headless=new", "--disable-gpu", "--no-sandbox",
-         "--virtual-time-budget=20000", "--dump-dom", copy.resolve().as_uri()],
-        capture_output=True, text=True, timeout=180, check=False,
-    ).stdout  # fmt: skip
+    return _dump(copy)
+
+
+def _dump(copy: Path) -> list[str]:
+    """Open the exercised copy headless and read its result; the copy is then removed,
+    so a check run on a real output folder leaves nothing behind."""
+    assert CHROME is not None
+    try:
+        dom = subprocess.run(
+            [CHROME, "--headless=new", "--disable-gpu", "--no-sandbox",
+             "--virtual-time-budget=20000", "--dump-dom", copy.resolve().as_uri()],
+            capture_output=True, text=True, timeout=180, check=False,
+        ).stdout  # fmt: skip
+    finally:
+        copy.unlink(missing_ok=True)
     return re.findall(r'data-(?:ok|err)="[^"]*"', dom)
 
 
@@ -214,12 +224,7 @@ def _report_result(page: Path, exercise: str = REPORT) -> list[str]:
     copy.write_text(
         text.replace("<body>", "<body>" + WATCH, 1).replace("</body>", RUN % exercise, 1)
     )
-    dom = subprocess.run(
-        [CHROME, "--headless=new", "--disable-gpu", "--no-sandbox",
-         "--virtual-time-budget=20000", "--dump-dom", copy.resolve().as_uri()],
-        capture_output=True, text=True, timeout=180, check=False,
-    ).stdout  # fmt: skip
-    return re.findall(r'data-(?:ok|err)="[^"]*"', dom)
+    return _dump(copy)
 
 
 def _long_report(folder: Path) -> Path:
@@ -257,9 +262,14 @@ const box = $("showcrash");
 if (box.parentElement.style.display === "none") throw new Error("crash toggle hidden");
 box.checked = true; draw();
 if (!map.hasLayer(crashLayer) || crashLayer.getLayers().length !== 2) throw new Error("crash layer");
-if (!lg.getContainer().innerHTML.includes("Crash forecast")) throw new Error("crash legend");
+const key = lg.getContainer().innerHTML;
+if (!key.includes("Crash forecast") || !key.includes("in 2014–2026") || !key.includes("top 1%: 1.6 or more"))
+  throw new Error("crash legend: " + key);
+const [big, small] = crashLayer.getLayers();
+if (big.options.radius <= small.options.radius) throw new Error("top corner not drawn larger");
 crashLayer.getLayers()[0].openPopup();
-if (!document.querySelector(".leaflet-popup-content").textContent.includes("rank 1"))
+const said = document.querySelector(".leaflet-popup-content").textContent;
+if (!said.includes("rank 1") || !said.includes("in 2014–2026: 1.6 (about one every 8 years)"))
   throw new Error("crash popup");
 box.checked = false; draw();
 if (map.hasLayer(crashLayer)) throw new Error("crash layer not removed");
@@ -273,7 +283,9 @@ def test_the_crash_forecast_layer_toggles_with_a_legend_and_popups(pages: list[P
     text = page.read_text()
     assert '"crash":[]' in text
     points = '[[0.0002,0.0002,1,1.6,2,"Made-up Ave"],[0.0004,0.0004,2,0.4,0,"Made-up St"]]'
-    page.with_name("crash.html").write_text(text.replace('"crash":[]', f'"crash":{points}', 1))
+    assert '"crashYears":null' in text
+    given = f'"crash":{points},"crashYears":[2014,2026]'
+    page.with_name("crash.html").write_text(text.replace('"crash":[],"crashYears":null', given, 1))
     assert _result(page.with_name("crash.html"), CRASH) == ['data-ok="ok"']
 
 
