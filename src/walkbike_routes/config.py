@@ -87,11 +87,12 @@ def load(path: str | Path, local: bool = True) -> Study:
             f"{private.name}: only local_layers, outlines and crash_forecast may go here, "
             f"not {unknown[0]!r}"
         )
-    forecast = (
-        None
-        if extra.get("crash_forecast") is None
-        else checks.path(extra["crash_forecast"], private.parent)
-    )
+    forecast = checks.path(extra.get("crash_forecast"), private.parent)
+    if forecast is not None and not forecast.is_file():
+        # Found now, not minutes into a run after the street network is built.
+        raise ConfigError(
+            f"{private.name}: crash_forecast: {forecast} not found; fix the path or remove the line"
+        )
     layers = [
         *checks.listed(raw, "local_layers", default=[]),
         *checks.listed(extra, "local_layers", default=[]),

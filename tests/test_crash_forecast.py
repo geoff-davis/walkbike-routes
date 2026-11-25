@@ -109,3 +109,12 @@ def test_the_main_config_may_not_name_a_crash_forecast(tmp_path: Path) -> None:
     for local in (True, False):
         with pytest.raises(config.ConfigError, match="unknown setting 'crash_forecast'"):
             config.load(path, local=local)
+
+
+def test_a_missing_forecast_file_is_refused_when_the_config_loads(tmp_path: Path) -> None:
+    """A moved or misspelt forecast stops the run at once, naming the file."""
+    study = _study(tmp_path, forecast=True)
+    (tmp_path / "forecast.geojson").unlink()
+    with pytest.raises(config.ConfigError, match=r"crash_forecast: .*forecast\.geojson not found"):
+        config.load(study, local=True)
+    assert config.load(study, local=False).crash_forecast is None
