@@ -187,12 +187,14 @@ def test_a_private_local_file_adds_its_layers_after_the_configs_own(tmp_path: Pa
 def test_a_private_local_file_may_hold_only_local_layers(tmp_path: Path) -> None:
     path = _write_with_private(tmp_path, {"local_layers": [], "presets": {"walk": ["shortest"]}})
     with pytest.raises(
-        config.ConfigError, match="only local_layers and outlines may go here, not 'presets'"
+        config.ConfigError,
+        match="only local_layers, outlines and crash_forecast may go here, not 'presets'",
     ):
         config.load(path)
     path = _write_with_private(tmp_path, {1: None, "unexpected": None})
     with pytest.raises(
-        config.ConfigError, match="only local_layers and outlines may go here, not 1"
+        config.ConfigError,
+        match="only local_layers, outlines and crash_forecast may go here, not 1",
     ):
         config.load(path)
 

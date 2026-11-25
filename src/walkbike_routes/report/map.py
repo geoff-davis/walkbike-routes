@@ -152,6 +152,7 @@ def build_maps(out: Path, *, offline: bool = False) -> list[Path]:
     outlines = (
         gpd.read_parquet(out / "outlines.parquet") if out / "outlines.parquet" in listed else None
     )
+    crash = crash_points(out, listed, Transformer.from_crs(links.crs, 4326, always_xy=True))
     written = []
     for destination_id in dict.fromkeys(summary.destination_id.astype(str)):
         rows = summary[summary.destination_id.astype(str).eq(destination_id)]
@@ -173,16 +174,34 @@ def build_maps(out: Path, *, offline: bool = False) -> list[Path]:
         data = page_data(
             destination_id, runs, links, homes, target, out / destination_id, listed, drawn
         )
-        text = page(data, manifest, offline=offline)
+        text = page({**data, "crash": crash}, manifest, offline=offline)
         path = out / destination_id / "map.html"
         path.write_text(text)
         written.append(path)
     together = combined_page_data(out, summary, links, destinations, listed, outlines)
     if together is not None:
         path = out / ALL_DESTINATIONS / "map.html"
-        path.write_text(page(together, manifest, offline=offline))
+        path.write_text(page({**together, "crash": crash}, manifest, offline=offline))
         written.append(path)
     return written
+
+
+def crash_points(out: Path, listed: set[Path], to_degrees: Transformer) -> list[list[Any]]:
+    """The run's forecast crash corners for the map: latitude, longitude, the
+    forecast's rank, expected and recorded bike crashes, and the streets."""
+    path = out / "crash_forecast.parquet"
+    if path not in listed:
+        return []
+    read = gpd.read_parquet(path)
+    lons, lats = to_degrees.transform(read.geometry.x.to_numpy(), read.geometry.y.to_numpy())
+    return [
+        [round(float(lat), 6), round(float(lon), 6), _finite(rank, 0), _finite(expected, 3),
+         _finite(observed, 0), str(streets)]
+        for lat, lon, rank, expected, observed, streets in zip(
+            lats, lons, read["rank"], read.expected_bike_crashes, read.observed_bike_crashes,
+            read.streets, strict=True,
+        )
+    ]  # fmt: skip
 
 
 def in_order(summary: pd.DataFrame) -> pd.DataFrame:

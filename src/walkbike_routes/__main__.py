@@ -26,6 +26,7 @@ from typing import Any
 
 import geopandas as gpd
 import pandas as pd
+from shapely.geometry import box
 
 from walkbike_routes import __version__, demo, layers, network_flows
 from walkbike_routes import config as settings
@@ -200,6 +201,13 @@ def build(
         files["outlines.parquet"] = _sha256(out / "outlines.parquet")
     else:
         (out / "outlines.parquet").unlink(missing_ok=True)
+    # Likewise another model's crash forecast, drawn within the streets' extent.
+    forecast = layers.crash_forecast(study, crs, box(*town.links.total_bounds))
+    if not forecast.empty:
+        forecast.to_parquet(out / "crash_forecast.parquet")
+        files["crash_forecast.parquet"] = _sha256(out / "crash_forecast.parquet")
+    else:
+        (out / "crash_forecast.parquet").unlink(missing_ok=True)
     if jobs is not None:
         jobs.to_parquet(out / "jobs.parquet")
         files["jobs.parquet"] = _sha256(out / "jobs.parquet")
