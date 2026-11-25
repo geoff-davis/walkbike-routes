@@ -2,9 +2,9 @@
 
 ## Current state
 
-- Status: ready for reviewer
-- Next action: reviewer reviews round 1
-- Review target: `9fa5d79` -> `4308084`
+- Status: complete, accepted at `0bb32b9`
+- Next action: none
+- Review target: `9fa5d79` -> `0bb32b9`
 - Open findings: none
 - Decisions needed from the user: none
 
@@ -145,3 +145,14 @@
   `test_the_private_file_is_checked_when_the_config_loads`.
 - Each new test fails with the round-1 `src/` and passes on `0bb32b9`.
 - `make check`: 1066 passed, 95.76%. `make validation-check`: 58 passed.
+
+## Review, round 2
+
+- Loop: `recorded-crashes-1`, round 2; Standard tier.
+- Target reviewed: `4308084..0bb32b9` (`0bb32b920a4f66f94184fcd58c7e6d78002588a4`). The round-2 handoff was read from `6995c1d` as requested; implementation checks used `0bb32b9`.
+- Verdict: **accepted** at `0bb32b9`. RC1, RC2 and RC3 are resolved; no new blocking findings.
+- Reviewed the complete adapter/config/test fix in an independent detached clone with its own Git metadata. The typed boolean Series preserves columns on empty selections; retained non-point crash geometries are refused with ConfigError; the required-crashes guard now checks top-level key presence rather than mapping truthiness.
+- Independently ran identical probes on base and head. RC1's new test passes on head for schema-preserving empty/car-only inputs, all-unlocated CSV rows and an empty projected layer; it fails on base with the original AttributeError. RC2's new spatial-line refusal test passes on head and fails on base because ConfigError is not raised. RC3's in-memory private-settings probe shows the empty mapping accepted on base and refused with needs-crashes on head; null remains refused, absence remains accepted, and local=False leaves records disabled. No private file was created or read for that probe.
+- `git diff --check` and permitted `make check` pass: lint, formatting, types, 1049 tests, fifteen deselected, 94.67% coverage. Two dotenv tests were not collected. Deselections cover four existing private-config cases, three forecast cases, and eight recorded-crash/private-config cases that read synthetic `.local.yaml` files. The new RC1/RC2 tests and existing adapter/browser tests using fabricated rows ran. Three pre-existing multithreaded-fork warnings recur.
+- `make validation-check` passes: lint, formatting, types and 58 tests.
+- No repository `data/`, `output/`, `.env`, `*.local.yaml`, or actual count/trip/crash records were read. All probes used fabricated inputs; RC3 was checked at the YAML-read boundary. Round-1 valid-data map/equivalence evidence remains applicable to the unchanged map and output code; private real-area evidence was not inspected.
