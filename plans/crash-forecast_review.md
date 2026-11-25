@@ -70,3 +70,38 @@
   the private file, since it is derived from crash records.
 - Known limitations: no matching to the fix-first places yet; the
   forecast's years are whatever the source used, and the popup says so.
+
+## Review, round 1
+
+- Loop: `crash-forecast-1`, round 1; Standard tier.
+- Target reviewed: `ec5e685..2b179fb` (`2b179fb216a0a6d727eae6b86f287e3dac848de9`). The handoff was read from `5b857bf` as requested; implementation checks used `2b179fb`.
+- Verdict: **changes required** for `2b179fb`.
+
+### CF1 — P2, blocking: the public config accepts and silently ignores the private-only key
+
+- Location: `src/walkbike_routes/config_models.py:214`, interacting with the dataclass-derived public key list in `config.py:153`.
+- Trigger: put `crash_forecast: invented-forecast.geojson` in the main study YAML, or pass the equivalent mapping to `config.parse`.
+- Defect: adding the field to `Study` automatically permits it in `checks.keys(raw, Study, ...)`. `parse` excludes `source` and `local_source` but not `crash_forecast`, and its Study constructor never assigns the supplied forecast. The setting is accepted without an error and discarded, leaving `Study.crash_forecast=None`. The requested private-file-only contract and unchanged public key list are therefore not enforced; a misplaced setting quietly produces no layer.
+- Confirmed by the identical raw-demo-config probe on base and head (no forecast file opened): `config.parse(raw | {"crash_forecast": "invented-forecast.geojson"})` raises `ConfigError: study config: unknown setting 'crash_forecast'` on `ec5e685`, but returns successfully with `crash_forecast=None` on `2b179fb`.
+- Requested fix: explicitly exclude the new internal/private-only field from the public parser's allowed keys, retaining assignment through the private-load path. Add a regression asserting that a public config/mapping with this key is refused, including when local loading is disabled. This test can use an ordinary public YAML or raw mapping without opening a `.local.yaml` file.
+
+### Verification and limits
+
+- Reviewed the complete ten-file diff in an independent detached clone with its own Git metadata; used a separate detached base clone for the identical parser probe.
+- Independent fabricated-forecast probe passes on school, downtown and all-destinations pages in Chromium: toggle, legend, popup and removal work; retained points have the expected ordering. All pre-existing Parquet and CSV route/list/summary outputs match a run without the forecast. Rerunning without it removes the old forecast file and manifest entry. This uses direct replacement of the Study field and does not read private YAML.
+- `git diff --check` and permitted `make check` pass: lint, formatting, types, 1040 tests, six deselected, 94.94% coverage. Two dotenv tests were not collected; four existing private-config tests and two new forecast tests that read synthetic `.local.yaml` were deselected to honor file restrictions. Three pre-existing multithreaded-fork warnings recur. The new browser test and missing-column test ran.
+- `make validation-check` passes: lint, formatting, types and 58 tests.
+- No repository `data/`, `output/`, `.env`, `*.local.yaml`, or actual count/trip/crash records were read. Additional builds used only the made-up demo and fabricated forecast points outside the repository. Private real-area evidence was not inspected. No other blocking findings.
+
+## Handoff, round 2
+
+- Target: `2b179fb` -> `eadf908` (this handoff is in the next commit).
+- CF1 fixed: `config.parse` passes `skip={"source", "local_source",
+  "crash_forecast"}` to `checks.keys`, so the main config refuses the key
+  as an unknown setting, as on the base. The private path still sets it
+  through `replace` in `config.load`.
+- Regression: `test_the_main_config_may_not_name_a_crash_forecast` refuses
+  it through `config.parse` on a raw mapping, and through `config.load`
+  with `local=True` and `local=False`, on a public YAML in a temporary
+  folder with no private file. It fails with the round-1 `config.py`.
+- `make check`: 1049 passed, 95.77%. `make validation-check`: 58 passed.
