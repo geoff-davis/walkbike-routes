@@ -2,9 +2,9 @@
 
 ## Current state
 
-- Status: ready for reviewer
-- Next action: reviewer reviews round 1
-- Review target: `ec5e685` -> `2b179fb`
+- Status: complete, accepted at `eadf908`
+- Next action: none
+- Review target: `ec5e685` -> `eadf908`
 - Open findings: none
 - Decisions needed from the user: none
 
@@ -105,3 +105,14 @@
   with `local=True` and `local=False`, on a public YAML in a temporary
   folder with no private file. It fails with the round-1 `config.py`.
 - `make check`: 1049 passed, 95.77%. `make validation-check`: 58 passed.
+
+## Review, round 2
+
+- Loop: `crash-forecast-1`, round 2; Standard tier.
+- Target reviewed: `2b179fb..eadf908` (`eadf9083d1f9b2f2f86503473f6a3b5e8f45d78e`). The round-2 handoff was read from `ecf8a4b` as requested; implementation checks used `eadf908`.
+- Verdict: **accepted** at `eadf908`. CF1 is resolved; no new blocking findings.
+- Reviewed the complete parser/test fix in an independent detached clone with its own Git metadata. `crash_forecast` is now explicitly excluded from the dataclass-derived public key list. The private loader's existing post-parse assignment through `replace` is unchanged.
+- Independently ran the new regression against base and head. It fails on `2b179fb` because no ConfigError is raised. At `eadf908`, all three paths refuse the public key: raw `config.parse`, and public-file `config.load` with local loading enabled or disabled. The test uses ordinary temporary YAML with no private file, so no `.local.yaml` contents are read.
+- `git diff --check` and permitted `make check` pass: lint, formatting, types, 1041 tests, six deselected, 94.94% coverage. Two dotenv tests were not collected; four existing private-config tests and two forecast tests that read synthetic `.local.yaml` were deselected to honor file restrictions. Three pre-existing multithreaded-fork warnings recur. The new public-key regression and browser tests ran.
+- `make validation-check` passes: lint, formatting, types and 58 tests.
+- No repository `data/`, `output/`, `.env`, `*.local.yaml`, or actual count/trip/crash records were read. Private-input loading was reviewed in source rather than exercised against a private file; round-1 fabricated-forecast display/equivalence evidence remains applicable to the unchanged layer code.
