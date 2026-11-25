@@ -98,7 +98,7 @@ def load(path: str | Path, local: bool = True) -> Study:
         raise ConfigError(f"{private.name}: recorded_crashes: unknown setting {stray[0]!r}")
     crashes = _private_file(recorded.get("crashes"), private, "recorded_crashes.crashes")
     parties = _private_file(recorded.get("parties"), private, "recorded_crashes.parties")
-    if recorded and crashes is None:
+    if "recorded_crashes" in extra and crashes is None:
         raise ConfigError(f"{private.name}: recorded_crashes needs crashes, the crash file")
     layers = [
         *checks.listed(raw, "local_layers", default=[]),

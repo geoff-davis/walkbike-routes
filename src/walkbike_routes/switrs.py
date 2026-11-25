@@ -43,7 +43,14 @@ def bike_crashes(crashes: Path, parties: Path | None = None) -> gpd.GeoDataFrame
     if missing:
         raise ConfigError(f"recorded_crashes: {crashes.name} has no {missing[0]} column")
     read = read[read.BICYCLE_ACCIDENT.astype("string").str.strip().str.upper().eq("Y")]
-    read = read[[shape is not None and not shape.is_empty for shape in read.geometry]].copy()
+    kinds = {shape.geom_type for shape in read.geometry if shape is not None}
+    if kinds - {"Point"}:
+        raise ConfigError(
+            f"recorded_crashes: {crashes.name} holds {sorted(kinds - {'Point'})[0]} shapes; "
+            "each crash must be a point"
+        )
+    placed = [shape is not None and not shape.is_empty for shape in read.geometry]
+    read = read[pd.Series(placed, index=read.index, dtype=bool)].copy()
     read["year"] = pd.to_numeric(read.ACCIDENT_YEAR, errors="coerce").astype("Int64")
     read["severity"] = _code(read.COLLISION_SEVERITY).map(SEVERITY).fillna("severity not recorded")
     ages = _rider_ages(parties) if parties is not None else pd.Series(dtype="float64")

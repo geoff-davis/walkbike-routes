@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -11,10 +12,10 @@ import geopandas as gpd
 import pandas as pd
 import pytest
 import yaml
-from shapely.geometry import Point
+from shapely.geometry import LineString, Point, box
 
 from walkbike_routes import __main__ as cli
-from walkbike_routes import config, demo, switrs
+from walkbike_routes import config, demo, layers, switrs
 from walkbike_routes.report import map as report
 
 DEMO = Path(__file__).resolve().parents[1] / "config" / "demo.yaml"
@@ -84,6 +85,32 @@ def test_crash_files_without_their_columns_are_refused(tmp_path: Path) -> None:
     _parties().drop(columns="PARTY_AGE").to_parquet(tmp_path / "p.parquet")
     with pytest.raises(config.ConfigError, match="no PARTY_AGE column"):
         switrs.bike_crashes(tmp_path / "ok.parquet", tmp_path / "p.parquet")
+
+
+def test_a_source_with_no_bike_crashes_gives_an_empty_layer(tmp_path: Path) -> None:
+    crashes = _crashes([Point(i, i) for i in range(5)], 4326)
+    cars = crashes.assign(BICYCLE_ACCIDENT=None)
+    for name, table in [("empty", crashes.iloc[0:0]), ("cars", cars)]:
+        table.to_parquet(tmp_path / f"{name}.parquet")
+        read = switrs.bike_crashes(tmp_path / f"{name}.parquet", None)
+        assert read.empty and list(read.columns) == switrs.COLUMNS and read.crs == "EPSG:4326"
+    unplaced = pd.DataFrame(crashes.drop(columns="geometry")).assign(POINT_X="0", POINT_Y="")
+    unplaced.to_csv(tmp_path / "c.csv", index=False)
+    read = switrs.bike_crashes(tmp_path / "c.csv")
+    assert read.empty and list(read.columns) == switrs.COLUMNS
+    # And an empty layer draws nothing: the run removes the file, the map hides the toggle.
+    study = replace(config.load(DEMO), recorded_crashes=tmp_path / "cars.parquet")
+    assert layers.recorded_crashes(study, "EPSG:32610", box(-1e9, -1e9, 1e9, 1e9)).empty
+
+
+def test_a_spatial_file_of_lines_is_refused(tmp_path: Path) -> None:
+    crashes = _crashes([Point(i, i) for i in range(5)], 4326)
+    crashes.geometry = [LineString([(i, i), (i + 1, i)]) for i in range(5)]
+    crashes.to_parquet(tmp_path / "lines.parquet")
+    with pytest.raises(
+        config.ConfigError, match="holds LineString shapes; each crash must be a point"
+    ):
+        switrs.bike_crashes(tmp_path / "lines.parquet")
 
 
 def _study(folder: Path, private: str | None) -> Path:
@@ -157,6 +184,8 @@ def test_without_crash_records_the_layer_is_empty_and_an_old_file_is_removed(
         ("recorded_crashes:\n  crashes: gone.parquet\n", r"recorded_crashes\.crashes: .*gone"),
         ("recorded_crashes:\n  crashes: crashes.parquet\n  parties: gone.csv\n", "parties: .*gone"),
         ("recorded_crashes:\n  parties: parties.csv\n", "recorded_crashes needs crashes"),
+        ("recorded_crashes: {}\n", "recorded_crashes needs crashes"),
+        ("recorded_crashes:\n", "recorded_crashes: expected a mapping"),
         ("recorded_crashes:\n  crashes: crashes.parquet\n  victims: v.csv\n", "'victims'"),
     ],
 )
