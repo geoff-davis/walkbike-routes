@@ -68,11 +68,21 @@ def _result(page: Path, exercise: str = EXERCISE) -> list[str]:
     text = text.replace("<script>\nconst D=", WATCH + "<script>\nconst D=", 1)
     copy = page.with_name("_smoke.html")
     copy.write_text(text.replace("</body>", RUN % exercise, 1))
-    dom = subprocess.run(
-        [CHROME, "--headless=new", "--disable-gpu", "--no-sandbox",
-         "--virtual-time-budget=20000", "--dump-dom", copy.resolve().as_uri()],
-        capture_output=True, text=True, timeout=180, check=False,
-    ).stdout  # fmt: skip
+    return _dump(copy)
+
+
+def _dump(copy: Path) -> list[str]:
+    """Open the exercised copy headless and read its result; the copy is then removed,
+    so a check run on a real output folder leaves nothing behind."""
+    assert CHROME is not None
+    try:
+        dom = subprocess.run(
+            [CHROME, "--headless=new", "--disable-gpu", "--no-sandbox",
+             "--virtual-time-budget=20000", "--dump-dom", copy.resolve().as_uri()],
+            capture_output=True, text=True, timeout=180, check=False,
+        ).stdout  # fmt: skip
+    finally:
+        copy.unlink(missing_ok=True)
     return re.findall(r'data-(?:ok|err)="[^"]*"', dom)
 
 
@@ -214,12 +224,7 @@ def _report_result(page: Path, exercise: str = REPORT) -> list[str]:
     copy.write_text(
         text.replace("<body>", "<body>" + WATCH, 1).replace("</body>", RUN % exercise, 1)
     )
-    dom = subprocess.run(
-        [CHROME, "--headless=new", "--disable-gpu", "--no-sandbox",
-         "--virtual-time-budget=20000", "--dump-dom", copy.resolve().as_uri()],
-        capture_output=True, text=True, timeout=180, check=False,
-    ).stdout  # fmt: skip
-    return re.findall(r'data-(?:ok|err)="[^"]*"', dom)
+    return _dump(copy)
 
 
 def _long_report(folder: Path) -> Path:
@@ -257,9 +262,14 @@ const box = $("showcrash");
 if (box.parentElement.style.display === "none") throw new Error("crash toggle hidden");
 box.checked = true; draw();
 if (!map.hasLayer(crashLayer) || crashLayer.getLayers().length !== 2) throw new Error("crash layer");
-if (!lg.getContainer().innerHTML.includes("Crash forecast")) throw new Error("crash legend");
+const key = lg.getContainer().innerHTML;
+if (!key.includes("Crash forecast") || !key.includes("in 2014–2026") || !key.includes("top 1%: 1.6</div>") || !key.includes("the rest: 0.4</div>") || key.includes("top 5%"))
+  throw new Error("crash legend: " + key);
+const [big, small] = crashLayer.getLayers();
+if (big.options.radius <= small.options.radius) throw new Error("top corner not drawn larger");
 crashLayer.getLayers()[0].openPopup();
-if (!document.querySelector(".leaflet-popup-content").textContent.includes("rank 1"))
+const said = document.querySelector(".leaflet-popup-content").textContent;
+if (!said.includes("rank 1") || !said.includes("in 2014–2026: 1.6 (about one every 8 years)"))
   throw new Error("crash popup");
 box.checked = false; draw();
 if (map.hasLayer(crashLayer)) throw new Error("crash layer not removed");
@@ -273,7 +283,9 @@ def test_the_crash_forecast_layer_toggles_with_a_legend_and_popups(pages: list[P
     text = page.read_text()
     assert '"crash":[]' in text
     points = '[[0.0002,0.0002,1,1.6,2,"Made-up Ave"],[0.0004,0.0004,2,0.4,0,"Made-up St"]]'
-    page.with_name("crash.html").write_text(text.replace('"crash":[]', f'"crash":{points}', 1))
+    assert '"crashYears":null' in text
+    given = f'"crash":{points},"crashYears":[2014,2026]'
+    page.with_name("crash.html").write_text(text.replace('"crash":[],"crashYears":null', given, 1))
     assert _result(page.with_name("crash.html"), CRASH) == ['data-ok="ok"']
 
 
@@ -313,3 +325,68 @@ def test_the_recorded_crashes_layer_toggles_with_a_legend_and_popups(pages: list
         text.replace('"crashes":[]', f'"crashes":{points}', 1)
     )
     assert _result(page.with_name("crashes.html"), CRASHES) == ['data-ok="ok"']
+
+
+SMALL = (
+    EXERCISE
+    + """
+$("showcrash").checked = true; draw();
+const key = lg.getContainer().innerHTML;
+for (const bad of ["under", "or more"]) if (key.includes(bad)) throw new Error("legend: " + key);
+for (const said of ["top 1%: 0.2</div>", "top 25%: up to 0.1</div>", "the rest: up to 0.1</div>"])
+  if (!key.includes(said)) throw new Error("legend lacks " + said + ": " + key);
+"""
+)
+
+
+@pytest.mark.skipif(CHROME is None, reason="no Chrome or Chromium to open the map in")
+def test_small_forecast_values_get_truthful_legend_ranges(pages: list[Path]) -> None:
+    """Below 0.05 one decimal reads 0.0: each size gives its own corners' range,
+    rounded outward, never "under 0.1 or more"."""
+    page = next(p for p in pages if p.parent.name == "school")
+    values = [0.01, 0.02, 0.03, 0.04, 0.2]
+    points = ",".join(
+        f'[0.000{i + 1},0.0002,{i + 1},{v},0,"Made-up St"]' for i, v in enumerate(values)
+    )
+    text = page.read_text().replace('"crash":[]', f'"crash":[{points}]', 1)
+    page.with_name("small.html").write_text(text)
+    assert _result(page.with_name("small.html"), SMALL) == ['data-ok="ok"']
+
+
+OVERLAP = (
+    EXERCISE
+    + """
+let found = false;
+for (const mode of [...$("mode").options].map(o => o.value)) {
+  $("mode").value = mode; $("mode").dispatchEvent(new Event("change"));
+  for (const limit of [...$("limit").options].map(o => o.value)) {
+    $("limit").value = limit; $("limit").dispatchEvent(new Event("change"));
+    if (overlapOf(run()).length) { found = true; break; }
+  }
+  if (found) break;
+}
+if (!found) throw new Error("no run with car overlap in the demo");
+$("showoverlap").checked = true; $("showflow").checked = true; draw();
+const bands = overlapLayer.getLayers(), lines = flowLayer.getLayers();
+const painted = [];
+for (let o = cv._drawFirst; o; o = o.next) painted.push(o.layer);
+const lastBand = Math.max(...bands.map(l => painted.indexOf(l)));
+const firstLine = Math.min(...lines.map(l => painted.indexOf(l)));
+if (!(lastBand >= 0 && lastBand < firstLine)) throw new Error("overlap painted over trips");
+const r = run(), top = Math.max(...r.flow.map(f => f[1]));
+const width = new Map(r.flow.map(([i, f]) => [i, 1 + 11 * Math.sqrt(f / top)]));
+const [i] = overlapOf(r)[0];
+if (Math.abs(bands[0].options.weight - (width.get(i) + 8)) > 1e-9) throw new Error("band width");
+$("showflow").checked = false; draw();
+if (overlapLayer.getLayers()[0].options.weight !== 9) throw new Error("band width without trips");
+"""
+)
+
+
+@pytest.mark.skipif(CHROME is None, reason="no Chrome or Chromium to open the map in")
+def test_the_overlap_band_is_painted_beneath_the_trips(pages: list[Path]) -> None:
+    for page in pages:
+        if '"overlap":{"' in page.read_text():
+            assert _result(page, OVERLAP) == ['data-ok="ok"']
+            return
+    pytest.fail("no demo map has car overlap")

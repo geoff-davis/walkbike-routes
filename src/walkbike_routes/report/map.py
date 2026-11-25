@@ -154,6 +154,7 @@ def build_maps(out: Path, *, offline: bool = False) -> list[Path]:
     )
     to_degrees = Transformer.from_crs(links.crs, 4326, always_xy=True)
     crash = crash_points(out, listed, to_degrees)
+    crash_years = forecast_years(out, listed)
     crashes = recorded_points(out, listed, to_degrees)
     written = []
     for destination_id in dict.fromkeys(summary.destination_id.astype(str)):
@@ -176,7 +177,11 @@ def build_maps(out: Path, *, offline: bool = False) -> list[Path]:
         data = page_data(
             destination_id, runs, links, homes, target, out / destination_id, listed, drawn
         )
-        text = page({**data, "crash": crash, "crashes": crashes}, manifest, offline=offline)
+        text = page(
+            {**data, "crash": crash, "crashYears": crash_years, "crashes": crashes},
+            manifest,
+            offline=offline,
+        )
         path = out / destination_id / "map.html"
         path.write_text(text)
         written.append(path)
@@ -184,7 +189,11 @@ def build_maps(out: Path, *, offline: bool = False) -> list[Path]:
     if together is not None:
         path = out / ALL_DESTINATIONS / "map.html"
         path.write_text(
-            page({**together, "crash": crash, "crashes": crashes}, manifest, offline=offline)
+            page(
+                {**together, "crash": crash, "crashYears": crash_years, "crashes": crashes},
+                manifest,
+                offline=offline,
+            )
         )
         written.append(path)
     return written
@@ -206,6 +215,17 @@ def crash_points(out: Path, listed: set[Path], to_degrees: Transformer) -> list[
             read.streets, strict=True,
         )
     ]  # fmt: skip
+
+
+def forecast_years(out: Path, listed: set[Path]) -> list[int] | None:
+    """The years the forecast's expected crashes cover, [first, last], if known."""
+    path = out / "crash_forecast.parquet"
+    if path not in listed:
+        return None
+    read = pd.read_parquet(path, columns=None)
+    if read.empty or "first_year" not in read or read.first_year.isna().all():
+        return None  # a forecast from before the years were recorded, or none given
+    return [int(read.first_year.iloc[0]), int(read.last_year.iloc[0])]
 
 
 def recorded_points(out: Path, listed: set[Path], to_degrees: Transformer) -> list[list[Any]]:

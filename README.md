@@ -322,12 +322,15 @@ over one for what it shows.
   time limit, the same homes whose minutes saved are counted.
 - **Model agreement.** When a mode has two or more presets, the streets in
   the top tenth of flow under every preset, and those busy under only some.
-- **Car overlap.** Streets with both car and walk or bike trips.
+- **Car overlap.** Streets with both car and walk or bike trips, drawn as
+  a blue band around the trips line.
 - **Crash forecast** (off at first, only when the private file names one):
   another model's forecast of police-recorded bike crashes at corners, such
   as [bike-safety-ca](https://github.com/geoff-davis/bike-safety-ca)'s
-  intersection ranking. Each corner is a cyan circle sized by its expected
-  crashes; a popup gives its rank and its expected and recorded crashes.
+  intersection ranking. Each corner is a cyan circle in one of four sizes:
+  the top 1%, 5% and 25% of the map's corners by expected crashes, and the
+  rest. A popup gives its rank and its expected and recorded crashes, with
+  the years they cover and a yearly rate when the private file gives them.
   Every corner it covers within the streets' extent is drawn. It is shown
   for comparison only: it changes no route, list or ranking.
 - **Recorded crashes** (off at first, only when the private file names
@@ -432,7 +435,10 @@ destination id (`outlines: {almond: {file: ..., where: ...}}`), for an
 attendance area you may use but not share, and name a crash forecast to
 draw on the maps (`crash_forecast: ranking/intersection_ranking.geojson`):
 points with `rank` and `expected_bike_crashes`, and `streets` and
-`observed_bike_crashes` when present, as bike-safety-ca writes them. It
+`observed_bike_crashes` when present, as bike-safety-ca writes them. To
+say the years its counts cover, give
+`crash_forecast: {file: ranking/intersection_ranking.geojson, years: [2014, 2026]}`.
+It
 comes from crash records, so it stays in the private file, as do police
 crash records in California's SWITRS layout (as TIMS exports them), for
 the recorded-crashes layer:
