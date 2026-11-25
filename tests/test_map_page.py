@@ -275,3 +275,41 @@ def test_the_crash_forecast_layer_toggles_with_a_legend_and_popups(pages: list[P
     points = '[[0.0002,0.0002,1,1.6,2,"Made-up Ave"],[0.0004,0.0004,2,0.4,0,"Made-up St"]]'
     page.with_name("crash.html").write_text(text.replace('"crash":[]', f'"crash":{points}', 1))
     assert _result(page.with_name("crash.html"), CRASH) == ['data-ok="ok"']
+
+
+CRASHES = (
+    EXERCISE
+    + """
+const box = $("showcrashes");
+if (box.parentElement.style.display === "none") throw new Error("crashes toggle hidden");
+if ($("crashwrap").style.display !== "none") throw new Error("forecast toggle shown with no forecast");
+box.checked = true; draw();
+if (!map.hasLayer(crashesLayer) || crashesLayer.getLayers().length !== 2)
+  throw new Error("crashes layer");
+const legend = lg.getContainer().innerHTML;
+if (!legend.includes("Recorded bike crashes (2019–2023)")) throw new Error("crashes legend");
+const [minor, worst] = crashesLayer.getLayers();
+if (worst.options.radius <= minor.options.radius) throw new Error("killed not drawn larger");
+worst.openPopup();
+const shown = document.querySelector(".leaflet-popup-content").textContent;
+if (!shown.includes("2 bike crashes here") || !shown.includes("2023: killed; rider child (under 13)"))
+  throw new Error("crashes popup");
+box.checked = false; draw();
+if (map.hasLayer(crashesLayer)) throw new Error("crashes layer not removed");
+"""
+)
+
+
+@pytest.mark.skipif(CHROME is None, reason="no Chrome or Chromium to open the map in")
+def test_the_recorded_crashes_layer_toggles_with_a_legend_and_popups(pages: list[Path]) -> None:
+    page = next(p for p in pages if p.parent.name == "school")
+    text = page.read_text()
+    assert '"crashes":[]' in text
+    points = (
+        '[[0.0002,0.0002,[[2019,"complaint of pain","adult"]]],'
+        '[0.0004,0.0004,[[2023,"killed","child (under 13)"],[2021,"other visible injury","teen (13 to 17)"]]]]'
+    )
+    page.with_name("crashes.html").write_text(
+        text.replace('"crashes":[]', f'"crashes":{points}', 1)
+    )
+    assert _result(page.with_name("crashes.html"), CRASHES) == ['data-ok="ok"']

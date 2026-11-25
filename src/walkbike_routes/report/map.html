@@ -75,6 +75,7 @@ body.printing .leaflet-control-attribution{display:none}
 <label id="agreewrap" title="Streets busy under every route model, or under only some"><input type="checkbox" id="showagree"> Model agreement</label>
 <label id="overlapwrap" title="Streets with both car and walk or bike trips"><input type="checkbox" id="showoverlap"> Car overlap</label>
 <label id="crashwrap" title="Another model's forecast of police-recorded bike crashes at corners (bike-safety-ca); not used in this map's routes or lists"><input type="checkbox" id="showcrash"> Crash forecast</label>
+<label id="crasheswrap" title="Bike crashes in police reports (California SWITRS); not used in this map's routes or lists"><input type="checkbox" id="showcrashes"> Recorded crashes</label>
 <label id="outlinewrap"><input type="checkbox" id="showoutline" checked> <span id="outlinelab">attendance area</span></label>
 <button id="print" type="button">Print this view</button>
 </header>
@@ -155,7 +156,7 @@ map.on("baselayerchange",()=>{base();draw();});
 // under it, so nothing goes below it.  On it, bottom to top: travel-time squares,
 // streets, flows, then agreement and overlap, read against the flows.  The
 // destination and the screen's sections are drawn above it.
-for(const [p,z] of [["dest",430],["crash",440],["exposure",450],["screen",460]])map.createPane(p).style.zIndex=z;
+for(const [p,z] of [["dest",430],["crash",440],["crashes",445],["exposure",450],["screen",460]])map.createPane(p).style.zIndex=z;
 const cellR=cv,flowR=cv,overR=cv;
 const cellLayer=L_.layerGroup().addTo(map),agreeLayer=L_.layerGroup().addTo(map),overlapLayer=L_.layerGroup().addTo(map),flowLayer=L_.layerGroup().addTo(map),screenLayer=L_.layerGroup().addTo(map),exposureLayer=L_.layerGroup().addTo(map);
 // Outlines such as an attendance area: drawn under the destination, toggled as one.
@@ -168,6 +169,14 @@ const crashTop=Math.max(1e-9,...CRASH.map(c=>c[3]||0));
 for(const [lat,lon,rank,expected,recorded,streets] of CRASH){
   const pop=`<div class="pop"><h3>Crash forecast: rank ${rank??"–"}</h3>${streets?`<div>${esc(streets)}</div>`:""}<div>Expected bike crashes: ${expected??"–"}</div><div>Recorded bike crashes: ${recorded??"–"}</div><div class="note">bike-safety-ca's forecast of police-recorded crashes over its years of records: a count, not a risk per trip.</div></div>`;
   L_.circleMarker([lat,lon],{pane:"crash",radius:3+9*Math.sqrt((expected||0)/crashTop),color:CRASH_COL,weight:1.5,fillColor:CRASH_COL,fillOpacity:.25}).bindPopup(pop).addTo(crashLayer);}
+// Police-recorded bike crashes, one dot each, the worst drawn last: drawn as given, used for nothing else.
+const crashesLayer=L_.layerGroup(),CRASHES=D.crashes||[],BAD=new Set(["killed","severe injury"]);
+const years=CRASHES.flatMap(c=>c[2].map(x=>x[0])).filter(y=>y!=null),yearSpan=years.length?`${Math.min(...years)}–${Math.max(...years)}`:"";
+for(const [lat,lon,here] of CRASHES){
+  const bad=here.some(c=>BAD.has(c[1])),n=here.length;
+  const rows=here.map(([year,severity,rider])=>`<div>${year??"Year not recorded"}: ${esc(severity)}; rider ${esc(rider)}</div>`).join("");
+  const pop=`<div class="pop"><h3>${n===1?"Bike crash":`${n} bike crashes here`}</h3>${rows}<div class="note">From police reports. A dot shows where crashes happened, not how risky a place is: busier places see more crashes.</div></div>`;
+  L_.circleMarker([lat,lon],{pane:"crashes",radius:(bad?5.5:3.5)+2*(Math.sqrt(n)-1),color:"#fff",weight:1,fillColor:CRASH_COL,fillOpacity:bad?1:.75}).bindPopup(pop).addTo(crashesLayer);}
 const destStyle={pane:"dest",color:"#111",weight:2.5,fill:false,dashArray:"6 4",interactive:false};
 for(const o of D.places||[D.outline]){if(o.point)L_.circleMarker(o.point,{...destStyle,radius:9,dashArray:null,fill:true,fillColor:"#fff",fillOpacity:.9}).addTo(map);
 else L_.polygon(o.rings,destStyle).addTo(map);}
@@ -213,6 +222,8 @@ function draw(){
   if($("showoutline").checked)outlineLayer.addTo(map);else outlineLayer.remove();
   if($("showcrash").checked)crashLayer.addTo(map);else crashLayer.remove();
   $("crashwrap").style.display=CRASH.length?"":"none";
+  if($("showcrashes").checked)crashesLayer.addTo(map);else crashesLayer.remove();
+  $("crasheswrap").style.display=CRASHES.length?"":"none";
   $("outlinewrap").style.display=D.outlines.length?"":"none";$("cellswrap").style.display=ALL?"none":"";
   // A menu with one choice is not a choice.
   $("modewrap").style.display=modeSel.options.length>1?"":"none";$("runwrap").style.display=runSel.options.length>1?"":"none";
@@ -303,6 +314,7 @@ function legend(r,bands){const d=lg.getContainer().querySelector(".kb"),col=mode
     if(D.outlines.some(o=>o.served))h+=`<div class="note" style="color:#5d646c">Solid: only homes inside count.</div>`;
     if(D.outlines.some(o=>!o.served))h+=`<div class="note" style="color:#5d646c">Dashed: shown only; homes outside still count.</div>`;}
   if(CRASH.length&&$("showcrash").checked)h+=`<b>Crash forecast (bike-safety-ca)</b><div><span class="sq" style="border:1.5px solid ${CRASH_COL};background:${CRASH_COL}40;border-radius:50%"></span>larger: more bike crashes expected</div><div class="note" style="color:#5d646c">Another model's forecast of police-recorded crashes at corners; not used in this map's routes or lists.</div>`;
+  if(CRASHES.length&&$("showcrashes").checked)h+=`<b>Recorded bike crashes${yearSpan?` (${yearSpan})`:""}</b><div><span class="sq" style="background:${CRASH_COL};border-radius:50%"></span>police-reported crashes; larger: more at one spot, or someone killed or severely injured (solid)</div><div class="note" style="color:#5d646c">Where crashes happened, not how risky a place is: busier places see more. Not used in this map's routes or lists.</div>`;
   // The swatch is the mark drawn: a ring for a point, a dashed line for an area.
   const drawnAs=D.places||[D.outline];
   h+=`<b>${drawnAs.length>1?"Destinations":"Destination"}</b>`;
@@ -314,9 +326,9 @@ lg.onAdd=()=>{const d=L_.DomUtil.create("div","legend");
   d.innerHTML=`<details${innerHeight>=800?" open":""}><summary>Key</summary><div class="kb"></div></details>`;
   L_.DomEvent.disableClickPropagation(d);L_.DomEvent.disableScrollPropagation(d);return d;};
 lg.addTo(map);
-["run","showflow","showcells","showagree","showexposure","showscreen","showoverlap","showoutline","showcrash"].forEach(i=>$(i).addEventListener("change",draw));
+["run","showflow","showcells","showagree","showexposure","showscreen","showoverlap","showoutline","showcrash","showcrashes"].forEach(i=>$(i).addEventListener("change",draw));
 function filters(){const r=run(),t=[`${MODE[r.mode]||r.mode}, preset ${r.preset}: ${r.title}`];
-  for(const [id,txt] of [["showcells","time to get there"],["showexposure","places to fix first and to watch"],["showscreen","barriers: where a change would open new routes"],["showagree","busy under every route model or some"],["showoverlap","car and walk/bike overlap"],["showoutline","outlines"],["showcrash","crash forecast"]])if($(id).checked&&$(id).parentElement.style.display!=="none")t.push(txt);
+  for(const [id,txt] of [["showcells","time to get there"],["showexposure","places to fix first and to watch"],["showscreen","barriers: where a change would open new routes"],["showagree","busy under every route model or some"],["showoverlap","car and walk/bike overlap"],["showoutline","outlines"],["showcrash","crash forecast"],["showcrashes","recorded crashes"]])if($(id).checked&&$(id).parentElement.style.display!=="none")t.push(txt);
   return t.join(" · ")+` · zoom ${map.getZoom()} · background: ${osm&&map.hasLayer(osm)?"OpenStreetMap tiles":"built-in streets"} · printed ${new Date().toLocaleDateString()}`;}
 let saved=null;
 function toPrint(){if(saved)return;saved=[map.getCenter(),map.getZoom()];$("pfilters").textContent=filters();$("pkey").innerHTML=lg.getContainer().querySelector(".kb").innerHTML;

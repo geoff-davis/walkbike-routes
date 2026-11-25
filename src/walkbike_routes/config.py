@@ -57,8 +57,9 @@ def local_file(path: Path) -> Path | None:
     """Where a config's private local layers live: ``x.yaml`` -> ``x.local.yaml``.
 
     That file holds only ``local_layers``, ``outlines`` (destination id to
-    an outline drawn on its map) and ``crash_forecast`` (a file of forecast
-    crashes at intersections, drawn as a map layer). It is kept out of git, so a city's own data
+    an outline drawn on its map), ``crash_forecast`` (a file of forecast
+    crashes at intersections) and ``recorded_crashes`` (police crash
+    records), the last two drawn as map layers. It is kept out of git, so a city's own data
     can be used on every run without being committed with the config.
     """
     if path.name.endswith(LOCAL_SUFFIX):
@@ -81,18 +82,24 @@ def load(path: str | Path, local: bool = True) -> Study:
     if private is None or not private.is_file():
         return parse(raw, base=path.parent, source=path)
     extra = _read_yaml(private)
-    unknown = sorted(set(extra) - {"local_layers", "outlines", "crash_forecast"}, key=str)
+    allowed = {"local_layers", "outlines", "crash_forecast", "recorded_crashes"}
+    unknown = sorted(set(extra) - allowed, key=str)
     if unknown:
         raise ConfigError(
-            f"{private.name}: only local_layers, outlines and crash_forecast may go here, "
-            f"not {unknown[0]!r}"
+            f"{private.name}: only local_layers, outlines, crash_forecast and "
+            f"recorded_crashes may go here, not {unknown[0]!r}"
         )
-    forecast = checks.path(extra.get("crash_forecast"), private.parent)
-    if forecast is not None and not forecast.is_file():
-        # Found now, not minutes into a run after the street network is built.
-        raise ConfigError(
-            f"{private.name}: crash_forecast: {forecast} not found; fix the path or remove the line"
-        )
+    forecast = _private_file(extra.get("crash_forecast"), private, "crash_forecast")
+    recorded = checks.mapping(
+        extra.get("recorded_crashes", {}), f"{private.name}: recorded_crashes"
+    )
+    stray = sorted(set(recorded) - {"crashes", "parties"}, key=str)
+    if stray:
+        raise ConfigError(f"{private.name}: recorded_crashes: unknown setting {stray[0]!r}")
+    crashes = _private_file(recorded.get("crashes"), private, "recorded_crashes.crashes")
+    parties = _private_file(recorded.get("parties"), private, "recorded_crashes.parties")
+    if "recorded_crashes" in extra and crashes is None:
+        raise ConfigError(f"{private.name}: recorded_crashes needs crashes, the crash file")
     layers = [
         *checks.listed(raw, "local_layers", default=[]),
         *checks.listed(extra, "local_layers", default=[]),
@@ -115,8 +122,23 @@ def load(path: str | Path, local: bool = True) -> Study:
             raise ConfigError(f"{where}: give nearest or a limiting outline, not both")
         known[str(key)] = replace(known[str(key)], outline=drawn)
     return replace(
-        study, destinations=tuple(known.values()), local_source=private, crash_forecast=forecast
+        study,
+        destinations=tuple(known.values()),
+        local_source=private,
+        crash_forecast=forecast,
+        recorded_crashes=crashes,
+        crash_parties=parties,
     )
+
+
+def _private_file(raw: Any, private: Path, key: str) -> Path | None:
+    """A file the private config names, checked now rather than minutes into a run."""
+    found = checks.path(raw, private.parent)
+    if found is not None and not found.is_file():
+        raise ConfigError(
+            f"{private.name}: {key}: {found} not found; fix the path or remove the line"
+        )
+    return found
 
 
 class _NoDuplicateKeys(yaml.SafeLoader):
@@ -152,8 +174,13 @@ def _read_yaml(path: Path) -> dict[str, Any]:
 
 def parse(raw: Mapping[str, Any], base: Path = Path("."), source: Path | None = None) -> Study:
     """Check a study config already read from YAML; ``base`` resolves file names."""
-    # crash_forecast comes from crash records: only the private file may name it.
-    top = checks.keys(raw, Study, "study config", skip={"source", "local_source", "crash_forecast"})
+    # Crash files come from crash records: only the private file may name them.
+    top = checks.keys(
+        raw,
+        Study,
+        "study config",
+        skip={"source", "local_source", "crash_forecast", "recorded_crashes", "crash_parties"},
+    )
     area = _area(checks.mapping(top["area"], "area"), base)
     modes = _modes(top["modes"])
     demand = _demand(checks.mapping(top["demand"], "demand"))

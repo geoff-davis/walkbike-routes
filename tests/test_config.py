@@ -188,13 +188,13 @@ def test_a_private_local_file_may_hold_only_local_layers(tmp_path: Path) -> None
     path = _write_with_private(tmp_path, {"local_layers": [], "presets": {"walk": ["shortest"]}})
     with pytest.raises(
         config.ConfigError,
-        match="only local_layers, outlines and crash_forecast may go here, not 'presets'",
+        match="only local_layers, outlines, crash_forecast and recorded_crashes may go here, not 'presets'",
     ):
         config.load(path)
     path = _write_with_private(tmp_path, {1: None, "unexpected": None})
     with pytest.raises(
         config.ConfigError,
-        match="only local_layers, outlines and crash_forecast may go here, not 1",
+        match="only local_layers, outlines, crash_forecast and recorded_crashes may go here, not 1",
     ):
         config.load(path)
 

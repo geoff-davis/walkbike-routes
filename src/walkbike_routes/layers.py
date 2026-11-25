@@ -20,7 +20,7 @@ from shapely.geometry import Point
 from shapely.geometry.base import BaseGeometry
 
 from walkbike_routes import config as settings
-from walkbike_routes import local_layers, overrides
+from walkbike_routes import local_layers, overrides, switrs
 from walkbike_routes.demand.spread import spread_blocks
 from walkbike_routes.demo import Town
 from walkbike_routes.download import area as areas
@@ -263,6 +263,21 @@ def crash_forecast(study: settings.Study, crs: str, bounds: BaseGeometry) -> gpd
     read = read.sort_values(["expected_bike_crashes", "rank"], ascending=[False, True])
     logging.info("crash forecast: %d corners within the streets", len(read))
     return gpd.GeoDataFrame(read[columns], geometry="geometry", crs=crs)
+
+
+def recorded_crashes(study: settings.Study, crs: str, bounds: BaseGeometry) -> gpd.GeoDataFrame:
+    """The study's police-recorded bike crashes within ``bounds``, worst drawn last.
+
+    Read from the private config's ``recorded_crashes`` files, in the
+    California SWITRS layout (:mod:`walkbike_routes.switrs`).  Drawn on the
+    maps only.
+    """
+    if study.recorded_crashes is None:
+        return gpd.GeoDataFrame(columns=switrs.COLUMNS, geometry="geometry", crs=crs)
+    read = switrs.bike_crashes(study.recorded_crashes, study.crash_parties).to_crs(crs)
+    read = read[read.intersects(bounds)]
+    logging.info("recorded crashes: %d bike crashes within the streets", len(read))
+    return gpd.GeoDataFrame(read, geometry="geometry", crs=crs)
 
 
 def _destinations(study: settings.Study, crs: str) -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:

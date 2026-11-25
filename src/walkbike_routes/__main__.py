@@ -201,13 +201,18 @@ def build(
         files["outlines.parquet"] = _sha256(out / "outlines.parquet")
     else:
         (out / "outlines.parquet").unlink(missing_ok=True)
-    # Likewise another model's crash forecast, drawn within the streets' extent.
-    forecast = layers.crash_forecast(study, crs, box(*town.links.total_bounds))
-    if not forecast.empty:
-        forecast.to_parquet(out / "crash_forecast.parquet")
-        files["crash_forecast.parquet"] = _sha256(out / "crash_forecast.parquet")
-    else:
-        (out / "crash_forecast.parquet").unlink(missing_ok=True)
+    # Likewise the crash layers (another model's forecast, and police
+    # records), drawn within the streets' extent.
+    extent = box(*town.links.total_bounds)
+    for name, layer in [
+        ("crash_forecast.parquet", layers.crash_forecast(study, crs, extent)),
+        ("recorded_crashes.parquet", layers.recorded_crashes(study, crs, extent)),
+    ]:
+        if not layer.empty:
+            layer.to_parquet(out / name)
+            files[name] = _sha256(out / name)
+        else:
+            (out / name).unlink(missing_ok=True)
     if jobs is not None:
         jobs.to_parquet(out / "jobs.parquet")
         files["jobs.parquet"] = _sha256(out / "jobs.parquet")

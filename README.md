@@ -330,6 +330,14 @@ over one for what it shows.
   crashes; a popup gives its rank and its expected and recorded crashes.
   Every corner it covers within the streets' extent is drawn. It is shown
   for comparison only: it changes no route, list or ranking.
+- **Recorded crashes** (off at first, only when the private file names
+  them): police-reported bike crashes within the streets' extent, a cyan
+  dot for each place with any, larger with more crashes there and solid
+  where someone was killed or severely injured. A popup lists each crash:
+  its year, its severity and the rider's age group (child, teen or adult;
+  the youngest rider when there were several). A dot shows where a
+  crash happened, not how risky a place is: busier places see more. Shown
+  for comparison only.
 
 With two or more destinations, `out/all-destinations/map.html` shows every
 destination's trips added up and the lists for all of them together; each
@@ -425,7 +433,18 @@ attendance area you may use but not share, and name a crash forecast to
 draw on the maps (`crash_forecast: ranking/intersection_ranking.geojson`):
 points with `rank` and `expected_bike_crashes`, and `streets` and
 `observed_bike_crashes` when present, as bike-safety-ca writes them. It
-comes from crash records, so it stays in the private file. Git ignores `*.local.yaml`. Every run adds that file's layers to the
+comes from crash records, so it stays in the private file, as do police
+crash records in California's SWITRS layout (as TIMS exports them), for
+the recorded-crashes layer:
+
+```yaml
+recorded_crashes:
+  crashes: crashes.parquet   # CASE_ID, ACCIDENT_YEAR, COLLISION_SEVERITY,
+                             # BICYCLE_ACCIDENT, and points (or POINT_X/POINT_Y)
+  parties: parties.csv       # optional: CASE_ID, PARTY_TYPE, PARTY_AGE
+```
+
+Git ignores `*.local.yaml`. Every run adds that file's layers to the
 config's own, and the log and report name the layers used. A run with none
 says so. `run --no-local` leaves the private file
 out, for outputs made from public data alone.
