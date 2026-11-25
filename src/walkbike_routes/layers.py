@@ -11,6 +11,7 @@ block with ``buildings: none``.
 from __future__ import annotations
 
 import logging
+import math
 from pathlib import Path
 
 import geopandas as gpd
@@ -233,6 +234,35 @@ def outlines(study: settings.Study, crs: str) -> gpd.GeoDataFrame:
             )
     columns = ["destination_id", "name", "served", "geometry"]
     return gpd.GeoDataFrame(rows, columns=columns, geometry="geometry", crs=crs)
+
+
+def crash_forecast(study: settings.Study, crs: str, bounds: BaseGeometry) -> gpd.GeoDataFrame:
+    """The study's forecast crash corners within ``bounds``, most expected first.
+
+    Read from the private config's ``crash_forecast`` file: points with
+    ``rank`` and ``expected_bike_crashes``, and ``streets`` and
+    ``observed_bike_crashes`` when present.  Drawn on the maps only.
+    """
+    columns = ["rank", "streets", "expected_bike_crashes", "observed_bike_crashes", "geometry"]
+    if study.crash_forecast is None:
+        return gpd.GeoDataFrame(columns=columns, geometry="geometry", crs=crs)
+    name = study.crash_forecast.name
+    read = gpd.read_file(study.crash_forecast)
+    missing = [c for c in ("rank", "expected_bike_crashes") if c not in read.columns]
+    if missing:
+        raise settings.ConfigError(f"crash_forecast: {name} has no {missing[0]} column")
+    if read.crs is None:
+        raise settings.ConfigError(f"crash_forecast: {name} gives no coordinate system")
+    read = read[read.geometry.notna() & read.geometry.geom_type.eq("Point")].to_crs(crs)
+    read = read[read.intersects(bounds)].copy()  # a corner on the edge counts
+    for column in ("rank", "expected_bike_crashes", "observed_bike_crashes"):
+        given = read[column] if column in read else pd.Series(math.nan, index=read.index)
+        read[column] = pd.to_numeric(given, errors="coerce")
+    read["streets"] = read.get("streets", pd.Series("", index=read.index)).fillna("").astype(str)
+    read = read.dropna(subset=["expected_bike_crashes"])
+    read = read.sort_values(["expected_bike_crashes", "rank"], ascending=[False, True])
+    logging.info("crash forecast: %d corners within the streets", len(read))
+    return gpd.GeoDataFrame(read[columns], geometry="geometry", crs=crs)
 
 
 def _destinations(study: settings.Study, crs: str) -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:

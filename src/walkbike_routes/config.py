@@ -56,8 +56,9 @@ LOCAL_SUFFIX = ".local.yaml"
 def local_file(path: Path) -> Path | None:
     """Where a config's private local layers live: ``x.yaml`` -> ``x.local.yaml``.
 
-    That file holds only ``local_layers`` and ``outlines`` (destination id to
-    an outline drawn on its map). It is kept out of git, so a city's own data
+    That file holds only ``local_layers``, ``outlines`` (destination id to
+    an outline drawn on its map) and ``crash_forecast`` (a file of forecast
+    crashes at intersections, drawn as a map layer). It is kept out of git, so a city's own data
     can be used on every run without being committed with the config.
     """
     if path.name.endswith(LOCAL_SUFFIX):
@@ -80,11 +81,17 @@ def load(path: str | Path, local: bool = True) -> Study:
     if private is None or not private.is_file():
         return parse(raw, base=path.parent, source=path)
     extra = _read_yaml(private)
-    unknown = sorted(set(extra) - {"local_layers", "outlines"}, key=str)
+    unknown = sorted(set(extra) - {"local_layers", "outlines", "crash_forecast"}, key=str)
     if unknown:
         raise ConfigError(
-            f"{private.name}: only local_layers and outlines may go here, not {unknown[0]!r}"
+            f"{private.name}: only local_layers, outlines and crash_forecast may go here, "
+            f"not {unknown[0]!r}"
         )
+    forecast = (
+        None
+        if extra.get("crash_forecast") is None
+        else checks.path(extra["crash_forecast"], private.parent)
+    )
     layers = [
         *checks.listed(raw, "local_layers", default=[]),
         *checks.listed(extra, "local_layers", default=[]),
@@ -106,7 +113,9 @@ def load(path: str | Path, local: bool = True) -> Study:
         if drawn.limits and known[str(key)].nearest is not None:
             raise ConfigError(f"{where}: give nearest or a limiting outline, not both")
         known[str(key)] = replace(known[str(key)], outline=drawn)
-    return replace(study, destinations=tuple(known.values()), local_source=private)
+    return replace(
+        study, destinations=tuple(known.values()), local_source=private, crash_forecast=forecast
+    )
 
 
 class _NoDuplicateKeys(yaml.SafeLoader):

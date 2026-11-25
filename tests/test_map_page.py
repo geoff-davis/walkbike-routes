@@ -247,3 +247,31 @@ def test_the_reports_notes_long_tables_and_folds_work(pages: list[Path], tmp_pat
     assert _report_result(_long_report(tmp_path), "throw new Error('made-up')") == [
         'data-err="made-up"'
     ]
+
+
+# The crash forecast layer: drawn when its box is ticked, with a legend entry and popups.
+CRASH = (
+    EXERCISE
+    + """
+const box = $("showcrash");
+if (box.parentElement.style.display === "none") throw new Error("crash toggle hidden");
+box.checked = true; draw();
+if (!map.hasLayer(crashLayer) || crashLayer.getLayers().length !== 2) throw new Error("crash layer");
+if (!lg.getContainer().innerHTML.includes("Crash forecast")) throw new Error("crash legend");
+crashLayer.getLayers()[0].openPopup();
+if (!document.querySelector(".leaflet-popup-content").textContent.includes("rank 1"))
+  throw new Error("crash popup");
+box.checked = false; draw();
+if (map.hasLayer(crashLayer)) throw new Error("crash layer not removed");
+"""
+)
+
+
+@pytest.mark.skipif(CHROME is None, reason="no Chrome or Chromium to open the map in")
+def test_the_crash_forecast_layer_toggles_with_a_legend_and_popups(pages: list[Path]) -> None:
+    page = next(p for p in pages if p.parent.name == "school")
+    text = page.read_text()
+    assert '"crash":[]' in text
+    points = '[[0.0002,0.0002,1,1.6,2,"Made-up Ave"],[0.0004,0.0004,2,0.4,0,"Made-up St"]]'
+    page.with_name("crash.html").write_text(text.replace('"crash":[]', f'"crash":{points}', 1))
+    assert _result(page.with_name("crash.html"), CRASH) == ['data-ok="ok"']

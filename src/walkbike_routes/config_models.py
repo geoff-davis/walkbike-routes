@@ -208,6 +208,10 @@ class Study:
     crs: str | None = None
     # Flows across the whole network to job clusters; None: only the destinations.
     network_flows: NetworkFlows | None = None
+    # Another model's forecast of crashes at intersections (points with ``rank``
+    # and ``expected_bike_crashes``, as bike-safety-ca writes them), drawn as a
+    # map layer only; it changes no route or list.  Set in the private file.
+    crash_forecast: Path | None = None
     # True when the inputs are made up: every output is then labelled synthetic.
     synthetic: bool = False
     source: Path | None = field(default=None, compare=False)

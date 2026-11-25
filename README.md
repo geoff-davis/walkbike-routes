@@ -323,6 +323,13 @@ over one for what it shows.
 - **Model agreement.** When a mode has two or more presets, the streets in
   the top tenth of flow under every preset, and those busy under only some.
 - **Car overlap.** Streets with both car and walk or bike trips.
+- **Crash forecast** (off at first, only when the private file names one):
+  another model's forecast of police-recorded bike crashes at corners, such
+  as [bike-safety-ca](https://github.com/geoff-davis/bike-safety-ca)'s
+  intersection ranking. Each corner is a cyan circle sized by its expected
+  crashes; a popup gives its rank and its expected and recorded crashes.
+  Every corner it covers within the streets' extent is drawn. It is shown
+  for comparison only: it changes no route, list or ranking.
 
 With two or more destinations, `out/all-destinations/map.html` shows every
 destination's trips added up and the lists for all of them together; each
@@ -414,7 +421,11 @@ A layer you may use but not publish belongs in a private file beside the
 config: for `study.yaml`, list it under `local_layers` in `study.local.yaml`.
 That file may also give destinations their outlines, under `outlines:` by
 destination id (`outlines: {almond: {file: ..., where: ...}}`), for an
-attendance area you may use but not share. Git ignores `*.local.yaml`. Every run adds that file's layers to the
+attendance area you may use but not share, and name a crash forecast to
+draw on the maps (`crash_forecast: ranking/intersection_ranking.geojson`):
+points with `rank` and `expected_bike_crashes`, and `streets` and
+`observed_bike_crashes` when present, as bike-safety-ca writes them. It
+comes from crash records, so it stays in the private file. Git ignores `*.local.yaml`. Every run adds that file's layers to the
 config's own, and the log and report name the layers used. A run with none
 says so. `run --no-local` leaves the private file
 out, for outputs made from public data alone.
