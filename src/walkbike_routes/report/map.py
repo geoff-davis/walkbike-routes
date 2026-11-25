@@ -152,7 +152,9 @@ def build_maps(out: Path, *, offline: bool = False) -> list[Path]:
     outlines = (
         gpd.read_parquet(out / "outlines.parquet") if out / "outlines.parquet" in listed else None
     )
-    crash = crash_points(out, listed, Transformer.from_crs(links.crs, 4326, always_xy=True))
+    to_degrees = Transformer.from_crs(links.crs, 4326, always_xy=True)
+    crash = crash_points(out, listed, to_degrees)
+    crashes = recorded_points(out, listed, to_degrees)
     written = []
     for destination_id in dict.fromkeys(summary.destination_id.astype(str)):
         rows = summary[summary.destination_id.astype(str).eq(destination_id)]
@@ -174,14 +176,16 @@ def build_maps(out: Path, *, offline: bool = False) -> list[Path]:
         data = page_data(
             destination_id, runs, links, homes, target, out / destination_id, listed, drawn
         )
-        text = page({**data, "crash": crash}, manifest, offline=offline)
+        text = page({**data, "crash": crash, "crashes": crashes}, manifest, offline=offline)
         path = out / destination_id / "map.html"
         path.write_text(text)
         written.append(path)
     together = combined_page_data(out, summary, links, destinations, listed, outlines)
     if together is not None:
         path = out / ALL_DESTINATIONS / "map.html"
-        path.write_text(page({**together, "crash": crash}, manifest, offline=offline))
+        path.write_text(
+            page({**together, "crash": crash, "crashes": crashes}, manifest, offline=offline)
+        )
         written.append(path)
     return written
 
@@ -202,6 +206,29 @@ def crash_points(out: Path, listed: set[Path], to_degrees: Transformer) -> list[
             read.streets, strict=True,
         )
     ]  # fmt: skip
+
+
+def recorded_points(out: Path, listed: set[Path], to_degrees: Transformer) -> list[list[Any]]:
+    """The run's police-recorded bike crashes for the map, one row per place:
+    latitude, longitude and its crashes (year, severity, the rider's age
+    group), worst first.  Many crashes share a point, often a corner's
+    centre; one dot each would hide all but the top one.  The places with
+    the worst crashes come last, to be drawn on top."""
+    path = out / "recorded_crashes.parquet"
+    if path not in listed:
+        return []
+    read = gpd.read_parquet(path)  # worst last
+    lons, lats = to_degrees.transform(read.geometry.x.to_numpy(), read.geometry.y.to_numpy())
+    places: dict[tuple[float, float], list[list[Any]]] = {}
+    worst: dict[tuple[float, float], int] = {}
+    for order, (lat, lon, year, severity, rider) in enumerate(
+        zip(lats, lons, read.year, read.severity, read.rider, strict=True)
+    ):
+        key = (round(float(lat), 6), round(float(lon), 6))
+        crash = [int(year) if pd.notna(year) else None, str(severity), str(rider)]
+        places.setdefault(key, []).insert(0, crash)
+        worst[key] = order
+    return [[lat, lon, places[(lat, lon)]] for lat, lon in sorted(places, key=worst.__getitem__)]
 
 
 def in_order(summary: pd.DataFrame) -> pd.DataFrame:

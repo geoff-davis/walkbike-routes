@@ -212,6 +212,10 @@ class Study:
     # and ``expected_bike_crashes``, as bike-safety-ca writes them), drawn as a
     # map layer only; it changes no route or list.  Set in the private file.
     crash_forecast: Path | None = None
+    # Police crash records in the California SWITRS/TIMS layout (crashes, and
+    # parties for the rider's age), drawn as a map layer only.  Private file.
+    recorded_crashes: Path | None = None
+    crash_parties: Path | None = None
     # True when the inputs are made up: every output is then labelled synthetic.
     synthetic: bool = False
     source: Path | None = field(default=None, compare=False)
