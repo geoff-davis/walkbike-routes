@@ -97,3 +97,15 @@ def test_a_forecast_without_its_columns_or_coordinates_is_refused(tmp_path: Path
     )
     with pytest.raises(config.ConfigError, match="no expected_bike_crashes column"):
         layers.crash_forecast(study, "EPSG:32610", area)
+
+
+def test_the_main_config_may_not_name_a_crash_forecast(tmp_path: Path) -> None:
+    """Only the private file may: a forecast in the main config is refused, not ignored."""
+    raw = yaml.safe_load(DEMO.read_text())
+    with pytest.raises(config.ConfigError, match="unknown setting 'crash_forecast'"):
+        config.parse({**raw, "crash_forecast": "forecast.geojson"}, base=DEMO.parent)
+    path = tmp_path / "study.yaml"
+    path.write_text(yaml.safe_dump({**raw, "crash_forecast": "forecast.geojson"}))
+    for local in (True, False):
+        with pytest.raises(config.ConfigError, match="unknown setting 'crash_forecast'"):
+            config.load(path, local=local)

@@ -151,7 +151,8 @@ def _read_yaml(path: Path) -> dict[str, Any]:
 
 def parse(raw: Mapping[str, Any], base: Path = Path("."), source: Path | None = None) -> Study:
     """Check a study config already read from YAML; ``base`` resolves file names."""
-    top = checks.keys(raw, Study, "study config", skip={"source", "local_source"})
+    # crash_forecast comes from crash records: only the private file may name it.
+    top = checks.keys(raw, Study, "study config", skip={"source", "local_source", "crash_forecast"})
     area = _area(checks.mapping(top["area"], "area"), base)
     modes = _modes(top["modes"])
     demand = _demand(checks.mapping(top["demand"], "demand"))
