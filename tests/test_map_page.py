@@ -263,7 +263,7 @@ if (box.parentElement.style.display === "none") throw new Error("crash toggle hi
 box.checked = true; draw();
 if (!map.hasLayer(crashLayer) || crashLayer.getLayers().length !== 2) throw new Error("crash layer");
 const key = lg.getContainer().innerHTML;
-if (!key.includes("Crash forecast") || !key.includes("in 2014–2026") || !key.includes("top 1%: 1.6 or more"))
+if (!key.includes("Crash forecast") || !key.includes("in 2014–2026") || !key.includes("top 1%: 1.6</div>") || !key.includes("the rest: 0.4</div>") || key.includes("top 5%"))
   throw new Error("crash legend: " + key);
 const [big, small] = crashLayer.getLayers();
 if (big.options.radius <= small.options.radius) throw new Error("top corner not drawn larger");
@@ -325,3 +325,68 @@ def test_the_recorded_crashes_layer_toggles_with_a_legend_and_popups(pages: list
         text.replace('"crashes":[]', f'"crashes":{points}', 1)
     )
     assert _result(page.with_name("crashes.html"), CRASHES) == ['data-ok="ok"']
+
+
+SMALL = (
+    EXERCISE
+    + """
+$("showcrash").checked = true; draw();
+const key = lg.getContainer().innerHTML;
+for (const bad of ["under", "or more"]) if (key.includes(bad)) throw new Error("legend: " + key);
+for (const said of ["top 1%: 0.2</div>", "top 25%: up to 0.1</div>", "the rest: up to 0.1</div>"])
+  if (!key.includes(said)) throw new Error("legend lacks " + said + ": " + key);
+"""
+)
+
+
+@pytest.mark.skipif(CHROME is None, reason="no Chrome or Chromium to open the map in")
+def test_small_forecast_values_get_truthful_legend_ranges(pages: list[Path]) -> None:
+    """Below 0.05 one decimal reads 0.0: each size gives its own corners' range,
+    rounded outward, never "under 0.1 or more"."""
+    page = next(p for p in pages if p.parent.name == "school")
+    values = [0.01, 0.02, 0.03, 0.04, 0.2]
+    points = ",".join(
+        f'[0.000{i + 1},0.0002,{i + 1},{v},0,"Made-up St"]' for i, v in enumerate(values)
+    )
+    text = page.read_text().replace('"crash":[]', f'"crash":[{points}]', 1)
+    page.with_name("small.html").write_text(text)
+    assert _result(page.with_name("small.html"), SMALL) == ['data-ok="ok"']
+
+
+OVERLAP = (
+    EXERCISE
+    + """
+let found = false;
+for (const mode of [...$("mode").options].map(o => o.value)) {
+  $("mode").value = mode; $("mode").dispatchEvent(new Event("change"));
+  for (const limit of [...$("limit").options].map(o => o.value)) {
+    $("limit").value = limit; $("limit").dispatchEvent(new Event("change"));
+    if (overlapOf(run()).length) { found = true; break; }
+  }
+  if (found) break;
+}
+if (!found) throw new Error("no run with car overlap in the demo");
+$("showoverlap").checked = true; $("showflow").checked = true; draw();
+const bands = overlapLayer.getLayers(), lines = flowLayer.getLayers();
+const painted = [];
+for (let o = cv._drawFirst; o; o = o.next) painted.push(o.layer);
+const lastBand = Math.max(...bands.map(l => painted.indexOf(l)));
+const firstLine = Math.min(...lines.map(l => painted.indexOf(l)));
+if (!(lastBand >= 0 && lastBand < firstLine)) throw new Error("overlap painted over trips");
+const r = run(), top = Math.max(...r.flow.map(f => f[1]));
+const width = new Map(r.flow.map(([i, f]) => [i, 1 + 11 * Math.sqrt(f / top)]));
+const [i] = overlapOf(r)[0];
+if (Math.abs(bands[0].options.weight - (width.get(i) + 8)) > 1e-9) throw new Error("band width");
+$("showflow").checked = false; draw();
+if (overlapLayer.getLayers()[0].options.weight !== 9) throw new Error("band width without trips");
+"""
+)
+
+
+@pytest.mark.skipif(CHROME is None, reason="no Chrome or Chromium to open the map in")
+def test_the_overlap_band_is_painted_beneath_the_trips(pages: list[Path]) -> None:
+    for page in pages:
+        if '"overlap":{"' in page.read_text():
+            assert _result(page, OVERLAP) == ['data-ok="ok"']
+            return
+    pytest.fail("no demo map has car overlap")
