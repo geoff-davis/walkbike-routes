@@ -84,6 +84,27 @@ def write(folder: Path, **frames: pd.DataFrame) -> list[Path]:
     return paths
 
 
+def homes_counted(study: settings.Study, destination: settings.Destination) -> str:
+    """Whose homes count for ``destination``, in words; "" when it has no area of its own.
+
+    "in the Blach attendance area", "nearer by street to it than to Hill High
+    School", or both. With neither, every home within reach counts, and there
+    is no area to take a share of.
+    """
+    parts = []
+    if destination.outline is not None and destination.outline.limits:
+        name = destination.outline.name
+        parts.append(f"in the {name[0].lower() + name[1:] if name == 'Attendance area' else name}")
+    elif destination.serves is not None:
+        parts.append("in the area it serves")
+    if destination.nearest:
+        others = [d.name for d in study.destinations
+                  if d.nearest == destination.nearest and d.id != destination.id]  # fmt: skip
+        listed = others[0] if len(others) == 1 else ", ".join(others[:-1]) + " or " + others[-1]
+        parts.append(f"nearer by street to it than to {listed}")
+    return ", ".join(parts)
+
+
 def summary(
     context: Context,
     destination: settings.Destination,
@@ -107,6 +128,7 @@ def summary(
         "mode": mode,
         "preset": preset,
         "weight_unit": str(context.origins.weight_unit.iloc[0]) if len(context.origins) else "",
+        "homes_counted": homes_counted(context.study, destination),
         "total_weight": total,
         "reachable_weight": float(weight[reachable].sum()),
         "time_cap_min": cap if cap is not None else math.nan,

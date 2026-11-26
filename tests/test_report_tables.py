@@ -54,7 +54,11 @@ def test_the_report_is_written_both_ways(out: Path) -> None:
 
 
 def test_the_summary_figures_come_from_summary_csv(out: Path) -> None:
-    summary = tables.read_summary(out)
+    alone = tables.read_summary(out)
+    assert alone.homes_counted.eq("").all()  # the demo school has no area of its own
+    walking = next(r for r in tables.summary_table(alone).rows if r[0] == "Walking")
+    assert walking[2] == walking[4] == "–"  # nothing to take a share of
+    summary = alone.assign(homes_counted="in the demo area")
     walk = summary[summary.preset.eq("broach-2016") & summary["mode"].eq("walk")].iloc[0]
     table = tables.summary_table(summary)
     row = next(
@@ -91,8 +95,17 @@ def test_each_destination_opens_with_who_can_get_there(out: Path) -> None:
     walk = summary[summary["mode"].eq("walk")].iloc[0]
     # How much there is to fix comes first, then who can get there, as one table.
     assert section.split("\n\n")[2].startswith("Priority:")
-    assert f"Of the {walk.total_weight:,.0f} residents aged 5-11 in the study area:" in section
-    assert f"| Walking | 20 min | {walk.within_cap_weight:,.0f} |" in section
+    assert (
+        "It has no area of its own: all residents aged 5-11 who can get there within the "
+        "time limit count." in section
+    )
+    assert f"| Walking | 20 min | {walk.within_cap_weight:,.0f} | – |" in section
+    assert "in the study area" not in section
+    with_area = tables.main_rows(summary).assign(homes_counted="in the Hill attendance area")
+    assert tables.who_line(with_area) == (
+        f"Of the {walk.total_weight:,.0f} residents aged 5-11 in the Hill attendance area:"
+    )
+    assert str(tables.who_table(with_area).rows[0][3]).endswith("%")
 
 
 def test_a_run_from_before_units_and_decay_were_recorded_still_reports() -> None:

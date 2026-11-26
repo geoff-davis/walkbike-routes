@@ -357,7 +357,8 @@ def tips(
         "Priority": "Priority or watch, and why.",
         "Time limit": "The longest trip counted for this mode.",
         "Can get there": f"Those whose route is within the time limit. Left out: {UNCONNECTED}.",
-        "Share": "Can get there, as a share of everyone in the study area.",
+        "Share": "Can get there, as a share of everyone counted; – for a destination with "
+        "no area of its own.",
         "Median minutes": "The middle travel time among those who can get there.",
         "Expected trips": "Trips the model expects: each home counts at the usual share "
         "of trips of its length. Not a count.",
@@ -375,8 +376,9 @@ def tips(
         "points it adds.",
         "Place": "The street, crossing or junction where the change would go.",
         "Route model": GLOSSARY["route model"],
-        "In study area": "Everyone of the counted age in the study area, whether or not "
-        "they can get there.",
+        "Counted": "Everyone of the counted age whose homes count for this destination (its "
+        "area, as the line above the table says), whether or not they can get there; – for "
+        "a destination with no area of its own.",
         "Factor": "What earns a place risk points.",
         "Points": "The risk points the factor adds.",
         "Mode": "How people travel: walking, cycling or driving.",

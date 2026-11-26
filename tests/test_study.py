@@ -291,10 +291,38 @@ def test_the_median_within_the_limit_works_out_the_limit_if_routes_lack_the_flag
         origins=pd.DataFrame({"weight_unit": ["residents"]}),
         study=SimpleNamespace(time_bands_min=[5, 10, 15, 20]),
     )
-    destination = SimpleNamespace(id="school")
+    destination = SimpleNamespace(id="school", outline=None, serves=None, nearest=None)
     row = study_context.summary(context, destination, "walk", "p", routes, None, 20.0)  # type: ignore[arg-type]
     assert row["median_minutes_within_cap"] == 5.0 and row["within_cap_weight"] == 1.0
     assert row["median_minutes"] == 30.0
+    assert row["homes_counted"] == ""  # no area of its own
+
+
+def test_each_destination_says_whose_homes_it_counts() -> None:
+    from types import SimpleNamespace
+
+    from walkbike_routes import config, study_context
+
+    def school(id: str, **kw: object) -> SimpleNamespace:
+        given = {"outline": None, "serves": None, "nearest": None} | kw
+        return SimpleNamespace(id=id, name=f"{id.title()} School", **given)
+
+    district = config.Outline(file=Path("d.shp"), name="Hill district")
+    drawn = config.Outline(file=Path("d.shp"), name="Hill district", limits=False)
+    a, b = school("a", outline=district, nearest="high"), school("b", nearest="high")
+    c, d = school("c", nearest="high"), school("d", serves=Path("s.geojson"))
+    study = SimpleNamespace(destinations=[a, b, c, d])
+    words: Any = study_context.homes_counted  # takes stand-ins for a study and destinations
+    assert (
+        words(study, a)
+        == "in the Hill district, nearer by street to it than to B School or C School"
+    )
+    assert words(study, b) == "nearer by street to it than to A School or C School"
+    assert words(study, d) == "in the area it serves"
+    plain = config.Outline(file=Path("d.shp"), name="Attendance area")
+    assert words(study, school("e", outline=plain)) == "in the attendance area"
+    assert words(study, school("f", outline=drawn)) == ""
+    assert words(study, school("g")) == ""
 
 
 def test_a_presets_network_is_built_once_for_all_destinations(

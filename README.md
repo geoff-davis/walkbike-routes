@@ -61,7 +61,11 @@ where to look, not a design.
 
 The report gives the number of residents (or children of the right ages)
 within 5, 10, 15 and 20 minutes on foot or by bike, under each route model,
-and compares the models.
+and compares the models. Each destination says whose homes it counts: its
+attendance area, its district's homes nearer it than the other schools in its
+group, or, with no area of its own, everyone within the time limit. Only a
+destination with an area gets a share, since only it has a total to take one
+of.
 
 ## What it is not
 
@@ -293,7 +297,8 @@ how many of its people come from each destination.
 
 Plus `out/<destination>/overlap.parquet`, where car flow meets walking or
 cycling flow (where to look, not a risk measure), `out/summary.csv` with
-time bands for each destination, mode and preset, and `out/manifest.json`
+time bands for each destination, mode and preset (and `homes_counted`, whose
+homes it counts, empty for a destination with no area of its own), and `out/manifest.json`
 with a hash of every file and the data sources used.
 
 With `network_flows`, also `out/jobs.parquet` (jobs by block) and
