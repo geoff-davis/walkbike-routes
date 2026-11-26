@@ -1013,8 +1013,8 @@ exposure:
 
 `busiest_share` adds a second rule for high use. With 0.10, the busiest 10%
 of each list's places, by people, are "priority" too, whatever their
-points, as long as they meet the people bar. Their reason says so: "Fix
-first: among the busiest 10% of places here (about 400 people use it),
+points, as long as they meet the people bar. Their reason says so:
+"Priority: among the busiest 10% of places here (about 400 people use it),
 though it has 2 risk points." Without it, a busy place with few points
 stays "watch", and its reason says what it would need.
 
