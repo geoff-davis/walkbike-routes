@@ -2,10 +2,10 @@
 
 ## Current state
 
-- Status: ready for reviewer
-- Next action: reviewer verifies round 2
-- Review target: `1eb88e1` -> `0e832b4`
-- Open findings: AFD1 (fixed in 0e832b4, to verify)
+- Status: complete, accepted at `0e832b4`
+- Next action: none
+- Review target: `1eb88e1` -> `0e832b4` (accepted, round 2)
+- Open findings: none (AFD1 fixed in 0e832b4)
 - Decisions needed from the user: none
 
 ## Loop
@@ -104,3 +104,14 @@
   `ValueError: max() iterable argument is empty`. It also covers the
   `serves` branch that round 1 left unexercised.
 - Checks at `0e832b4`: `make check` 1083 passed.
+
+## Review, round 2
+
+- Loop: `area-from-destinations-1`, round 2, Standard tier.
+- Target: `1eb88e1..0e832b4` (`0e832b43051cefad935dfb16b2ea50ecd24c0c68`); handoff read from `d4ff0ab`. Fix verification compared `0b643c4..0e832b4`.
+- Verdict: **accepted at `0e832b4`**. AFD1 resolved; no new findings.
+- Reach is now computed only for destinations needing a fallback buffer. With no walking/cycling cap it returns None, and the caller raises an actionable ConfigError naming an unbounded destination. Destinations with their own serves/limiting-outline polygons bypass reach computation.
+- Same synthetic, fully parsed car-only config on round-1 and head implementations: `0b643c4` reproduced the empty-maximum ValueError; `0e832b4` preserved the supplied serves polygon exactly. Additional head probes passed for limiting outlines and automatic UTM selection. Removing the area, or replacing it with a drawn-only outline, produced the intended destination-specific ConfigError. Only made-up in-memory polygons were used.
+- `uv sync --locked --offline` and `make check` passed in an independent detached snapshot: lint, format, types; 1,060 tests passed, 21 deselected, 94.63% coverage. Three existing multiprocessing fork warnings. `make validation-check` passed, 58 tests. `git diff --check 1eb88e1..0e832b4` passed. All callers of the now-optional reach return were inspected; the suite's walking/cycling and fake-service build checks passed.
+- Privacy exclusions match round 1: ignored `tests/test_env_file.py`; deselected the 21 parameterized config, forecast and recorded-crash cases that load companion private YAML files. No `.env`, `*.local.yaml`, repository data/output, or real records read.
+- Round-1 conclusions for other source paths and settled decisions remain valid. Implementer tree unchanged apart from this entry. Review snapshot removed after the verdict. Acceptance authorizes no commit, push or merge.
