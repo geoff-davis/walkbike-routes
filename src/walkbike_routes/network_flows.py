@@ -96,7 +96,9 @@ def analyze(study: settings.Study, town: Town, out: Path) -> list[Path]:
         out=out,
     )
     written = [folder / "destinations.parquet"]
-    clusters.to_parquet(written[0])
+    # Job clusters share no homes with a nearest group: the same column as the
+    # study's own destinations, empty.
+    clusters.assign(nearest_group="").to_parquet(written[0])
     attraction = dict(zip(clusters.destination_id.astype(str), clusters.jobs, strict=True))
     rows = []
     for mode in (m for m in study.modes if m in ACTIVE):
