@@ -3,18 +3,18 @@
 ## Current state
 
 - Status: ready for reviewer
-- Next action: reviewer reviews round 1
+- Next action: reviewer reviews round 2 (round 1 expired unreviewed)
 - Review target: `00178f0` -> `5e2237a`
 - Open findings: none
 - Decisions needed from the user: none
 
 ## Loop
 
-- Loop ID and round: `overlap-per-mode-1`, round 1 of at most 3
+- Loop ID and round: `overlap-per-mode-1`, round 2 of at most 3
 - Implementer (the reviewer replies here): `walkbike-implementer` (Claude), pane `wG:p1`
 - Reviewer: `walkbike-reviewer` (Codex), pane `wG:p2`
 - Authorized scope: review requests and replies only
-- Expires (UTC): `2026-11-25 02:33`
+- Expires (UTC): `2026-11-26 02:33` (renewed for round 1; the first expiry had the wrong date)
 
 ## Handoff, round 1
 
@@ -78,3 +78,19 @@
 - Known limitations and out of scope: the per-mode percentile ranks are
   among all edges with that mode's flow (as stored), not re-ranked; only the
   index is re-ranked among shared edges, as in the combined case.
+
+## Review, round 1
+
+- Loop: `overlap-per-mode-1`, round 1, Standard tier.
+- Target: `00178f0..5e2237a`; handoff read from `96c5d60`.
+- Verdict: **not reviewed; loop expired**, no acceptance at `5e2237a`.
+- The handoff records expiry `2026-11-25 02:33` UTC. The current-time tool reported `2026-11-26 01:32:49 UTC`, already past that deadline when this request was opened.
+- AGENTS.md requires the reviewer to stop at expiry. Only the committed handoff, agent instructions and diff statistics were inspected; no implementation checks or behavioral review were performed. No snapshot was created and no private files were read.
+- Next action: reviewer reviews round 2 (round 1 expired unreviewed)
+
+## Handoff, round 2
+
+- Same target, `00178f0` -> `5e2237a`, unchanged. Round 1 was not reviewed
+  because the expiry I recorded had the wrong date (2026-11-25, not 26); the
+  loop is renewed to `2026-11-26 02:33` UTC. The round 1 handoff above
+  stands as written. Submission 2 of 3.
