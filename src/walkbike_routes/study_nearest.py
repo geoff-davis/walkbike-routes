@@ -5,6 +5,10 @@ A destination's ``nearest`` names its group (see
 walk along streets and paths, under the shipped ``walk/shortest`` preset, so
 every mode and route model sees the same split.  A home with no street route
 to any of the group goes to the destination nearest in a straight line.
+
+Each member's homes are already cut to its own area (``serves`` or a limiting
+outline, such as a school district).  A home is shared only among the members
+whose area holds it, so it is never handed to a member that does not count it.
 """
 
 from __future__ import annotations
@@ -55,8 +59,13 @@ def nearest_origins(
             {i: _straight_lengths(context, destinations[i], every) for i in members},
             index=every.origin_id.astype(str),
         )
-        choice = choose_nearest(table, straight)
-        by_street = table.notna().any(axis=1)
+        ids = every.origin_id.astype(str)
+        allowed = pd.DataFrame(
+            {i: ids.isin(set(origins[i].origin_id.astype(str))).to_numpy() for i in members},
+            index=ids,
+        )
+        choice = choose_nearest(table, straight, allowed)
+        by_street = table.where(allowed).notna().any(axis=1)
         log.info(
             "nearest group %s: %d homes split by street distance, %d by straight line",
             group, int(by_street.sum()), int((~by_street).sum()),
@@ -100,12 +109,17 @@ def route_lengths(routes: pd.DataFrame) -> pd.Series:
     return whole.groupby(reached.origin_id.astype(str).to_numpy()).min()
 
 
-def choose_nearest(street: pd.DataFrame, straight: pd.DataFrame) -> pd.Series:
+def choose_nearest(
+    street: pd.DataFrame, straight: pd.DataFrame, allowed: pd.DataFrame | None = None
+) -> pd.Series:
     """Each origin's nearest member: by street where any is known, else in a straight line.
 
     Both tables have a row per origin and a column per member; ``street`` has
-    NaN where a member cannot be reached.
+    NaN where a member cannot be reached.  ``allowed``, of the same shape, is
+    true where the member's area holds the origin; only those are chosen from.
     """
+    if allowed is not None:
+        street, straight = street.where(allowed), straight.where(allowed)
     by_street = street.notna().any(axis=1)
     choice = straight.idxmin(axis=1)
     if by_street.any():

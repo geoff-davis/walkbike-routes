@@ -55,7 +55,13 @@ fields:
     for the member nearest it along streets and paths (the shortest walk,
     the same for every mode). A home with no street route to any of them
     goes to the nearest in a straight line. A group needs two or more
-    destinations, and a member takes no `serves` or limiting `outline`.
+    destinations. A member may also have `serves` or a limiting `outline`,
+    such as its school district (Census TIGER publishes elementary,
+    secondary and unified district boundaries): it then draws only on homes
+    inside that area, and each home goes to the nearest member whose area
+    holds it. Charter, magnet and private schools have no such area; leave
+    them out of a group. `destinations.parquet` records each one's group
+    in `nearest_group`.
 - **`modes`** and **`presets`**: which modes to run, and one or more
   route-choice presets for each. The first preset of a mode is its main one.
   See step 6.

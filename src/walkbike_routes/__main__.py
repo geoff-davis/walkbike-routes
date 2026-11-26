@@ -191,6 +191,13 @@ def build(
     )
     for name in LAYERS:
         layer: gpd.GeoDataFrame = getattr(town, name)
+        if name == "destinations":
+            # Which nearest group each shares its homes with, so pages can say how
+            # its homes were chosen; empty for one with its own area or none.
+            group = {d.id: d.nearest or "" for d in study.destinations}
+            layer = layer.assign(
+                nearest_group=[group.get(i, "") for i in layer.destination_id.astype(str)]
+            )
         path = out / f"{name}.parquet"
         layer.to_parquet(path)
         files[path.name] = _sha256(path)

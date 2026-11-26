@@ -222,6 +222,9 @@ def test_a_network_only_run_writes_no_maps_and_lists_its_files(
     for name in ("jobs.parquet", "network/destinations.parquet", "network/summary.csv",
                  "network/walk-shortest/flows.parquet"):  # fmt: skip
         assert name in manifest["files"], name
+    clusters = pd.read_parquet(out / "network" / "destinations.parquet")
+    assert len(clusters) and clusters.nearest_group.eq("").all()
+    assert "nearest_group" in pd.read_parquet(out / "destinations.parquet")
     assert not (out / "network" / "walk-shortest" / "by_destination").exists()
     assert not (out / "report.md").exists()
     cli.main(["report", "--out", str(out)])  # nothing to draw, and no error

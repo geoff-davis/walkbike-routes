@@ -109,8 +109,10 @@ class Destination:
 
     ``nearest`` names a group of destinations that share their homes: each
     home makes trips only to the group's destination nearest it along streets
-    and paths (high schools whose attendance areas are not known, say).  It
-    takes the place of ``serves`` or a limiting outline.
+    and paths (high schools whose attendance areas are not known, say).  With
+    ``serves`` or a limiting outline as well (the school district, say), a
+    member draws only on the homes inside its own area, and each home goes to
+    the nearest member whose area holds it.
     """
 
     id: str
