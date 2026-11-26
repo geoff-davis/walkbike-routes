@@ -2,9 +2,9 @@
 
 ## Current state
 
-- Status: ready for reviewer
-- Next action: reviewer reviews round 1
-- Review target: `369cb0c` -> `8ce8524`
+- Status: complete, accepted at `8ce8524`
+- Next action: none
+- Review target: `369cb0c` -> `8ce8524` (accepted, round 1)
 - Open findings: none
 - Decisions needed from the user: none
 
@@ -71,3 +71,14 @@
 - Known limitations and out of scope: the made-up demo school has no area,
   so demo reports now show counts without shares. Error messages and the
   download code still say "study area" (part two).
+
+## Review, round 1
+
+- Loop: `homes-counted-1`, round 1, Standard tier.
+- Target: `369cb0c..8ce8524` (`8ce8524def0619ddbd0dbcb78b531e0c047489a4`); handoff read from `4cf72ea`.
+- Verdict: **accepted at `8ce8524`**. No findings.
+- Verified destination summary wording for limiting outlines, the default outline name, serves, nearest groups and combinations; drawn-only outlines remain no-area cases. Both full and shorter-limit summary writers use the new field. Internal totals remain available for analysis while report/map shares follow the requested area distinction.
+- Independent synthetic output probe: all five full/shorter-limit summary files contained the new field. No-area report wording, suppressed modes-table Share and catchment Counted/Share, and skipped unconnected note passed. Populated-area wording/counts/shares passed. Removing the column reproduced legacy wording and shares. Chromium checks on shorter-limit figures passed for all three cases (none, area, legacy); the suite also covers full-limit figures. Area/legacy scenarios used controlled summary metadata changes on made-up demo outputs, with no real boundary inputs.
+- `uv sync --locked --offline` and `make check` passed in an independent detached snapshot: lint, format, types; 1,057 tests passed, 21 deselected, 94.61% coverage. Three existing multiprocessing fork warnings. `make validation-check` passed, 58 tests. `git diff --check 369cb0c..8ce8524` passed.
+- Privacy exclusions: `tests/test_env_file.py` ignored; the 21 parameterized config, forecast and recorded-crash cases that load companion private YAML files deselected. No `.env`, `*.local.yaml`, repository data/output, or real records read. Probes used only temporary synthetic outputs.
+- Settled decisions respected: no shares for destinations without an area; separate network-flow summaries are outside this column contract; study-area retirement remains a later slice. Implementer tree unchanged apart from this entry. Snapshot and synthetic probe artifacts removed after the verdict. Acceptance authorizes no commit, push or merge.
