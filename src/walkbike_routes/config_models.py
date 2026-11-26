@@ -197,7 +197,7 @@ class Study:
     shorter_limits_min: tuple[float, ...] = ()
     # Street sections tried in each walk and bike improvement screen; 0 turns them off.
     screen_candidates: int = 25
-    # Risk points and the fix-first rule of the exposure lists; see analysis/exposure_rules.py.
+    # Risk points and the priority rule of the exposure lists; see analysis/exposure_rules.py.
     exposure: ExposureRules = field(default_factory=ExposureRules)
     # A city's own sidewalks, signals, speeds or bikeways, laid over OpenStreetMap.
     local_layers: tuple[LocalLayer, ...] = ()

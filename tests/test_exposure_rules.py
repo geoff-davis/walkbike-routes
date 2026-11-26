@@ -1,4 +1,4 @@
-"""The exposure settings: risk points and the fix-first rule, from a study config."""
+"""The exposure settings: risk points and the priority rule, from a study config."""
 
 from __future__ import annotations
 
@@ -91,13 +91,13 @@ def test_the_busiest_share_makes_a_busy_place_fix_first_whatever_its_points() ->
     )  # fmt: skip
     ranked = exposure_lists.ranked(table, [*table.columns, "rank", "tier", "tier_reason"], None,
                               1000, rule)  # fmt: skip
-    assert ranked.tier.tolist() == ["fix first", "watch"]
+    assert ranked.tier.tolist() == ["priority", "watch"]
     assert ranked.tier_reason[0] == (
-        "Fix first: among the busiest 50% of places here (about 100 people use it), "
+        "Priority: among the busiest 50% of places here (about 100 people use it), "
         "though it has 2 risk points."
     )
     assert ranked.tier_reason[1] == (
-        "Watch: about 10 people use it, but it has 2 risk points; fix first needs 3, "
+        "Watch: about 10 people use it, but it has 2 risk points; priority needs 3, "
         "or about 100 people or more, which would put it among the busiest 50% of places "
         "and over the minimum (this has about 10)."
     )
@@ -106,14 +106,14 @@ def test_the_busiest_share_makes_a_busy_place_fix_first_whatever_its_points() ->
 def test_the_busiest_share_still_needs_the_people_bar() -> None:
     rule = FixFirst(busiest_share=1.0)
     assert exposure_rules.tier_of(1, 4, 1000, rule, busiest=1) == "watch"  # under 5 people
-    assert exposure_rules.tier_of(1, 6, 1000, rule, busiest=1) == "fix first"
+    assert exposure_rules.tier_of(1, 6, 1000, rule, busiest=1) == "priority"
     assert exposure_rules.tier_of(1, 6, 1000, FixFirst(), busiest=math.inf) == "watch"
 
 
 def test_a_raised_bar_is_used_and_stated() -> None:
     rule = FixFirst(min_points=5, min_people=20)
     assert exposure_rules.tier_of(4, 100, 1000, rule) == "watch"
-    assert "fix first needs 5." in exposure_rules.tier_reason(4, 100, 1000, rule)
+    assert "priority needs 5." in exposure_rules.tier_reason(4, 100, 1000, rule)
     assert "fewer than 20 people" in exposure_rules.tier_reason(6, 12, 1000, rule)
     streets, _ = exposure.exposure(
         _edges(), _nodes(), pd.Series({"mw": 10.0}), _shares(("mw", 10.0)), "bike",
@@ -124,7 +124,7 @@ def test_a_raised_bar_is_used_and_stated() -> None:
 
 def test_the_rule_and_points_read_plainly() -> None:
     assert fix_first_rule(FixFirst()) == (
-        "Fix first: 3 or more risk points, and at least 5 people (or 5% of those counted, "
+        "Priority: 3 or more risk points, and at least 5 people (or 5% of those counted, "
         "whichever is smaller)."
     )
     assert "or among the busiest 10% of the list's places" in fix_first_rule(
@@ -154,14 +154,14 @@ def test_decimal_settings_add_up_and_print_as_written() -> None:
     )
     assert score == 0.8 and "(+0.1)" in text and "(+0.7)" in text
     rule = FixFirst(min_points=0.8, min_people=10.00001)
-    assert exposure_rules.tier_of(score, 20, 1000, rule) == "fix first"
+    assert exposure_rules.tier_of(score, 20, 1000, rule) == "priority"
     assert "at least 10.00001 people" in fix_first_rule(rule)
     assert "busiest 7% " in fix_first_rule(FixFirst(busiest_share=0.07))
 
 
 def test_a_share_of_those_counted_is_the_bar_as_written() -> None:
     rule = FixFirst(min_people=10, min_share=0.07)
-    assert exposure_rules.tier_of(3, 7, 100, rule) == "fix first"
+    assert exposure_rules.tier_of(3, 7, 100, rule) == "priority"
     tiny = RiskPoints(bike_lts={1: 0, 2: 1, 3: 1e-10, 4: 5})
     assert exposure.street_risk(_edges(), "bike", points=tiny).risk_points["mw"] == 1e-10
 
@@ -173,7 +173,7 @@ def test_settings_keep_the_precision_totals_are_compared_at() -> None:
     risk = exposure.street_risk(_edges(), "bike", points=rules.points)
     assert (
         exposure_rules.tier_of(float(risk.risk_points["mw"]), 10, 100, rules.fix_first)
-        == "fix first"
+        == "priority"
     )
 
 
@@ -184,7 +184,7 @@ def test_people_are_compared_at_the_bars_precision() -> None:
     )  # fmt: skip
     ranked = exposure_lists.ranked(table, [*table.columns, "rank", "tier", "tier_reason"], None,
                               16, FixFirst())  # fmt: skip
-    assert ranked.tier.tolist() == ["fix first"]  # 5% of 16 counted is 0.8
+    assert ranked.tier.tolist() == ["priority"]  # 5% of 16 counted is 0.8
 
 
 def test_the_busiest_cutoff_is_taken_at_the_same_precision() -> None:
@@ -194,7 +194,7 @@ def test_the_busiest_cutoff_is_taken_at_the_same_precision() -> None:
     )  # fmt: skip
     ranked = exposure_lists.ranked(table, [*table.columns, "rank", "tier", "tier_reason"], None,
                               1, FixFirst(busiest_share=1))  # fmt: skip
-    assert ranked.tier.tolist() == ["fix first"]
+    assert ranked.tier.tolist() == ["priority"]
 
 
 def test_the_busiest_share_of_car_streets_is_that_share() -> None:
@@ -218,7 +218,7 @@ def test_streets_tied_at_the_edge_of_the_busiest_share_all_count() -> None:
 
 
 def test_a_configured_bar_reads_as_set() -> None:
-    assert "fix first needs 3.001." in exposure_rules.tier_reason(
+    assert "priority needs 3.001." in exposure_rules.tier_reason(
         2, 10, 1000, FixFirst(min_points=3.001)
     )
     rule = FixFirst(min_people=5.0001)
@@ -250,7 +250,7 @@ def test_the_busiest_reason_states_a_configured_people_bar_as_set() -> None:
 def test_a_reason_counts_in_the_runs_own_words_and_whole_numbers() -> None:
     reason = exposure_rules.tier_reason
     assert reason(4, 114.2, 1000, flow="expected trips") == (
-        "Fix first: 4 risk points (fix first needs 3), and about 114 expected trips use it."
+        "Priority: 4 risk points (priority needs 3), and about 114 expected trips use it."
     )
     # Decimals only where a whole number would misstate the comparison with the bar.
     assert reason(4, 4.6, 1000, flow="students").endswith(

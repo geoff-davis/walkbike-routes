@@ -90,7 +90,7 @@ def test_each_destination_opens_with_who_can_get_there(out: Path) -> None:
     assert section.lstrip().startswith("[Open the map](school/map.html)")
     walk = summary[summary["mode"].eq("walk")].iloc[0]
     # How much there is to fix comes first, then who can get there, as one table.
-    assert section.split("\n\n")[2].startswith("To fix first:")
+    assert section.split("\n\n")[2].startswith("Priority:")
     assert f"Of the {walk.total_weight:,.0f} residents aged 5-11 in the study area:" in section
     assert f"| Walking | 20 min | {walk.within_cap_weight:,.0f} |" in section
 
@@ -293,26 +293,26 @@ def test_main_runs_list_where_routes_meet_traffic(out: Path) -> None:
     assert list(crossings.columns) == CROSSING_COLUMNS
     assert not (out / "school" / "walk-shortest" / "exposure_streets.parquet").exists()
     text = tables.build_report(out)[0].read_text()
-    assert "### Walking: places to fix first" in text
-    section = text.split("### Walking: places to fix first", 1)[1].split("\n### ", 1)[0]
-    # Every fix-first place is listed, under the name the map gives it.
+    assert "### Walking: where routes meet risk" in text
+    section = text.split("### Walking: where routes meet risk", 1)[1].split("\n### ", 1)[0]
+    # Every priority place is listed, under the name the map gives it.
     for kind, listed in (("S", streets), ("C", crossings)):
-        for rank in listed[listed.tier.eq("fix first")]["rank"]:
+        for rank in listed[listed.tier.eq("priority")]["rank"]:
             assert f"| {kind}{rank} |" in section or f"| [{kind}{rank}](" in section
-        for rank in listed[listed.tier.ne("fix first")]["rank"]:
+        for rank in listed[listed.tier.ne("priority")]["rank"]:
             assert f"| {kind}{rank} |" not in section and f"| [{kind}{rank}](" not in section
-    if streets.tier.ne("fix first").any() or crossings.tier.ne("fix first").any():
+    if streets.tier.ne("priority").any() or crossings.tier.ne("priority").any():
         assert "### Demo Elementary: walking" in text.split("## Reference: watch lists", 1)[1]
     # The terms the lists use are defined once, before them.
     terms = text.split("## Key terms", 1)[1].split("\n## ", 1)[0]
     assert [line.split(":**")[0] for line in terms.strip().splitlines()] == [
-        "- **Risk points", "- **Expected trips", "- **Fix first", "- **Watch", "- **S1, C1",
+        "- **Risk points", "- **Expected trips", "- **Priority", "- **Watch", "- **S1, C1",
         "- **Route-cost minutes",
     ]  # fmt: skip
     # The barrier lists' unit is defined, with a link to the full explanation.
     assert f"generalized cost. [More]({ROUTE_COST_DOC})" in terms
-    assert "**Fix first:** A place with 3 or more risk points, and at least 5 people" in terms
-    assert text.index("## Key terms") < text.index("places to fix first")
+    assert "**Priority:** A place with 3 or more risk points, and at least 5 people" in terms
+    assert text.index("## Key terms") < text.index("where routes meet risk")
 
 
 def test_a_link_is_written_both_ways() -> None:
@@ -334,7 +334,7 @@ def _places(tiers: list[str]) -> gpd.GeoDataFrame:
 
 
 def test_fix_first_lists_every_place_or_says_how_many_it_left_out() -> None:
-    streets = _places(["watch"] + ["fix first"] * 7)
+    streets = _places(["watch"] + ["priority"] * 7)
     none = streets.iloc[:0]
     every = tables.fix_first_blocks("Walking", streets, none, "people", False)
     assert [type(b) for b in every] == [tables.Heading, tables.Table]
@@ -346,14 +346,14 @@ def test_fix_first_lists_every_place_or_says_how_many_it_left_out() -> None:
     )  # fmt: skip
     assert table.rows[0][2:5] == ("12", "120 m", "3")
     assert table.more_after is None  # seven rows are shown whole
-    longer = tables.fix_first_blocks("Walking", _places(["fix first"] * 8), none, "people", False)
+    longer = tables.fix_first_blocks("Walking", _places(["priority"] * 8), none, "people", False)
     assert isinstance(longer[1], tables.Table)
     assert len(longer[1].rows) == 8 and longer[1].more_after == 5  # opens at its first rows
     brief = tables.fix_first_blocks("Walking", streets, none, "people", True, limit=5)
     shown, note = brief[1], brief[2]
     assert isinstance(shown, tables.Table) and isinstance(note, tables.Para)
     assert len(shown.rows) == 5 and shown.header[2] == "Expected trips"
-    assert note.text.startswith("The 5 highest-ranked of 7 streets to fix first")
+    assert note.text.startswith("The 5 highest-ranked of 7 priority streets")
     nothing = tables.fix_first_blocks("Walking", streets.iloc[:1], none, "people", False)
     assert isinstance(nothing[1], tables.Para) and "watch lists" in nothing[1].text
     # Beside the lists for all together a destination has no watch list in the report.
@@ -376,7 +376,7 @@ def test_fix_first_lists_every_place_or_says_how_many_it_left_out() -> None:
 
 def test_a_place_links_to_the_map_and_to_a_street_map() -> None:
     # A made-up street 118 m long; its middle is where the links point.
-    streets = _places(["fix first"])
+    streets = _places(["priority"])
     to_degrees = Transformer.from_crs(CRS, 4326, always_xy=True)
     lon, lat = to_degrees.transform(59.0, 0.0)
     table = tables.exposure_table(
@@ -393,7 +393,7 @@ def test_a_place_links_to_the_map_and_to_a_street_map() -> None:
     assert f'<a class="tag" href="{tag.href}">S1</a>' in page
     assert f'Made-up Street 0 <a class="ext" href="{html.escape(url)}"' in page
     # A watch place too far down for the map to draw has no link to it.
-    low = _places(["fix first"] * 11 + ["watch"])
+    low = _places(["priority"] * 11 + ["watch"])
     cells = [
         r[0] for r in tables.exposure_table(low, "People", streets=True, where=("m", "r")).rows
     ]
@@ -413,7 +413,7 @@ def test_a_place_links_to_the_map_and_to_a_street_map() -> None:
 
 
 def test_factors_and_destinations_are_one_to_a_line_in_the_page() -> None:
-    streets = _places(["fix first"])
+    streets = _places(["priority"])
     streets["risk_factors"] = "a made-up factor (+2); another <made-up> one (+1)"
     table = tables.exposure_table(streets, "People", streets=True)
     assert table.rows[0][5] == tables.Lines(("a made-up factor (+2)", "another <made-up> one (+1)"))
@@ -531,7 +531,7 @@ def test_glossary_notes_do_not_fix_what_a_study_can_set() -> None:
 def test_watch_places_after_ten_fix_first_places_are_still_mapped_and_linked(
     tmp_path: Path,
 ) -> None:
-    """Fix-first places are numbered first; the busiest watch place keeps its map
+    """Priority places are numbered first; the busiest watch place keeps its map
     entry and its link (review FO1)."""
     made = gpd.GeoDataFrame(
         {

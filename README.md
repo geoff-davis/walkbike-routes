@@ -29,14 +29,14 @@ homes count more, as they do in the National Household Travel Survey. The
 thick lines are the streets that matter most for getting there. The shading
 shows how long the trip takes from each area.
 
-### Where routes meet traffic today
+### Where routes meet risk
 
-![The fix-first list for both Claremont schools together, with one street's popup explaining its rank](docs/images/claremont-traffic-today.png)
+![The priority list for both Claremont schools together, with one street's popup explaining its rank](docs/images/claremont-traffic-today.png)
 
 Each street and crossing on those routes gets risk points from published risk
 factors: traffic volume, speed, lanes to cross, missing sidewalks and
 drop-off traffic. Where many people meet high risk, the place is marked
-**fix first** (black, marked "!"); the rest with points are **watch**
+**priority** (black, marked "!"); the rest with points are **watch**
 (amber). Every place says why in plain words. In the picture, the top
 street has 4 risk points for heavy traffic and drop-off cars, and about 114
 riders' routes use it: 62% heading to the high school and 38% to the
@@ -283,9 +283,9 @@ destination, mode and preset a folder `out/<destination>/<mode>-<preset>/`:
   `walk/broach-2016`, which has no sidewalk term), a marked crosswalk, or a
   signal or crossing beacon. A screen of where to look, not a design.
 - `exposure_streets.parquet` and `exposure_crossings.parquet` (walking and
-  cycling, first preset): where routes meet traffic today. Streets and
+  cycling, first preset): where routes meet risk. Streets and
   crossings are ranked separately, by flow × hand-set risk points (see
-  "Where routes meet traffic today" in `docs/assumptions.md`).
+  "Where routes meet risk" in `docs/assumptions.md`).
 
 With two or more destinations, `out/all-destinations/<mode>-<preset>/` holds
 the same two lists with every destination's routes added up; each place says
@@ -313,7 +313,7 @@ over one for what it shows.
   a time limit, only squares whose median home is within it are shaded, so
   the shading roughly matches the homes whose trips are drawn (a square can
   hold homes on both sides of the limit).
-- **Fix first and watch.** Where routes meet traffic today: every fix-first
+- **Where routes meet risk.** Priority and watch: every priority
   street (S) and crossing (C), in black and marked "!", and the ten highest-ranked watch
   places, in amber. A popup gives the factors behind each place's points.
 - **Barriers** (off at first): where a change would open new routes. The
@@ -348,7 +348,7 @@ destination's trips added up and the lists for all of them together; each
 place's popup says how many come from each destination.
 
 A side panel opens with the run's headline figures: how many can get there,
-the median trip, and how many places to fix first. Below are the lists; click
+the median trip, and how many priority places. Below are the lists; click
 a row to see its place on the map. "How this map is made" at the foot holds
 the method and the preset's source. "Print this view" prints the map at its
 current zoom with the key and the figures.
@@ -363,11 +363,11 @@ To skip the maps, add `--no-map`.
 ### The report
 
 `out/report.md` and `out/report.html` open with the few terms the lists use
-(risk points, expected trips, fix first), then, for all destinations together
+(risk points, expected trips, priority), then, for all destinations together
 and for each one:
 
 - a link to its map, and who can get there by each mode;
-- every street and crossing to fix first, named as on the map (S3, C1), with
+- every priority street and crossing, named as on the map (S3, C1), with
   its risk points and the factors behind them;
 - barriers: the improvement screen's best places for each kind of change.
 

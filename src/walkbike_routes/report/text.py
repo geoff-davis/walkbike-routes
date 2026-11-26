@@ -37,7 +37,7 @@ MODES = ("walk", "bike", "car")  # the order modes are listed in, everywhere
 MODE_NAMES = {"walk": "Walking", "bike": "Cycling", "car": "Driving"}
 MODE_VERBS = {"walk": "walk", "bike": "cycle", "car": "drive"}
 NO_DECAY = "none"
-FIX_FIRST, WATCH = "fix first", "watch"
+FIX_FIRST, WATCH = "priority", "watch"
 
 
 def mode_rank(mode: str) -> int:
@@ -138,7 +138,7 @@ MAP_WATCH_ROWS = 10
 
 
 def on_map(row: Mapping[Any, Any]) -> bool:
-    """Whether the map draws a place: every fix-first place and the first
+    """Whether the map draws a place: every priority place and the first
     ``MAP_WATCH_ROWS`` watch places.  Lists saved before ``tier_rank`` existed
     ranked every place together, so there the rank decides, as it did then."""
     if str(row.get("tier", "")) == FIX_FIRST:
@@ -160,7 +160,7 @@ def how_to_read(rules: ExposureRules) -> str:
         "points for each factor it has: traffic, speed, lanes, a missing sidewalk, an unmarked "
         "crossing, and drop-off traffic. A signal at a crossing: "
         f"{signal_words(rules.points.signal_factor)}. Places are ranked by flow × risk points, "
-        f"fix-first places first. {fix_first_rule(rules.fix_first)} Every other place with "
+        f"priority places first. {fix_first_rule(rules.fix_first)} Every other place with "
         "points is “watch”. Points come from the systemic safety guides and the level "
         "of traffic stress; they are not crash rates, and flows are potential, not counts."
     )
@@ -171,7 +171,7 @@ exposure_note = how_to_read
 
 
 def standard_reason(rule: FixFirst) -> bool:
-    """Whether every fix-first place is one for the same reason: its points and its people."""
+    """Whether every priority place is one for the same reason: its points and its people."""
     return rule.busiest_share is None
 
 
@@ -227,7 +227,7 @@ def key_terms(
     rules: ExposureRules, any_decayed: bool, route_cost: bool = False
 ) -> list[tuple[str, str]]:
     """The few terms a reader needs before the lists, with the run's own rule."""
-    rule = fix_first_rule(rules.fix_first).removeprefix("Fix first: ")
+    rule = fix_first_rule(rules.fix_first).removeprefix("Priority: ")
     terms = [
         (
             "Risk points",
@@ -249,12 +249,12 @@ def key_terms(
             )
         )
     terms += [
-        ("Fix first", f"A place with {rule} These are the places this report lists first."),
+        ("Priority", f"A place with {rule} These are the places this report lists first."),
         ("Watch", "Every other place with risk points."),
         (
             "S1, C1",
             "A street (S) or crossing (C), numbered by flow × risk points, highest first: "
-            "fix-first places first, then the rest. The map uses the same labels.",
+            "priority places first, then the rest. The map uses the same labels.",
         ),
     ]
     if route_cost:
@@ -303,7 +303,7 @@ GLOSSARY: dict[str, str] = {
     "route model.",
     "distance-decay": "How fast trips fall off with distance: the national share of "
     "trips of each length, used to weight homes by how far away they are.",
-    "watch": "A place with risk points that does not meet the fix-first threshold.",
+    "watch": "A place with risk points that does not meet the priority threshold.",
     "flow": FLOW_MEANING,
     "flows": FLOW_MEANING,
     "path-size logit": "A way of sharing each home's trips among several near-best "
@@ -354,7 +354,7 @@ def tips(
         "Length": "The length of the stretch with these risk points.",
         "From each destination": "How many of the place's trips go to each destination. "
         "The place is judged on the total.",
-        "Priority": "Fix first or watch, and why.",
+        "Priority": "Priority or watch, and why.",
         "Time limit": "The longest trip counted for this mode.",
         "Can get there": f"Those whose route is within the time limit. Left out: {UNCONNECTED}.",
         "Share": "Can get there, as a share of everyone in the study area.",

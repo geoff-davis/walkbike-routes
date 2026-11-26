@@ -61,8 +61,8 @@ def test_the_report_and_map_show_where_people_come_from(out: Path) -> None:
     together = text.split("## All destinations together", 1)[1].split("\n## ", 1)[0]
     assert "[Open the map](all-destinations/map.html)" in together
     # Walking before cycling, whatever order the folders sort in.
-    assert together.index("### Walking: places to fix first") < together.index(
-        "### Cycling: places to fix first"
+    assert together.index("### Walking: where routes meet risk") < together.index(
+        "### Cycling: where routes meet risk"
     )
     assert "From each destination" in text
     assert text.index("## All destinations together") < text.index("## Demo Elementary")
@@ -132,9 +132,9 @@ def test_the_run_records_and_prints_its_rules(tmp_path: Path) -> None:
     }  # fmt: skip
     text = tables.build_report(out)[0].read_text()
     assert "## Risk points used" in text
-    assert "**Fix first:** A place with 1 or more risk points" in text and "busiest 20%" in text
-    # With a second way to be fix first, each place says which applied to it.
-    first = text.split("places to fix first", 1)[1].split("\n## ", 1)[0]
+    assert "**Priority:** A place with 1 or more risk points" in text and "busiest 20%" in text
+    # With a second way to be priority, each place says which applied to it.
+    first = text.split("where routes meet risk", 1)[1].split("\n## ", 1)[0]
     assert "| Priority |" in first
     page = report.build_maps(out)[0].read_text()
-    assert "Fix first: 1 or more risk points" in page
+    assert "Priority: 1 or more risk points" in page

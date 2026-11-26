@@ -922,7 +922,7 @@ destinations at once, for comparing modelled flows with street counts.
   follows the trips drawn, and changing a view's time limit changes it only
   through that mode's trips. The driving view shows the combined index.
 
-## Where routes meet traffic today
+## Where routes meet risk
 
 The improvement screen ranks places by the time a change would save, so it
 finds barriers, often busy roads at the edge of a catchment, that few routes
@@ -982,7 +982,7 @@ find it, so a signal mapped on the approaches counts. At a junction, a
 stop sign is taken to be for the side street, so it does not lower the
 points: the map data do not tell all-way stops apart.
 
-**Tiers.** Fix first: 3 or more points, and at least 5 people or 5% of those
+**Tiers.** Priority: 3 or more points, and at least 5 people or 5% of those
 counted, whichever is smaller. Every other place with points is "watch".
 Places with no points are not listed. Each place says in a sentence which
 rule put it where it is.
@@ -1012,7 +1012,7 @@ exposure:
 ```
 
 `busiest_share` adds a second rule for high use. With 0.10, the busiest 10%
-of each list's places, by people, are "fix first" too, whatever their
+of each list's places, by people, are "priority" too, whatever their
 points, as long as they meet the people bar. Their reason says so: "Fix
 first: among the busiest 10% of places here (about 400 people use it),
 though it has 2 risk points." Without it, a busy place with few points
@@ -1035,7 +1035,7 @@ destination's routes added up, in `out/all-destinations/`. A place's people
 are the sum over the destinations, and `people_by_destination` says how
 many come from each (for a street, at its busiest link). Its tier is judged
 on that sum, against everyone counted for all the destinations, so a street
-used by a few children from each of three schools can be "fix first"
+used by a few children from each of three schools can be "priority"
 together when it is "watch" for each school. Risk points come from the same
 factors, except that drop-off traffic is the destinations' car trips added
 up. Destinations whose people are counted differently (children of

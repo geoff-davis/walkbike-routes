@@ -71,7 +71,7 @@ fields:
 - **`shorter_limits_min`** (optional): shorter walking and cycling limits
   the map can switch to, such as `[10]`. At each, homes past it are left
   out, any route over it is dropped and the trips are split again among the
-  near-best routes left; flows and the fix-first lists are worked out again.
+  near-best routes left; flows and the priority lists are worked out again.
   This uses the routes already found, so it adds little to a run, and gives
   the same results as a run at that limit. Barriers are worked out at the
   full limit only. Each must be below both the walk and bike limits; the
@@ -79,9 +79,9 @@ fields:
 - **`demand`**: who travels. `weight: residents` (with `min_age` and
   `max_age` for a school) or `weight: households`.
 
-- **`exposure`** (optional): the risk points and the "fix first" rule of
-  the lists of where routes meet traffic today, including an optional rule
-  that makes the busiest places fix first. See "Changing the points and the
+- **`exposure`** (optional): the risk points and the "priority" rule of
+  the lists of where routes meet risk, including an optional rule
+  that makes the busiest places priority. See "Changing the points and the
   rule" in `docs/assumptions.md`.
 
 Unknown or missing settings stop the run with an error that names them.

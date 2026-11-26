@@ -1,4 +1,4 @@
-"""Where routes meet traffic today: risk points, crossings and tiers, on made-up streets."""
+"""Where routes meet risk: risk points, crossings and tiers, on made-up streets."""
 
 from __future__ import annotations
 
@@ -151,13 +151,13 @@ def test_streets_join_same_named_neighbours_and_skip_places_without_risk() -> No
     assert streets.label.tolist() == ["Main Street"]  # its two ends meet no other street
     row = streets.iloc[0]
     assert row.people == 10.0 and row.person_km == pytest.approx(1.4)
-    assert row.exposure == pytest.approx(30.0) and row.tier == "fix first"  # people × points
+    assert row.exposure == pytest.approx(30.0) and row.tier == "priority"  # people × points
 
 
 def test_tiers() -> None:
-    assert exposure_rules.tier_of(3, 5, 1000) == "fix first"
+    assert exposure_rules.tier_of(3, 5, 1000) == "priority"
     assert exposure_rules.tier_of(3, 4.9, 1000) == "watch"
-    assert exposure_rules.tier_of(3, 1, 10) == "fix first"  # 5% of 10 counted is 0.5
+    assert exposure_rules.tier_of(3, 1, 10) == "priority"  # 5% of 10 counted is 0.5
     assert exposure_rules.tier_of(2.9, 100, 100) == "watch"
 
 
@@ -438,10 +438,10 @@ def test_a_one_way_street_bending_at_a_junction_is_one_carriageway() -> None:
 
 def test_each_place_says_why_it_is_in_its_tier() -> None:
     assert exposure_rules.tier_reason(4, 86.1, 1000) == (
-        "Fix first: 4 risk points (fix first needs 3), and about 86 people use it."
+        "Priority: 4 risk points (priority needs 3), and about 86 people use it."
     )
     assert exposure_rules.tier_reason(2, 373.6, 1000) == (
-        "Watch: about 374 people use it, but it has 2 risk points; fix first needs 3."
+        "Watch: about 374 people use it, but it has 2 risk points; priority needs 3."
     )
     assert exposure_rules.tier_reason(4, 2.5, 1000) == (
         "Watch: 4 risk points, but fewer than 5 people use it (about 2)."
@@ -451,7 +451,7 @@ def test_each_place_says_why_it_is_in_its_tier() -> None:
     streets = exposure.exposed_streets(
         _edges(), pd.Series({"mw": 10.0}), exposure.street_risk(_edges(), "bike"), counted=30
     )
-    assert streets.tier_reason.iloc[0].startswith("Fix first: 3 risk points")
+    assert streets.tier_reason.iloc[0].startswith("Priority: 3 risk points")
 
 
 def test_traffic_from_the_road_type_says_it_is_estimated() -> None:
@@ -464,7 +464,7 @@ def test_traffic_from_the_road_type_says_it_is_estimated() -> None:
 
 
 def test_reasons_keep_enough_digits_to_stay_true() -> None:
-    assert "it has 2.999 risk points; fix first needs 3." in exposure_rules.tier_reason(
+    assert "it has 2.999 risk points; priority needs 3." in exposure_rules.tier_reason(
         2.999, 10, 1000
     )
     reason = exposure_rules.tier_reason(4, 1.233, 24.68)  # the bar is 1.234
@@ -495,7 +495,7 @@ def test_destinations_together_add_up_and_say_how_many_come_from_each() -> None:
     main = streets.iloc[0]
     assert main.people == 10.0  # the busiest link, mw, carries 4 + 6
     assert json.loads(main.people_by_destination) == {"egan": 6.0, "almond": 4.0}
-    assert main.tier == "fix first"
+    assert main.tier == "priority"
     oak = crossings.iloc[0]  # Main Street crossed by the routes turning onto Oak
     assert oak.people == 6.0 and json.loads(oak.people_by_destination) == {
         "almond": 3.0,
@@ -515,7 +515,7 @@ def test_a_place_is_judged_on_everyone_together() -> None:
     alone = exposure.exposure(_edges(), _nodes(), pd.Series({"mw": 3.0}),
                               _shares(("mw", 100.0)), "bike")[0]  # fmt: skip
     together = exposure.combined_exposure(_edges(), _nodes(), runs, "bike")[0]
-    assert alone.tier.tolist() == ["watch"] and together.tier.tolist() == ["fix first"]
+    assert alone.tier.tolist() == ["watch"] and together.tier.tolist() == ["priority"]
     assert alone.people_by_destination.eq("").all()
 
 
@@ -548,7 +548,7 @@ def test_together_with_no_runs_gives_empty_lists() -> None:
 
 
 def test_fix_first_places_are_numbered_first_without_gaps() -> None:
-    """A watch place outranks no fix-first place, whatever its exposure."""
+    """A watch place outranks no priority place, whatever its exposure."""
     table = pd.DataFrame(
         {
             "place_id": ["a", "b", "c", "d"],
@@ -563,7 +563,7 @@ def test_fix_first_places_are_numbered_first_without_gaps() -> None:
         exposure_rules.FixFirst(),
     )  # fmt: skip
     assert out.place_id.tolist() == ["d", "b", "a", "c"]
-    assert out.tier.tolist() == ["fix first", "fix first", "watch", "watch"]
+    assert out.tier.tolist() == ["priority", "priority", "watch", "watch"]
     assert out["rank"].tolist() == [1, 2, 3, 4]
 
 
