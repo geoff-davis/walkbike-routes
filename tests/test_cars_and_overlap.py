@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 from shapely.geometry import LineString, Point
 
-from walkbike_routes.analysis.overlap import overlap, positive_percentile
+from walkbike_routes.analysis.overlap import mode_tiers, overlap, positive_percentile
 from walkbike_routes.network import cars
 from walkbike_routes.network.motor import MotorPenaltyProfile
 
@@ -128,6 +128,23 @@ def test_overlap_ranks_streets_where_car_and_active_flows_meet() -> None:
     assert layer.not_observed_flow_or_risk.all()
     with pytest.raises(ValueError, match="walking or cycling"):
         overlap(edges, car, {})
+
+
+def test_each_mode_view_ranks_the_overlap_from_its_own_trips() -> None:
+    edges = _edges(SQUARE)
+    car = pd.Series({"AB": 100.0, "BD": 10.0, "DC": 50.0})
+    walk = pd.Series({"AB": 5.0, "CA": 20.0})
+    bike = pd.Series({"BD": 1.0, "DC": 40.0})
+    layer = overlap(edges, car, {"walk": walk, "bike": bike}).set_index("physical_edge_id")
+    walking, cycling = mode_tiers(layer, "walk"), mode_tiers(layer, "bike")
+    # Walking meets cars only on AB.  Cycling meets them on BD and DC, with
+    # DC higher (car 2/3, bike 1 against car 1/3, bike 1/2); AB has no bikes.
+    assert walking[walking.ne("")].to_dict() == {"AB": "top 1%"}
+    assert cycling[cycling.ne("")].to_dict() == {"DC": "top 1%"}
+    # The combined tiers, from the higher of the two, are what driving shows.
+    assert mode_tiers(layer, "car").tolist() == layer.overlap_tier.tolist()
+    walk_only = overlap(edges, car, {"walk": walk})
+    assert mode_tiers(walk_only, "bike").eq("").all()
 
 
 def test_percentiles_leave_zeros_at_zero() -> None:

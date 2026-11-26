@@ -322,8 +322,9 @@ over one for what it shows.
   time limit, the same homes whose minutes saved are counted.
 - **Model agreement.** When a mode has two or more presets, the streets in
   the top tenth of flow under every preset, and those busy under only some.
-- **Car overlap.** Streets with both car and walk or bike trips, drawn as
-  a blue band around the trips line.
+- **Car overlap.** Streets with both car trips and the view's own trips
+  (walking on the walking view, cycling on the cycling view, either on the
+  driving view), drawn as a blue band around the trips line.
 - **Crash forecast** (off at first, only when the private file names one):
   another model's forecast of police-recorded bike crashes at corners, such
   as [bike-safety-ca](https://github.com/geoff-davis/bike-safety-ca)'s
