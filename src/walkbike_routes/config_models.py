@@ -12,7 +12,7 @@ from walkbike_routes.choice import ChoiceSettings
 Mode = Literal["walk", "bike", "car"]
 
 
-AREA_SOURCES = ("demo", "place", "boundary_file")
+AREA_SOURCES = ("demo", "place", "boundary_file", "destinations")
 
 
 BUILDING_SOURCES = ("overture", "none")
@@ -49,7 +49,11 @@ class Area:
 
     ``demo`` is the made-up town in :mod:`walkbike_routes.demo`; ``place`` is a
     US Census place ("Name, State"); ``boundary_file`` is an outline of
-    your own.  ``buffer_m`` widens the area so routes can leave and re-enter it.
+    your own; ``destinations`` is the destinations' own areas (a limiting
+    outline or ``serves``), and around one with no area the farthest a walk or
+    ride within its time limit could start, so no reader needs a separate
+    "study area" explained.  ``buffer_m`` widens the area so routes can leave
+    and re-enter it.
     ``osm_file`` is an OpenStreetMap file to use instead of a Geofabrik extract.
     ``buildings`` spreads each Census block's counts over its buildings
     ("overture") or keeps one point per block ("none"); ``overture_release``

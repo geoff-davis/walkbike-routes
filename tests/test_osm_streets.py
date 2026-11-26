@@ -16,6 +16,7 @@ from shapely.geometry import box
 from tests import fake_services as fake
 from walkbike_routes import __main__ as cli
 from walkbike_routes import config, layers
+from walkbike_routes.download import area as area_source
 from walkbike_routes.download import census, overture
 from walkbike_routes.download.http import DownloadError
 from walkbike_routes.network import osm_streets as o
@@ -760,3 +761,76 @@ def test_refreshing_the_streets_removes_the_saved_copies(tmp_path: Path) -> None
     own = replace(study, area=replace(study.area, osm_file=tmp_path / "centre.geojson"))
     with pytest.raises(config.ConfigError, match="--refresh-osm"):
         cli.build(own, tmp_path / "out", tmp_path / "data", refresh_osm=True)
+
+
+def _from_destinations(tmp_path: Path) -> config.Study:
+    """The test study with its area taken from its destinations: the school has
+    an attendance area, the centre none."""
+    study = _study(tmp_path)
+    served = {"type": "FeatureCollection", "features": [
+        {"type": "Feature", "properties": {"zone": "a"}, "geometry": fake.square(-99.996, 40.004, 0.004)}]}  # fmt: skip
+    (tmp_path / "zones.geojson").write_text(json.dumps(served))
+    school = replace(
+        study.destinations[0],
+        outline=config.Outline(file=tmp_path / "zones.geojson", name="School attendance area"),
+    )
+    area = replace(study.area, source="destinations", place=None, buffer_m=100.0)
+    return replace(study, area=area, destinations=(school, study.destinations[1]))
+
+
+def test_an_area_from_the_destinations_is_their_areas_and_reach(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    study = _from_destinations(tmp_path)
+    # The cycling limit is the longer reach: 15 minutes at 10 mph.
+    assert layers.reach_m(study) == pytest.approx(15 * 60 * 10 * 1609.344 / 3600)
+    shapes = layers.destination_areas(study)
+    assert shapes.crs == "EPSG:26914" and len(shapes) == 2
+    school = layers.outline_shape(study.destinations[0], "EPSG:26914")
+    assert shapes.geometry.iloc[0].equals(school)  # its own area, no wider
+    centre = layers.outline(tmp_path / "centre.geojson", "EPSG:26914")
+    reach = layers.reach_m(study)
+    assert reach is not None
+    assert shapes.geometry.iloc[1].contains(centre.buffer(reach - 1))
+    assert not shapes.geometry.iloc[1].contains(centre.buffer(reach + 1))
+    monkeypatch.setenv("CENSUS_API_KEY", "made-up-key")
+    town = layers.build(study, tmp_path / "data", fake.fetcher(tmp_path / "data", []))
+    assert len(town.links) and len(town.homes)
+    with pytest.raises(area_source.AreaError, match="needs the destinations' areas"):
+        area_source.resolve(study.area, fake.fetcher(tmp_path / "data", []))
+    extent = area_source.resolve(study.area, fake.fetcher(tmp_path / "data", []), None, shapes)
+    assert extent.name == "the destinations' own areas"
+    assert extent.extent.union_all().contains(shapes.union_all().buffer(99))
+
+
+def test_an_area_from_the_destinations_takes_no_place_and_needs_destinations() -> None:
+    raw: dict[str, Any] = {
+        "study": "Gridville test",
+        "area": {"source": "destinations", "buffer_m": 1000},
+        "destinations": [{"id": "school", "name": "School", "kind": "point",
+                          "location": [-99.996, 40.004]}],
+        "modes": ["walk", "bike"],
+        "presets": {"walk": ["shortest"], "bike": ["shortest"]},
+        "time_caps_min": {"walk": 20, "bike": 15},
+        "demand": {"weight": "residents"},
+    }  # fmt: skip
+    assert config.parse(raw).area.source == "destinations"
+    with pytest.raises(config.ConfigError, match="area.place: does not apply"):
+        config.parse(raw | {"area": raw["area"] | {"place": "Gridville, Nebraska"}})
+    jobs_only = raw | {"destinations": [], "network_flows": {}}
+    with pytest.raises(config.ConfigError, match="'destinations' needs at least one destination"):
+        config.parse(jobs_only)
+
+
+def test_a_car_only_area_from_the_destinations_needs_each_to_have_an_area(
+    tmp_path: Path,
+) -> None:
+    study = _from_destinations(tmp_path)
+    cars = replace(study, modes=("car",), time_caps_min={})
+    assert layers.reach_m(cars) is None  # cars have no time limit to reach with
+    served = replace(cars.destinations[1], serves=tmp_path / "centre.geojson")
+    bounded = replace(cars, destinations=(cars.destinations[0], served))
+    shapes = layers.destination_areas(bounded)  # every destination has an area: no reach needed
+    assert shapes.geometry.iloc[1].equals(layers.outline(tmp_path / "centre.geojson", "EPSG:26914"))
+    with pytest.raises(config.ConfigError, match="'centre': has no area of its own"):
+        layers.destination_areas(cars)

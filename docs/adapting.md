@@ -28,11 +28,18 @@ fields:
 
 - **`study`**: a name for titles.
 - **`area`**: where streets and homes come from.
-  - `source: place` with `place: "Boulder, Colorado"` (a Census place), or
-    `source: boundary_file` with `boundary_file:` an outline of your own.
-  - `buffer_m`: how far beyond the boundary to load streets and homes. Make
-    it at least as far as the longest trip: a 15-minute bike ride is about
-    4 km.
+  - `source: destinations` takes the area from the destinations themselves:
+    each one's own area (a limiting `outline` or `serves`) and, around one
+    with no area, a circle as wide as the farthest a counted walk or ride
+    could start (the longer time limit at 3 mph walking or 10 mph cycling: a
+    15-minute ride is about 4 km). Readers then never meet a "study area":
+    each destination says whose homes it counts.
+  - Or `source: place` with `place: "Boulder, Colorado"` (a Census place),
+    or `source: boundary_file` with `boundary_file:` an outline of your own.
+  - `buffer_m`: how far beyond that to load streets and homes, so routes
+    can leave an area and come back. With `source: destinations` about
+    1,000 m is enough; with a place or boundary file make it at least as far
+    as the longest trip.
   - `osm_file`, `buildings`, `overture_release` and `traffic_counts` are
     optional; see "A study config" in the README, which also covers `crs`,
     `route_choice` and `screen_candidates`.

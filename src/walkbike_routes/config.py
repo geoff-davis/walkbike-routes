@@ -230,6 +230,8 @@ def parse(raw: Mapping[str, Any], base: Path = Path("."), source: Path | None = 
     )
     if not destinations and network is None:
         raise ConfigError("destinations: name at least one, or add network_flows")
+    if not destinations and area.source == "destinations":
+        raise ConfigError("area: source 'destinations' needs at least one destination")
     ids = [d.id for d in destinations]
     if len(set(ids)) != len(ids):
         raise ConfigError(f"destinations: ids must be unique, got {ids}")
@@ -286,6 +288,7 @@ def _area(raw: Mapping[str, Any], base: Path) -> Area:
         "demo": ("place", "boundary_file", "buffer_m", "osm_file", "overture_release"),
         "place": ("boundary_file",),
         "boundary_file": ("place",),
+        "destinations": ("place", "boundary_file"),
     }[source]
     for key in unused:
         if top.get(key) is not None:
