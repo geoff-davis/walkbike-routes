@@ -2,9 +2,9 @@
 
 ## Current state
 
-- Status: ready for reviewer
-- Next action: reviewer reviews round 2 (round 1 expired unreviewed)
-- Review target: `00178f0` -> `5e2237a`
+- Status: complete, accepted at `5e2237a`
+- Next action: none
+- Review target: `00178f0` -> `5e2237a` (accepted, round 2)
 - Open findings: none
 - Decisions needed from the user: none
 
@@ -86,7 +86,7 @@
 - Verdict: **not reviewed; loop expired**, no acceptance at `5e2237a`.
 - The handoff records expiry `2026-11-25 02:33` UTC. The current-time tool reported `2026-11-26 01:32:49 UTC`, already past that deadline when this request was opened.
 - AGENTS.md requires the reviewer to stop at expiry. Only the committed handoff, agent instructions and diff statistics were inspected; no implementation checks or behavioral review were performed. No snapshot was created and no private files were read.
-- Next action: reviewer reviews round 2 (round 1 expired unreviewed)
+- Next action: none
 
 ## Handoff, round 2
 
@@ -94,3 +94,15 @@
   because the expiry I recorded had the wrong date (2026-11-25, not 26); the
   loop is renewed to `2026-11-26 02:33` UTC. The round 1 handoff above
   stands as written. Submission 2 of 3.
+
+## Review, round 2
+
+- Loop: `overlap-per-mode-1`, round 2, Standard tier; reviewed under the renewed `2026-11-26 02:33 UTC` expiry. Round 1 performed no behavioral review.
+- Target: `00178f0..5e2237a` (`5e2237a0c136bf62f87e997053eb6477076e4446`); handoff read from `2580e52`.
+- Verdict: **accepted at `5e2237a`**. No blocking or non-blocking findings.
+- Verified walking/cycling tier computation uses the respective stored percentile, ranks only shared edges, keeps the existing thresholds and yields no tiers when that mode's column is absent. Driving retains the combined tier. The nested mode/limit data reaches the browser, and legend headings name walking/cycling as specified. Combined-destination maps retain their empty overlap layer.
+- Compatibility probe: 84 synthetic base/head overlap frames matched exactly, including all columns, values and dtypes (empty, singleton, larger, tied, zero and negative-flow inputs, walk-only, bike-only and both). Driving tiers matched the stored combined tiers; missing-mode and zero-flow checks passed.
+- Existing-output probe: generated synthetic demo outputs using `00178f0`, then rebuilt maps only using `5e2237a`. The same browser probes for shorter-limit switching and per-mode overlap failed with the base report and passed with the head report. These exercise band counts, distinct walking/cycling data, mode-specific headings, shared-canvas draw order and visible/hidden trips widths.
+- Independent snapshot checks: `uv sync --locked --offline` passed; `make check` passed (lint, format, types; 1,053 tests passed, 21 deselected; 94.42% coverage). Three existing multiprocessing fork warnings. `make validation-check` passed, 58 tests. `git diff --check 00178f0..5e2237a` passed.
+- Privacy exclusions: ignored `tests/test_env_file.py`; deselected the 21 parameterized config, forecast and recorded-crash cases identified in earlier reviews that load companion private YAML files. No `.env`, `*.local.yaml`, repository `data/` or `output/`, or real records read. All probes used made-up data in temporary folders.
+- Implementer tree left unchanged apart from this review entry. Temporary snapshots and synthetic probe artifacts removed after the verdict. Acceptance authorizes no commit, push or merge.
