@@ -272,8 +272,10 @@ function heading(r,col){const cap=capOf(r),m=MODE[r.mode]||r.mode;
   $("cellswrap").title=cap!==null?`Time to get there, for areas within ${dec(cap)} min`:"Time to get there from each area";}
 // The three figures a reader wants first.
 function figures(r){const s=r.summary,cap=capOf(r),f=[],first=r.fix_first||{street:0,crossing:0},n=first.street+first.crossing;
-  if(!ALL&&s.within_cap_weight!==null&&s.within_cap_weight!==undefined){const share=s.total_weight?` (${Math.round(100*s.within_cap_weight/s.total_weight)}%)`:"";
-    f.push([num(s.within_cap_weight),`of ${num(s.total_weight)} ${esc(r.unit)} can ${CAN[r.mode]||"get"} there${cap!==null?` within ${dec(cap)} min`:""}${share}`]);
+  if(!ALL&&s.within_cap_weight!==null&&s.within_cap_weight!==undefined){
+    // A destination with no area of its own (homes_counted empty) has no total to take a share of.
+    const area=!("homes_counted" in s)||!!s.homes_counted,share=area&&s.total_weight?` (${Math.round(100*s.within_cap_weight/s.total_weight)}%)`:"";
+    f.push([num(s.within_cap_weight),`${area?`of ${num(s.total_weight)} `:""}${esc(r.unit)} can ${CAN[r.mode]||"get"} there${cap!==null?` within ${dec(cap)} min`:""}${share}`]);
     if(s.median_minutes_within_cap!==null&&s.median_minutes_within_cap!==undefined)f.push([dec(s.median_minutes_within_cap),cap!==null?"minutes, the median trip within the limit":"minutes, the median trip"]);}
   if(r.exposure.length||n)f.push([num(n),`priority: ${num(first.street)} ${first.street===1?"street":"streets"}, ${num(first.crossing)} ${first.crossing===1?"crossing":"crossings"}`]);
   return f.length?`<div class="figs">${f.map(([a,b])=>`<div class="fig"><b>${a}</b><span>${b}</span></div>`).join("")}</div>`:"";}

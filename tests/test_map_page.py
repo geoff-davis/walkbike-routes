@@ -407,3 +407,21 @@ def test_the_overlap_band_is_painted_beneath_the_trips(pages: list[Path]) -> Non
             assert _result(page, OVERLAP) == ['data-ok="ok"']
             return
     pytest.fail("no demo map has car overlap")
+
+
+# A destination with no area of its own has no total to take a share of; one
+# with an area says "of N ... (P%)".
+AREA = """
+const r = D.runs.find(x => x.summary && x.summary.within_cap_weight != null);
+const none = figures(r);
+if (none.includes("<span>of ") || none.includes("%)")) throw new Error("no area: " + none);
+r.summary.homes_counted = "in the demo area";
+const some = figures(r);
+if (!some.includes("<span>of ") || !some.includes("%)")) throw new Error("area: " + some);
+"""
+
+
+@pytest.mark.skipif(CHROME is None, reason="no Chrome or Chromium to open the map in")
+def test_the_map_gives_a_share_only_for_a_destination_with_an_area(pages: list[Path]) -> None:
+    page = next(p for p in pages if p.parent.name == "school")
+    assert _result(page, AREA) == ['data-ok="ok"']

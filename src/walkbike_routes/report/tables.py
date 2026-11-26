@@ -183,9 +183,9 @@ def build_report(out: Path) -> list[Path]:
 
 
 def read_summary(out: Path) -> pd.DataFrame:
-    """``summary.csv`` with its identifiers kept as text ("001", "NA")."""
-    ids = ["destination_id", "mode", "preset"]
+    """``summary.csv`` with its identifiers and wording kept as text ("001", "NA", "")."""
     summary = pd.read_csv(out / "summary.csv")
+    ids = ["destination_id", "mode", "preset"] + [c for c in ["homes_counted"] if c in summary]
     summary[ids] = pd.read_csv(out / "summary.csv", usecols=ids, dtype=str, keep_default_na=False)[
         ids
     ]
@@ -430,15 +430,30 @@ def _lines(items: str) -> Cell:
     return Lines(parts) if len(parts) > 1 else items
 
 
+def counted_words(rows: pd.DataFrame) -> str | None:
+    """Whose homes a destination counts ("in the Blach attendance area"); "" when it
+    has no area of its own, so every home within reach counts; None for a run
+    written before the column, which counted everyone in the study area."""
+    if "homes_counted" not in rows or rows.empty:
+        return None
+    value = rows.homes_counted.iloc[0]
+    return "" if pd.isna(value) else str(value)
+
+
 def who_line(main: pd.DataFrame) -> str:
-    """ "Of the 5,440 residents aged 12-13 in the study area:", above the table of modes."""
+    """ "Of the 5,440 residents aged 12-13 in the Blach attendance area:", above the
+    table of modes; for a destination with no area, that everyone within reach counts."""
     records = main.to_dict("records")
+    unit = text.unit_words(records[0].get("weight_unit")) if records else ""
+    where = counted_words(main)
+    if where == "":
+        return (
+            f"It has no area of its own: all {unit} who can get there within the time limit count."
+        )
     totals = {_float(r.get("total_weight")) for r in records}
     if len(totals) != 1 or not (total := totals.pop()):
         return ""
-    return (
-        f"Of the {_num(total)} {text.unit_words(records[0].get('weight_unit'))} in the study area:"
-    )
+    return f"Of the {_num(total)} {unit} {where or 'in the study area'}:"
 
 
 def unconnected_note(main: pd.DataFrame) -> str:
@@ -447,6 +462,8 @@ def unconnected_note(main: pd.DataFrame) -> str:
         total, within = _float(r.get("total_weight")), _float(r.get("within_cap_weight"))
         if _float(r.get("time_cap_min")) is not None or not total or within is None:
             continue
+        if counted_words(main) == "":  # no area: nobody is missing from it
+            return ""
         missing = total - within
         if text.percent(within / total) == "100%" or missing <= 0:
             continue
@@ -501,11 +518,12 @@ def who_table(main: pd.DataFrame) -> Table:
     for r in main.to_dict("records"):
         total, within = _float(r.get("total_weight")), _float(r.get("within_cap_weight"))
         cap = _float(r.get("time_cap_min"))
+        has_area = counted_words(main) != ""
         cells = [
             MODE_NAMES.get(str(r["mode"]), str(r["mode"])),
             "none" if cap is None else f"{_num(cap, 1)} min",
             _num(within),
-            text.percent(within / total) if total and within is not None else "–",
+            text.percent(within / total) if has_area and total and within is not None else "–",
             text.minutes(_float(r.get("median_minutes_within_cap"))),
         ]
         if any_decayed:
@@ -775,7 +793,8 @@ def summary_table(rows: pd.DataFrame) -> Table:
             if (m := re.fullmatch(r"within_(.+)_min_weight", c))
         }
     )
-    header = ["Mode", "Route model", "In study area", "Can get there", "Share", "Median minutes"]
+    has_area = counted_words(rows) != ""
+    header = ["Mode", "Route model", "Counted", "Can get there", "Share", "Median minutes"]
     header += [f"≤ {_num(b, 1)} min" for b in bands]
     header += ["Expected trips"]
     body = []
@@ -783,10 +802,11 @@ def summary_table(rows: pd.DataFrame) -> Table:
         total, within = _float(r.get("total_weight")), _float(r.get("within_cap_weight"))
         cap = _float(r.get("time_cap_min"))
         limit = f"{_num(within)} (≤ {_num(cap, 1)} min)" if cap is not None else _num(within)
-        share = text.percent(within / total) if total and within is not None else "–"
+        share = text.percent(within / total) if has_area and total and within is not None else "–"
         mode, preset = str(r["mode"]), str(r["preset"])
         model: Cell = Noted(preset, tip) if (tip := text.model_tip(mode, preset)) else preset
-        cells: list[Cell] = [MODE_NAMES.get(mode, mode), model, _num(total), limit, share]
+        counted = _num(total) if has_area else "–"
+        cells: list[Cell] = [MODE_NAMES.get(mode, mode), model, counted, limit, share]
         # Runs from before the column show "–", not the all-homes median under this label.
         cells.append(text.minutes(_float(r.get("median_minutes_within_cap"))))
         cells += [_num(_float(r.get(_band_column(rows, b)))) for b in bands]
