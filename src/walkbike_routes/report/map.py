@@ -3,8 +3,8 @@
 The page shows each run's potential flow (line width), where homes can reach
 the destination from (grid squares shaded by travel time), the streets that
 are busy under every route-choice preset of a mode and those busy under only
-some, the improvement screen's top sections, and where car and walk or bike
-flows overlap.  When the study wrote lists for all its destinations
+some, the improvement screen's top sections, and where car flow overlaps
+the mode's own (walking or cycling; either for driving).  When the study wrote lists for all its destinations
 together, ``out/all-destinations/map.html`` shows those, over every
 destination's trips added up.  A switcher picks the run; "Print this view" prints the map at
 its current zoom with the key and a summary.
@@ -40,6 +40,7 @@ from walkbike_routes.analysis.exposure_rules import (
     ExposureRules,
     rules_from,
 )
+from walkbike_routes.analysis.overlap import mode_tiers
 from walkbike_routes.analysis.screens import PARTS_PER_STREET, priorities
 from walkbike_routes.costs import presets
 from walkbike_routes.report import text
@@ -437,15 +438,19 @@ def page_data(
         used = frame[frame.potential_flow.gt(0)]
         for edge_id, line in zip(used.physical_edge_id.astype(str), used.geometry, strict=True):
             shapes.setdefault(edge_id, line)
-    tiers: dict[str, dict[str, str]] = {}
-    for key, overlap in overlaps.items():
-        tiered = overlap[overlap.overlap_tier.fillna("").astype(str).ne("")]
-        tiers[key] = {}
-        for edge_id, line, tier in zip(
-            tiered.physical_edge_id.astype(str), tiered.geometry, tiered.overlap_tier, strict=True
-        ):
-            shapes.setdefault(edge_id, line)
-            tiers[key][edge_id] = str(tier)
+    # Each mode's view shows its own overlap: walking from walking trips, cycling
+    # from cycling trips, driving the combined one.
+    tiers: dict[str, dict[str, dict[str, str]]] = {}
+    for mode in dict.fromkeys(run.mode for run in runs):
+        for key, overlap in overlaps.items():
+            tier = mode_tiers(overlap, mode)
+            tiered = overlap[tier.ne("")]
+            found_here = tiers.setdefault(mode, {}).setdefault(key, {})
+            for edge_id, line, label in zip(
+                tiered.physical_edge_id.astype(str), tiered.geometry, tier[tier.ne("")], strict=True
+            ):
+                shapes.setdefault(edge_id, line)
+                found_here[edge_id] = str(label)
     order = sorted(shapes)
     position = {edge_id: i for i, edge_id in enumerate(order)}
     names = dict(zip(links.link_id.astype(str), links.name.fillna("").astype(str), strict=True))
@@ -537,10 +542,14 @@ def page_data(
         "glossary": text.GLOSSARY,
         "repo": text.REPO,
         "agreement": agreement,
-        # Keyed by time limit: "" for the full one, else its minutes as the page writes them.
+        # Keyed by mode, then time limit: "" for the full one, else its minutes
+        # as the page writes them.
         "overlap": {
-            key: [[position[e], t] for e, t in sorted(found.items())]
-            for key, found in tiers.items()
+            mode: {
+                key: [[position[e], t] for e, t in sorted(found.items())]
+                for key, found in by_limit.items()
+            }
+            for mode, by_limit in tiers.items()
         },
         "cells": cells,
         "bounds": [[round(s_, 5), round(w, 5)], [round(n, 5), round(e, 5)]],

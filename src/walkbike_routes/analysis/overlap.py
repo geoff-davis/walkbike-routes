@@ -9,6 +9,11 @@ percentile, zero where the mode has no flow), and the index is
 
 a hand-set index, not from a published source.  Tiers mark the top 1%, 5% and 10%
 of edges that carry both car and walking or cycling flow.
+
+The map shows each mode's own overlap: on the walking view, the index from the
+walk percentile alone, and on the cycling view from the bike percentile alone
+(:func:`mode_tiers`), so the band follows the trips drawn.  The combined tier,
+``overlap_tier``, is what the driving view shows.
 """
 
 from __future__ import annotations
@@ -29,6 +34,37 @@ def positive_percentile(values: pd.Series) -> pd.Series:
     positive = numeric.gt(0)
     result[positive] = numeric[positive].rank(method="average", pct=True)
     return result
+
+
+def _tiers(car: pd.Series, active: pd.Series) -> tuple[pd.Series, pd.Series]:
+    """The overlap percentile and tier from a car and an active percentile.
+
+    Only edges with both (each percentile above zero) are ranked; the rest get
+    0 and no tier.
+    """
+    index = (car * active).pow(0.5)
+    shared = car.gt(0) & active.gt(0)
+    percentile = pd.Series(0.0, index=car.index, dtype=float)
+    percentile[shared] = index[shared].rank(method="average", pct=True)
+    tier = pd.Series("", index=car.index, dtype=str)
+    for threshold, label in reversed(TIERS):
+        tier[shared & percentile.ge(threshold)] = label
+    return percentile, tier
+
+
+def mode_tiers(layer: pd.DataFrame, mode: str) -> pd.Series:
+    """Each edge's overlap tier as one mode's view shows it.
+
+    Walking and cycling use their own percentile against the car percentile,
+    re-ranked among the edges carrying both; a mode the layer lacks has no
+    tiers.  Any other mode, such as driving, gets the combined ``overlap_tier``.
+    """
+    if mode not in ("walk", "bike"):
+        return layer.overlap_tier.fillna("").astype(str)
+    column = f"{mode}_percentile"
+    if column not in layer:
+        return pd.Series("", index=layer.index, dtype=str)
+    return _tiers(layer.car_percentile.astype(float), layer[column].astype(float))[1]
 
 
 def overlap(
@@ -54,13 +90,8 @@ def overlap(
         active_percentiles.append(base[f"{mode}_percentile"])
     base["active_percentile"] = pd.concat(active_percentiles, axis=1).max(axis=1)
     base["overlap_index"] = np.sqrt(base.car_percentile * base.active_percentile)
-    shared = base.car_flow.gt(0) & base.active_percentile.gt(0)
-    base["overlap_percentile"] = 0.0
-    base.loc[shared, "overlap_percentile"] = base.loc[shared, "overlap_index"].rank(
-        method="average", pct=True
+    base["overlap_percentile"], base["overlap_tier"] = _tiers(
+        base.car_percentile, base.active_percentile
     )
-    base["overlap_tier"] = ""
-    for threshold, label in reversed(TIERS):
-        base.loc[shared & base.overlap_percentile.ge(threshold), "overlap_tier"] = label
     base["not_observed_flow_or_risk"] = True
     return gpd.GeoDataFrame(base, geometry="geometry", crs=edges.crs)

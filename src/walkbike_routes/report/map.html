@@ -73,7 +73,7 @@ body.printing .leaflet-control-attribution{display:none}
 <label id="exposurewrap" title="Where routes meet traffic today: places to fix first, and to watch"><input type="checkbox" id="showexposure"> Fix first and watch</label>
 <label id="screenwrap" title="Barriers: where a change would open new routes"><input type="checkbox" id="showscreen"> Barriers</label>
 <label id="agreewrap" title="Streets busy under every route model, or under only some"><input type="checkbox" id="showagree"> Model agreement</label>
-<label id="overlapwrap" title="Streets with both car and walk or bike trips"><input type="checkbox" id="showoverlap"> Car overlap</label>
+<label id="overlapwrap" title="Streets with both car trips and this mode's trips"><input type="checkbox" id="showoverlap"> Car overlap</label>
 <label id="crashwrap" title="Another model's forecast of police-recorded bike crashes at corners (bike-safety-ca); not used in this map's routes or lists"><input type="checkbox" id="showcrash"> Crash forecast</label>
 <label id="crasheswrap" title="Bike crashes in police reports (California SWITRS); not used in this map's routes or lists"><input type="checkbox" id="showcrashes"> Recorded crashes</label>
 <label id="outlinewrap"><input type="checkbox" id="showoutline" checked> <span id="outlinelab">attendance area</span></label>
@@ -109,8 +109,10 @@ const VERB={walk:"walked",bike:"cycled",car:"drove"},CAN={walk:"walk",bike:"cycl
 const modeSel=$("mode"),runSel=$("run"),limitSel=$("limit");
 // A run's views at shorter time limits are runs too, with their limit set.
 const limitKey=r=>r.limit===null||r.limit===undefined?"":String(r.limit);
-// Car overlap is worked out at each time limit from the walking and cycling trips there.
-const overlapOf=r=>(D.overlap||{})[limitKey(r)]||[];
+// Car overlap is worked out at each time limit from the mode's own trips there:
+// walking on the walking view, cycling on the cycling view, both on the driving view.
+const overlapOf=r=>((D.overlap||{})[r.mode]||{})[limitKey(r)]||[];
+const OVERLAP_WITH={walk:"walking",bike:"cycling"};
 const OVERLAP={"top 1%":"#08306b","top 5%":"#2171b5","top 10%":"#9ecae1"};
 function fillLimits(){const keep=limitSel.value,ofMode=D.runs.filter(r=>r.mode===modeSel.value);limitSel.replaceChildren();
   const full=ofMode.find(r=>limitKey(r)==="");const fc=full?capOf(full):null;
@@ -321,7 +323,7 @@ function legend(r,bands){const d=lg.getContainer().querySelector(".kb"),col=mode
     if(cap!==null)h+=`<div class="note" style="color:#5d646c">Not shaded: areas over ${dec(cap)} min, and where no homes are counted.</div>`;
     else{if(bands.length)h+=`<div><span class="sq" style="background:${SEQ[Math.min(bands.length,SEQ.length-1)]}"></span>over ${dec(lo)} min</div>`;h+=`<div><span class="sq" style="background:${NEVER}"></span>cannot get there</div><div class="note" style="color:#5d646c">Not shaded: where no homes are counted.</div>`;}}
   if(D.agreement[r.mode]&&$("showagree").checked)h+=`<b>Busy (top 10% of streets by trips)</b><div><span class="sw" style="background:#111;opacity:.55;height:7px"></span>under every route model</div><div><span class="sw" style="background:#e08a1e;height:7px"></span>under only some</div>`;
-  if(overlapOf(run()).length&&$("showoverlap").checked)h+=`<b>Car and walk/bike overlap</b>${Object.entries(OVERLAP).map(([t,c])=>`<div><span class="sw" style="background:${c};height:9px"></span>${t}</div>`).join("")}<div class="note" style="color:#5d646c">A blue band around the trips line. Where to look, not a measure of risk.</div>`;
+  if(overlapOf(run()).length&&$("showoverlap").checked)h+=`<b>Car and ${OVERLAP_WITH[run().mode]||"walk/bike"} overlap</b>${Object.entries(OVERLAP).map(([t,c])=>`<div><span class="sw" style="background:${c};height:9px"></span>${t}</div>`).join("")}<div class="note" style="color:#5d646c">A blue band around the trips line. Where to look, not a measure of risk.</div>`;
   if(r.exposure.length&&$("showexposure").checked)h+=`<b>Where routes meet traffic today</b><div><span class="sw" style="background:${TIER_COL["fix first"]};height:7px"></span>fix first, marked “!”</div><div><span class="sw" style="background:${TIER_COL.watch};height:7px"></span>watch</div><div class="note" style="color:#5d646c">S: along a street. C: a crossing. Numbered by rank; zoom in to see every number.</div>`;
   if(r.screen.length&&$("showscreen").checked){h+=`<b>Barriers: where a change would open new routes</b>`;
     for(const t of treatments(r)){const c=treatColour(t),at=r.screen.some(x=>x.treatment===t&&x.points.length);
@@ -352,7 +354,7 @@ lg.onAdd=()=>{const d=L_.DomUtil.create("div","legend");
 lg.addTo(map);
 ["run","showflow","showcells","showagree","showexposure","showscreen","showoverlap","showoutline","showcrash","showcrashes"].forEach(i=>$(i).addEventListener("change",draw));
 function filters(){const r=run(),t=[`${MODE[r.mode]||r.mode}, preset ${r.preset}: ${r.title}`];
-  for(const [id,txt] of [["showcells","time to get there"],["showexposure","places to fix first and to watch"],["showscreen","barriers: where a change would open new routes"],["showagree","busy under every route model or some"],["showoverlap","car and walk/bike overlap"],["showoutline","outlines"],["showcrash","crash forecast"],["showcrashes","recorded crashes"]])if($(id).checked&&$(id).parentElement.style.display!=="none")t.push(txt);
+  for(const [id,txt] of [["showcells","time to get there"],["showexposure","places to fix first and to watch"],["showscreen","barriers: where a change would open new routes"],["showagree","busy under every route model or some"],["showoverlap","car overlap"],["showoutline","outlines"],["showcrash","crash forecast"],["showcrashes","recorded crashes"]])if($(id).checked&&$(id).parentElement.style.display!=="none")t.push(txt);
   return t.join(" · ")+` · zoom ${map.getZoom()} · background: ${osm&&map.hasLayer(osm)?"OpenStreetMap tiles":"built-in streets"} · printed ${new Date().toLocaleDateString()}`;}
 let saved=null;
 function toPrint(){if(saved)return;saved=[map.getCenter(),map.getZoom()];$("pfilters").textContent=filters();$("pkey").innerHTML=lg.getContainer().querySelector(".kb").innerHTML;

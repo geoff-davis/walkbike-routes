@@ -916,6 +916,11 @@ destinations at once, for comparing modelled flows with street counts.
 - **Overlap index.** sqrt(car percentile × the larger of the walk and bike
   percentiles), on each street. Tiers mark the top 1%, 5% and 10%. It shows
   where to look, not crash risk.
+- **Each map view uses its own trips.** The walking view ranks the overlap
+  from the walk percentile alone, the cycling view from the bike percentile
+  alone, each among the streets carrying both cars and that mode. The band
+  follows the trips drawn, and changing a view's time limit changes it only
+  through that mode's trips. The driving view shows the combined index.
 
 ## Where routes meet traffic today
 

@@ -140,7 +140,7 @@ if (!(sum(cut) < sum(full))) throw new Error("flows not cut");
 if (!/Trips cut at 5 minutes/.test($("panel").textContent)) throw new Error("no note");
 if (cut.screen.length) throw new Error("barriers at the shorter limit");
 $("showoverlap").checked = true; draw();
-const drawn = overlapLayer.getLayers().length, at = D.overlap["5"] || [], all = D.overlap[""] || [];
+const own = D.overlap.walk || {}, drawn = overlapLayer.getLayers().length, at = own["5"] || [], all = own[""] || [];
 if (drawn !== at.length) throw new Error(`overlap drawn ${drawn}, at 5 min ${at.length}`);
 if (all.length && JSON.stringify(at) === JSON.stringify(all)) throw new Error("overlap not cut");
 $("showoverlap").checked = false;
@@ -366,6 +366,23 @@ for (const mode of [...$("mode").options].map(o => o.value)) {
   if (found) break;
 }
 if (!found) throw new Error("no run with car overlap in the demo");
+// Each mode's view draws its own overlap, and the key names the mode.
+for (const mode of [...$("mode").options].map(o => o.value)) {
+  $("mode").value = mode; $("mode").dispatchEvent(new Event("change"));
+  $("showoverlap").checked = true; draw();
+  const own = ((D.overlap[mode] || {})[limitKey(run())] || []).map(x => x[0]).sort().join();
+  if (overlapLayer.getLayers().length !== own.split(",").filter(Boolean).length)
+    throw new Error(`${mode}: ${overlapLayer.getLayers().length} bands, ${own}`);
+  const word = {walk: "walking", bike: "cycling"}[mode];
+  if (own && word && !lg.getContainer().textContent.includes(`Car and ${word} overlap`))
+    throw new Error(`${mode}: key does not name ${word}`);
+}
+if (JSON.stringify(D.overlap.walk) === JSON.stringify(D.overlap.bike))
+  throw new Error("walking and cycling show the same overlap");
+for (const mode of [...$("mode").options].map(o => o.value)) {
+  $("mode").value = mode; $("mode").dispatchEvent(new Event("change"));
+  if (overlapOf(run()).length) break;
+}
 $("showoverlap").checked = true; $("showflow").checked = true; draw();
 const bands = overlapLayer.getLayers(), lines = flowLayer.getLayers();
 const painted = [];
