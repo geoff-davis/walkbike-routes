@@ -1,0 +1,80 @@
+# Review: overlap-per-mode
+
+## Current state
+
+- Status: ready for reviewer
+- Next action: reviewer reviews round 1
+- Review target: `00178f0` -> `5e2237a`
+- Open findings: none
+- Decisions needed from the user: none
+
+## Loop
+
+- Loop ID and round: `overlap-per-mode-1`, round 1 of at most 3
+- Implementer (the reviewer replies here): `walkbike-implementer` (Claude), pane `wG:p1`
+- Reviewer: `walkbike-reviewer` (Codex), pane `wG:p2`
+- Authorized scope: review requests and replies only
+- Expires (UTC): `2026-11-25 02:33`
+
+## Handoff, round 1
+
+- Tier: Standard (changed logic in what the map draws)
+- Intended behavior and acceptance criteria:
+  - The map's car-overlap band on the walking view is ranked from the walk
+    percentile alone, on the cycling view from the bike percentile alone,
+    each re-ranked among edges carrying both cars and that mode
+    (`analysis/overlap.py:mode_tiers`). The driving view shows the combined
+    `overlap_tier`, unchanged.
+  - Same tier cut-offs (top 1%, 5%, 10%) and the same index form,
+    sqrt(car percentile x mode percentile), as the combined index.
+  - Page data `overlap` is keyed by mode, then limit key (`""` or minutes);
+    `overlapOf(r)` reads `D.overlap[r.mode][limitKey(r)]`.
+  - The key heading names the mode: "Car and walking overlap" or "Car and
+    cycling overlap" ("walk/bike" on the driving view).
+  - Works on existing outputs: tiers come from the `car_percentile`,
+    `walk_percentile` and `bike_percentile` columns that `overlap.parquet`
+    already stores, so a `report` rebuild is enough. A mode without its
+    percentile column gets no tiers.
+  - `overlap()` output is unchanged in columns and values (tiering moved into
+    `_tiers`, shared with `mode_tiers`; `overlap_tier` stays a string dtype).
+- Changed areas and affected producers and consumers:
+  `src/walkbike_routes/analysis/overlap.py` (`_tiers`, `mode_tiers`),
+  `src/walkbike_routes/report/map.py` (`page_data` overlap assembly;
+  combined page still sends `{}`), `src/walkbike_routes/report/map.html`
+  (`overlapOf`, key heading, title text), README and `docs/assumptions.md`.
+- Pattern inventory: `overlap_tier` is read only in `report/map.py` (now via
+  `mode_tiers`) and tests; `D.overlap` is read only through `overlapOf` and
+  in `tests/test_map_page.py`.
+- Verification:
+
+  | Command | Revision | Result | Run by |
+  | --- | --- | --- | --- |
+  | `make check` | `5e2237a` | 1076 passed, coverage 95.76% | implementer |
+  | `make validation-check` | `5e2237a` | 58 passed | implementer |
+  | new and changed tests with `src/` stashed back to base | base src, head tests | fail as below | implementer |
+
+  On base source: `test_cars_and_overlap.py` fails to import `mode_tiers`;
+  `test_the_map_switches_to_a_shorter_time_limit` fails with
+  `overlap drawn 10, at 5 min 0`; `test_the_overlap_band_is_painted_beneath_the_trips`
+  fails with `walk: 17 bands,` (the page drew the combined bands, not the
+  walking ones).
+
+- Condition inventory:
+
+  | Condition | Test or probe | Result | Note |
+  | --- | --- | --- | --- |
+  | walking view ranks from walk only | `test_each_mode_view_ranks_the_overlap_from_its_own_trips` | caught | AB only |
+  | cycling view ranks from bike only | same | caught | DC, not AB |
+  | driving view gets combined tiers | same | caught | |
+  | layer without the mode's column | same (`walk_only`) | caught | no tiers |
+  | page draws the mode's own bands at each mode | `OVERLAP` in `test_map_page.py` | caught | count per mode |
+  | key heading names the mode | same | caught | |
+  | walking and cycling data differ in the demo | same | caught | |
+  | shorter limit uses the mode's cut data | `LIMIT` | caught | |
+
+- Settled decisions (do not re-report): the user chose per-mode overlap on
+  the walking and cycling views; driving keeps the combined index.
+  `overlap.parquet` is not given extra tier columns; the map derives them.
+- Known limitations and out of scope: the per-mode percentile ranks are
+  among all edges with that mode's flow (as stored), not re-ranked; only the
+  index is re-ranked among shared edges, as in the combined case.
