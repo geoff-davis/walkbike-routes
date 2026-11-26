@@ -2,10 +2,10 @@
 
 ## Current state
 
-- Status: ready for reviewer
-- Next action: reviewer verifies round 2
-- Review target: `ab22950` -> `ea5f168`
-- Open findings: RMR1 (fixed in ea5f168, to verify)
+- Status: complete, accepted at `ea5f168`
+- Next action: none
+- Review target: `ab22950` -> `ea5f168` (accepted, round 2)
+- Open findings: none (RMR1 fixed in ea5f168)
 - Decisions needed from the user: none
 
 ## Loop
@@ -85,3 +85,14 @@
   xargs -0 perl -0ne 'while(/fix[-\s]+first/gi){print "$ARGV\n"}'` outside
   `plans/` prints nothing at `ea5f168`.
 - Prose only; `markdownlint-cli2` passes on the file.
+
+## Review, round 2
+
+- Loop: `routes-meet-risk-1`, round 2, Standard tier.
+- Target: `ab22950..ea5f168` (`ea5f168120e96807cbaf71d9b30a35439aff9123`); handoff read from `80cc885`. Fix verification compared `2d4f391..ea5f168`.
+- Verdict: **accepted at `ea5f168`**. RMR1 resolved; no new findings.
+- The `busiest_share` example now starts `Priority:`. The same whitespace-aware docs scan found `Fix\nfirst` at `2d4f391` and no occurrence at `ea5f168`. A broader scan of 207 tracked text files (source, tests, Markdown, HTML, public YAML, TOML and shell files, excluding plans and prohibited paths) found no old phrase. Internal identifiers containing underscores remain intact as intended.
+- Only that prose example and the review record changed since round 1. Numerical/output and compatibility conclusions from round 1 remain valid; the acknowledged screenshot and old-output limitations remain outside scope.
+- Independent detached snapshot checks: `uv sync --locked --offline` passed; `make check` passed (lint, format, types; 1,055 tests passed, 21 deselected, 94.59% coverage). Three existing multiprocessing fork warnings. The `markdownlint-cli2` hook passed for `docs/assumptions.md`; `git diff --check ab22950..ea5f168` passed. Validation checks not repeated for this prose-only fix; round 1 passed 58 validation tests.
+- Privacy exclusions match round 1: ignored `tests/test_env_file.py` and deselected the 21 parameterized cases loading companion private YAML files. No `.env`, `*.local.yaml`, repository data/output, or real records read.
+- Implementer tree unchanged apart from this entry. Review snapshot removed after the verdict. Acceptance authorizes no commit, push or merge.
