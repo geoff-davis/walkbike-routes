@@ -12,13 +12,19 @@
 # Elementary and junior high schools count only their attendance areas: add
 # `outline:` (here or in the private los_altos_schools.local.yaml, under
 # `outlines:`); with `limits: false` it is only drawn. Attendance boundaries are
-# not distributed here. The two high schools' areas are not published, so
-# `nearest: high` gives each home to the high school nearest it by street.
+# not distributed here. The two high schools' attendance areas are not
+# published: each counts the homes in their high school district that are
+# nearer it by street than the other (`nearest: high`). The district is the
+# Census Bureau's TIGER/Line 2025 secondary school districts (public domain):
+#
+#   mkdir -p data/raw/tiger/scsd_2025 && cd data/raw/tiger/scsd_2025
+#   curl -O https://www2.census.gov/geo/tiger/TIGER2025/SCSD/tl_2025_06_scsd.zip
+#   unzip tl_2025_06_scsd.zip
 study: Los Altos schools
 area:
   source: place
   place: Los Altos, California
-  buffer_m: 5000  # wide enough for Mountain View High's side of the split
+  buffer_m: 5000
 destinations:
   - id: almond
     name: Almond Elementary School
@@ -61,6 +67,11 @@ destinations:
       - [-122.110630, 37.385073]  # Almond Avenue, west
       - [-122.109473, 37.385074]  # Almond Avenue, central
       - [-122.107386, 37.385073]  # Almond Avenue at Gordon Way
+    outline:
+      file: ../data/raw/tiger/scsd_2025/tl_2025_06_scsd.shp
+      where: {NAME: [Mountain View-Los Altos Union School District]}
+      name: Mountain View-Los Altos high school district
+      credit: U.S. Census Bureau, TIGER/Line 2025 school districts
     nearest: high
   - id: covington
     name: Covington Elementary School
@@ -161,6 +172,11 @@ destinations:
     access_points:
       - [-122.068605, 37.361074]  # gate (OpenStreetMap)
       - [-122.067466, 37.359144]  # gate (OpenStreetMap)
+    outline:
+      file: ../data/raw/tiger/scsd_2025/tl_2025_06_scsd.shp
+      where: {NAME: [Mountain View-Los Altos Union School District]}
+      name: Mountain View-Los Altos high school district
+      credit: U.S. Census Bureau, TIGER/Line 2025 school districts
     nearest: high
 modes: [walk, bike, car]
 presets:
