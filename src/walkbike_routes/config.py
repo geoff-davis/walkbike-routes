@@ -118,8 +118,6 @@ def load(path: str | Path, local: bool = True) -> Study:
         drawn = _outline(checks.mapping(item, where), private.parent, where)
         if drawn.limits and known[str(key)].serves is not None:
             raise ConfigError(f"{where}: give serves or a limiting outline, not both")
-        if drawn.limits and known[str(key)].nearest is not None:
-            raise ConfigError(f"{where}: give nearest or a limiting outline, not both")
         known[str(key)] = replace(known[str(key)], outline=drawn)
     return replace(
         study,
@@ -354,8 +352,6 @@ def _destination(raw: Mapping[str, Any], base: Path, area: Area, demand: Demand)
     nearest = (
         None if top.get("nearest") is None else checks.text(top["nearest"], f"{where} nearest")
     )
-    if nearest is not None and (serves is not None or (outline is not None and outline.limits)):
-        raise ConfigError(f"{where}: give nearest, serves or a limiting outline, not more than one")
     return Destination(
         id=_destination_id(top["id"], f"{where} id"),
         name=checks.text(top["name"], f"{where} name"),
