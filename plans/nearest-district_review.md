@@ -2,10 +2,10 @@
 
 ## Current state
 
-- Status: ready for reviewer
-- Next action: reviewer verifies round 2
-- Review target: `fd02ba4` -> `e66a5f8`
-- Open findings: ND1 (fixed in e66a5f8, to verify)
+- Status: complete, accepted at `e66a5f8`
+- Next action: none
+- Review target: `fd02ba4` -> `e66a5f8` (accepted, round 2)
+- Open findings: none (ND1 fixed in e66a5f8)
 - Decisions needed from the user: none
 
 ## Loop
@@ -112,3 +112,14 @@
   `AttributeError: 'DataFrame' object has no attribute 'nearest_group'`.
 - Checks at `e66a5f8`: `make check` 1078 passed; network-flow and nearest tests
   under `-W error::Warning` 23 passed.
+
+## Review, round 2
+
+- Loop: `nearest-district-1`, round 2, Standard tier.
+- Target: `fd02ba4..e66a5f8` (`e66a5f8dfa4759e42e1a197fa219d2431a604dbe`); handoff read from `90f3607`. Fix verification compared `4463989..e66a5f8`.
+- Verdict: **accepted at `e66a5f8`**. ND1 resolved; no new findings.
+- The separate network-flow destination writer now assigns `nearest_group=""` to its written copy. Routing continues to use the original clusters. The regression assertion checks nonempty job-cluster output and empty-string metadata in a network-only study, plus presence of the root column.
+- Independent same-probe comparison: a synthetic network-only build at `4463989` wrote three clusters without the field; at `e66a5f8` all three had the field set to the empty string. The remaining cluster columns, network flows and network summary matched exactly between revisions. The probe ran with warnings treated as errors and emitted none.
+- Detached snapshot checks at `e66a5f8`: `uv sync --locked --offline` passed; `make check` passed (lint, format, types; 1,055 tests passed, 21 deselected, 94.57% coverage). Three existing multiprocessing fork warnings in the full suite. `make validation-check` passed, 58 tests. `git diff --check fd02ba4..e66a5f8` passed.
+- Privacy exclusions match round 1: `tests/test_env_file.py` ignored; the 21 parameterized config, forecast and recorded-crash cases that load companion private YAML files deselected. No `.env`, `*.local.yaml`, repository data/output, or real records read. All extra probes used temporary synthetic demo outputs.
+- Round-1 eligibility-mask and fallback conclusions remain valid; their implementation is unchanged. Implementer tree left unchanged apart from this review entry. Temporary snapshots and probe artifacts removed after the verdict. Acceptance authorizes no commit, push or merge.
