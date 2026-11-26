@@ -39,7 +39,7 @@ from walkbike_routes.analysis.places import (
 from walkbike_routes.network.broach import traffic_band
 from walkbike_routes.network.broach_walk import signalised_crossing
 
-# Risk points and the fix-first rule are settings (analysis/exposure_rules.py),
+# Risk points and the priority rule are settings (analysis/exposure_rules.py),
 # hand-set by default and changeable under ``exposure`` in a study's config.
 NEAR_ROAD_M = 30.0  # a mapped crossing takes its road's details from within this
 

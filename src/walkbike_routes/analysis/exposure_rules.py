@@ -1,7 +1,7 @@
-"""The settings behind the exposure lists: each factor's risk points, and the fix-first rule.
+"""The settings behind the exposure lists: each factor's risk points, and the priority rule.
 
 The defaults are the hand-set values in ``docs/assumptions.md`` ("Where routes
-meet traffic today").  A study may change any of them under ``exposure`` in
+meet risk").  A study may change any of them under ``exposure`` in
 its config; the run records the values used in its manifest, and the report
 and map print them, so a list can always be read against its own rule.
 """
@@ -28,7 +28,7 @@ BAND_WORDS = {
 
 @dataclass(frozen=True)
 class RiskPoints:
-    """The points each risk factor adds; see "Where routes meet traffic today"."""
+    """The points each risk factor adds; see "Where routes meet risk"."""
 
     # Cycling along a street, by its level of traffic stress (1 to 4).
     bike_lts: dict[int, float] = field(default_factory=lambda: {1: 0, 2: 1, 3: 3, 4: 5})
@@ -50,13 +50,13 @@ class RiskPoints:
 
 @dataclass(frozen=True)
 class FixFirst:
-    """Which places are "fix first"; every other place with points is "watch"."""
+    """Which places are "priority"; every other place with points is "watch"."""
 
     min_points: float = 3.0
     # And at least this many people, or this share of those counted, whichever is smaller.
     min_people: float = 5.0
     min_share: float = 0.05
-    # When set, the busiest share of a list's places (by people) are fix first too,
+    # When set, the busiest share of a list's places (by people) are priority too,
     # whatever their points, so long as they meet the people bar.
     busiest_share: float | None = None
 
@@ -86,9 +86,9 @@ def rules_from(raw: Mapping[str, Any] | None) -> ExposureRules:
 
 
 def fix_first_rule(rule: FixFirst) -> str:
-    """The fix-first rule in a sentence, as the report and map print it."""
+    """The priority rule in a sentence, as the report and map print it."""
     text = (
-        f"Fix first: {rule.min_points:.12g} or more risk points, and at least "
+        f"Priority: {rule.min_points:.12g} or more risk points, and at least "
         f"{rule.min_people:.12g} people (or {percent(rule.min_share)} of those counted, "
         "whichever is smaller)"
     )
@@ -249,7 +249,7 @@ __all__ = [
 ]
 
 
-# Tiers: which places are fix first, and the sentence that says why.
+# Tiers: which places are priority, and the sentence that says why.
 
 
 def tidy(value: float) -> float:
@@ -270,11 +270,11 @@ def tier_of(
     rule: FixFirst | None = None,
     busiest: float = math.inf,
 ) -> str:
-    """Fix first or watch.  ``busiest`` is the people at the edge of the busiest share."""
+    """Priority or watch.  ``busiest`` is the people at the edge of the busiest share."""
     rule = rule or FixFirst()
     if people < people_bar(rule, counted):
         return "watch"
-    return "fix first" if points >= rule.min_points or people >= busiest else "watch"
+    return "priority" if points >= rule.min_points or people >= busiest else "watch"
 
 
 def tier_reason(
@@ -298,16 +298,16 @@ def tier_reason(
     bar = f"{rule.min_points:.12g}"  # a setting reads as set: 3.001 is not "3"
     if points < rule.min_points:
         if people >= need and people >= busiest:
-            return (f"Fix first: among the busiest {percent(rule.busiest_share or 0)} of places "
+            return (f"Priority: among the busiest {percent(rule.busiest_share or 0)} of places "
                     f"here ({_use("about " + _about(people), flow)}), though it has {pts} "
                     f"{_points_word(pts)}.")  # fmt: skip
         if people < need:  # short on both: say both
             used, needed = _people_against(people, need, rule)
-            text = (f"Watch: it has {pts} {_points_word(pts)} (fix first needs {bar}), and fewer "
+            text = (f"Watch: it has {pts} {_points_word(pts)} (priority needs {bar}), and fewer "
                     f"than {_use(needed, flow)} (about {used}{_bar_note(rule, counted)})")  # fmt: skip
         else:
             text = (f"Watch: {_use("about " + _about(people), flow)}, but it has {pts} "
-                    f"{_points_word(pts)}; fix first needs {bar}")  # fmt: skip
+                    f"{_points_word(pts)}; priority needs {bar}")  # fmt: skip
         if math.isfinite(busiest):
             # Being among the busiest and over the minimum is the same as reaching both.
             used, top = _whole_against(people, max(busiest, need))
@@ -318,7 +318,7 @@ def tier_reason(
                      f"(this has about {used})")  # fmt: skip
         return text + "."
     if people >= need:
-        return (f"Fix first: {pts} {_points_word(pts)} (fix first needs {bar}), "
+        return (f"Priority: {pts} {_points_word(pts)} (priority needs {bar}), "
                 f"and {_use("about " + _about(people), flow)}.")  # fmt: skip
     used, needed = _people_against(people, need, rule)
     return (f"Watch: {pts} {_points_word(pts)}, but fewer than {_use(needed, flow)} "

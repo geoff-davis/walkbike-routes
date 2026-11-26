@@ -78,8 +78,8 @@ def ranked(
     rule: FixFirst,
     flow: str = "people",
 ) -> gpd.GeoDataFrame:
-    """Places with points and people, each with its tier and why, ranked: fix-first
-    places first, then the rest, each by exposure, so fix-first places are numbered
+    """Places with points and people, each with its tier and why, ranked: priority
+    places first, then the rest, each by exposure, so priority places are numbered
     1, 2, 3 ... without gaps."""
     table = table[table.risk_points.gt(0) & table.people.gt(0)].reset_index(drop=True)
     # Compared at the precision of the bars: route weights 0.1 + 0.7 are 0.8 people.
@@ -87,7 +87,7 @@ def ranked(
     busiest = busiest_edge((n for _, n in scored), rule.busiest_share)
     table["tier"] = [tier_of(p, n, counted, rule, busiest) for p, n in scored]
     table["tier_reason"] = [tier_reason(p, n, counted, rule, busiest, flow) for p, n in scored]
-    table["_later"] = ~table.tier.astype(str).eq("fix first")
+    table["_later"] = ~table.tier.astype(str).eq("priority")
     table = table.sort_values(["_later", "exposure", "place_id"], ascending=[True, False, True])
     table = table.reset_index(drop=True)
     table["rank"] = range(1, len(table) + 1)

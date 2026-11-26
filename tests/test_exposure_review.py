@@ -118,7 +118,7 @@ def test_links_that_read_differently_are_not_joined_into_one_place() -> None:
 
 def test_a_reason_names_both_shortfalls_and_which_bar_applied() -> None:
     both = exposure_rules.tier_reason(1, 2, 1000)
-    assert "1 risk point (fix first needs 3)" in both and "fewer than 5 people" in both
+    assert "1 risk point (priority needs 3)" in both and "fewer than 5 people" in both
     share = exposure_rules.tier_reason(4, 1.2, 24.68)
     assert "fewer than 1.23 people use it (about 1.2; the bar is 5% of the 24.7 counted)" in share
     assert "the bar is" not in exposure_rules.tier_reason(4, 2, 1000)  # the plain number applied

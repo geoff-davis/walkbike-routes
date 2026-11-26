@@ -690,7 +690,7 @@ def page(data: dict[str, Any], manifest: dict[str, Any], *, offline: bool = Fals
             {
                 **data,
                 "exposure_note": text.exposure_note(rules),
-                # With the plain rule a fix-first place's people and points are its whole reason.
+                # With the plain rule a priority place's people and points are its whole reason.
                 "plain_rule": text.standard_reason(rules.fix_first),
             }
         ),
@@ -855,9 +855,9 @@ def _exposure(
     found: Callable[[Path], bool],
     labels: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
-    """A run's streets and crossings for the page, and how many are fix first.
+    """A run's streets and crossings for the page, and how many are priority.
 
-    Every fix-first place is drawn, as the report lists every one, and the
+    Every priority place is drawn, as the report lists every one, and the
     rest of each list's top places.  With ``labels`` (destination names),
     each place also says how many of its people come from each destination.
     Figures are formatted here, so the page and the report print the same.

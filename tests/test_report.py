@@ -405,7 +405,7 @@ def test_the_page_has_a_mode_menu_a_title_and_plain_labels(out: Path) -> None:
     # The key does not name a data source the run may not have used.
     assert "2020 Census" not in page.split("<script>", 1)[1].split("const CREDITS=", 1)[1]
     assert "Barriers: where a change would open new routes" in page
-    assert "Where routes meet traffic today" in page
+    assert "Where routes meet risk" in page
     # Figures read the same whatever the reader's language.
     assert "toLocaleString(undefined" not in page and 'toLocaleString("en-US"' in page
 
@@ -437,10 +437,10 @@ def test_every_fix_first_place_is_on_the_map_with_the_reports_figures(out: Path)
         folder = out / data["id"] / run["id"]
         for kind in ("street", "crossing"):
             listed = gpd.read_parquet(folder / f"exposure_{kind}s.parquet")
-            first = listed[listed.tier.eq("fix first")]
+            first = listed[listed.tier.eq("priority")]
             drawn = [e for e in run["exposure"] if e["kind"] == kind]
             assert run["fix_first"][kind] == len(first)
-            assert {e["tag"] for e in drawn if e["tier"] == "fix first"} == {
+            assert {e["tag"] for e in drawn if e["tier"] == "priority"} == {
                 f"{kind[0].upper()}{rank}" for rank in first["rank"]
             }
             # Whole people, as text: the page prints what the report prints.

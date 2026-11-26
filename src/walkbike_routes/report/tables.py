@@ -309,10 +309,10 @@ def destination_sections(
     brief: bool = False,
     links: gpd.GeoDataFrame | None = None,
 ) -> Sections:
-    """One destination: who can get there, what to fix first, and the reference tables.
+    """One destination: who can get there, the priority places, and the reference tables.
 
     ``brief`` is for a report that also lists every destination's places
-    together: each destination then shows its highest-ranked fix-first places
+    together: each destination then shows its highest-ranked priority places
     and leaves its watch list to its map.
     """
     rules = rules or ExposureRules()
@@ -477,7 +477,7 @@ def _limit(row: Mapping[Any, Any]) -> str:
 
 
 def glance(main: pd.DataFrame, lists: Sequence[tuple[str, pd.DataFrame, pd.DataFrame]]) -> str:
-    """How much there is to fix first on a destination's routes, in a sentence."""
+    """How many priority places a destination's routes have, in a sentence."""
     sentences = []
     records = main.to_dict("records")
     counts = []
@@ -488,7 +488,7 @@ def glance(main: pd.DataFrame, lists: Sequence[tuple[str, pd.DataFrame, pd.DataF
         found = f"{text.count(s, 'street')} and {text.count(c, 'crossing')}" if s or c else "none"
         counts.append(f"{found} on the {MODE_NAMES.get(mode, mode).lower()} routes")
     if counts:
-        sentences.append(f"To fix first: {'; '.join(counts)}.")
+        sentences.append(f"Priority: {'; '.join(counts)}.")
     return " ".join(sentences)
 
 
@@ -519,10 +519,10 @@ def who_table(main: pd.DataFrame) -> Table:
 
 
 WATCH_ROWS = 3
-FIRST_ROWS = 5  # of each destination's own fix-first places, beside the lists for all together
+FIRST_ROWS = 5  # of each destination's own priority places, beside the lists for all together
 MORE_SLACK = 2  # a list this much longer than FIRST_ROWS is shown whole
 WATCH_NOTE = (
-    f"The {WATCH_ROWS} highest-ranked places that are not fix first, and what each is short "
+    f"The {WATCH_ROWS} highest-ranked places that are not priority, and what each is short "
     "of. The maps show more, with the factors behind their points; the full lists are in "
     "each run's exposure_streets.parquet and exposure_crossings.parquet."
 )
@@ -560,7 +560,7 @@ def exposure_table(
     rows = []
     for r, shape, spot in zip(top.to_dict("records"), _shapes(top), _spots(top), strict=True):
         tag = text.tag("street" if streets else "crossing", int(r["rank"]))
-        # The map draws every fix-first place and the highest-ranked of the rest.
+        # The map draws every priority place and the highest-ranked of the rest.
         drawn = text.on_map(r)
         row: list[Cell] = [
             _on_map(tag, where if drawn else None, spot),
@@ -613,10 +613,10 @@ def fix_first_blocks(
     limit: int | None = None,
     where: tuple[str, str] | None = None,
 ) -> list[Block]:
-    """The fix-first streets and crossings of one run, by rank: all, or the first ``limit``."""
+    """The priority streets and crossings of one run, by rank: all, or the first ``limit``."""
     rules = rules or ExposureRules()
     first_streets, first_crossings = _first(streets), _first(crossings)
-    blocks: list[Block] = [Heading(3, f"{mode}: places to fix first")]
+    blocks: list[Block] = [Heading(3, f"{mode}: where routes meet risk")]
     if first_streets.empty and first_crossings.empty:
         if streets.empty and crossings.empty:
             blocks.append(Para("No street or crossing on these routes has risk points."))
@@ -628,7 +628,7 @@ def fix_first_blocks(
                 else "The highest-ranked of the rest are under “Reference: watch lists”."
             )
             blocks.append(
-                Para(f"No street or crossing on these routes meets the fix-first rule. {rest}")
+                Para(f"No street or crossing on these routes meets the priority rule. {rest}")
             )
         return blocks
     flow = text.flow_heading(unit, is_decayed)
@@ -648,7 +648,7 @@ def fix_first_blocks(
             what = "streets" if is_street else "crossings"
             blocks.append(
                 Para(
-                    f"The {len(shown)} highest-ranked of {len(first):,} {what} to fix first; "
+                    f"The {len(shown)} highest-ranked of {len(first):,} priority {what}; "
                     "the map shows them all.",
                     note=True,
                 )
@@ -704,7 +704,7 @@ def combined_sections(
     listed: set[Path],
     rules: ExposureRules | None = None,
 ) -> Sections:
-    """The fix-first and watch lists with every destination's routes added up."""
+    """The priority and watch lists with every destination's routes added up."""
     folder = out / ALL_DESTINATIONS
     runs = sorted(
         {p.parent for p in listed if p.parent.parent == folder},
