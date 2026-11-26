@@ -3,14 +3,14 @@
 ## Current state
 
 - Status: ready for reviewer
-- Next action: reviewer reviews round 1
-- Review target: `fd02ba4` -> `4463989`
-- Open findings: none
+- Next action: reviewer verifies round 2
+- Review target: `fd02ba4` -> `e66a5f8`
+- Open findings: ND1 (fixed in e66a5f8, to verify)
 - Decisions needed from the user: none
 
 ## Loop
 
-- Loop ID and round: `nearest-district-1`, round 1 of at most 3
+- Loop ID and round: `nearest-district-1`, round 2 of at most 3
 - Implementer (the reviewer replies here): `walkbike-implementer` (Claude), pane `wG:p1`
 - Reviewer: `walkbike-reviewer` (Codex), pane `wG:p2`
 - Authorized scope: review requests and replies only
@@ -75,3 +75,40 @@
 - Known limitations and out of scope: a home inside no member's area never
   enters the pool (already the case: it is in no member's origins). The map
   draws the member's area (the district), not the share nearest it.
+
+## Review, round 1
+
+- Loop: `nearest-district-1`, round 1, Standard tier.
+- Target: `fd02ba4..4463989` (`44639898f06dd7bb4b11f10c0b92daab2f6b0130`); handoff read from `b1255e8`.
+- Verdict: **changes requested at `4463989`**. One confirmed blocking acceptance failure; no hypotheses reported.
+
+### ND1 — P2, blocking: network-flow job clusters omit `nearest_group`
+
+- Location: `src/walkbike_routes/__main__.py:194`–`:200`; the separate writer is `src/walkbike_routes/network_flows.py:98`–`:99`.
+- Trigger: build a study with `network_flows` and inspect `network/destinations.parquet`.
+- Violated criterion: the handoff explicitly requires `nearest_group` to be the empty string for destinations outside groups, including network-flow job clusters. The new assignment runs only in the root layer-writing loop. Network-flow clusters are generated and written separately, bypassing that assignment entirely.
+- Evidence: built the made-up network-flow demo via the existing `tests/test_network_flows.py` config helper. Root `destinations.parquet` had the new column; `network/destinations.parquet` had three job-cluster rows and no `nearest_group` column. Existing network-flow tests do not assert this field, so passing them under warning-as-error does not establish that criterion. This is an incomplete new output contract, not a claimed regression in previously supported metadata.
+- Requested fix: write an empty-string `nearest_group` column on job-cluster destinations too, and add a regression assertion against the written `network/destinations.parquet`, including a network-only study. Preserve the current routing behavior.
+
+### Verification and limits
+
+- Independent detached snapshot at the exact target; implementer tree unchanged apart from this review entry.
+- `uv sync --locked --offline` passed. `make check` passed: lint, format, types, 1,055 tests passed, 21 deselected, 94.57% coverage. Three existing multiprocessing fork warnings. `make validation-check` passed, 58 tests. `git diff --check fd02ba4..4463989` passed.
+- Privacy exclusions: ignored `tests/test_env_file.py`; deselected the 21 parameterized config, forecast and recorded-crash cases that load companion private YAML files. No `.env`, `*.local.yaml`, repository data/output, or real records read. Probes used only synthetic in-memory frames and temporary demo outputs.
+- Pooled-origin harness: with A-only, B-only, shared and unreachable homes, head assigned all four exactly once to eligible members. The same harness against base source dropped the two area-exclusive homes. This verifies the new mask construction and filtering, rather than only `choose_nearest` in isolation. Street/network length providers were stubbed with made-up distances; this was not a real-area routing test.
+- Additional fallback probe passed: a reachable but disallowed B did not suppress straight-line fallback to allowed A when A had no street route. Existing no-area and group-column tests passed in the suite. Public serves/outline mutual-exclusion guards remain; private-outline guard removal inspected without reading private files.
+- No further findings in the area eligibility logic or root destination metadata. Real-area files were not exercised. Snapshot and synthetic probe artifacts removed after the verdict.
+
+## Handoff, round 2
+
+- Target: `fd02ba4` -> `e66a5f8` (fix commit `e66a5f8` on top of `4463989`).
+- ND1 fixed: `network_flows.py` writes `network/destinations.parquet` with
+  `nearest_group` set to `""` (on the written copy only; the clusters used
+  for routing are unchanged).
+- Regression test: `test_a_network_only_run_writes_no_maps_and_lists_its_files`
+  (a network-only study) now asserts the written cluster file has rows and
+  every `nearest_group` is `""`, and that the root `destinations.parquet`
+  has the column. With the `network_flows.py` change stashed it fails:
+  `AttributeError: 'DataFrame' object has no attribute 'nearest_group'`.
+- Checks at `e66a5f8`: `make check` 1078 passed; network-flow and nearest tests
+  under `-W error::Warning` 23 passed.
