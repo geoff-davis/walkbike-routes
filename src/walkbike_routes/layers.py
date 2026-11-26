@@ -21,6 +21,7 @@ from shapely.geometry.base import BaseGeometry
 
 from walkbike_routes import config as settings
 from walkbike_routes import local_layers, overrides, switrs
+from walkbike_routes.defaults import BICYCLE_SPEED_MPH, WALK_SPEED_MPH
 from walkbike_routes.demand.spread import spread_blocks
 from walkbike_routes.demo import Town
 from walkbike_routes.download import area as areas
@@ -29,12 +30,14 @@ from walkbike_routes.download.http import Fetcher
 from walkbike_routes.network import osm_streets, traffic
 
 log = logging.getLogger(__name__)
+METERS_PER_MILE = 1609.344
 
 
 def build(study: settings.Study, data: Path, fetcher: Fetcher | None = None) -> Town:
     """The study's nodes, links, homes, destinations and access points."""
     fetcher = fetcher or Fetcher(data)
-    place = areas.resolve(study.area, fetcher, study.crs)
+    shapes = destination_areas(study) if study.area.source == "destinations" else None
+    place = areas.resolve(study.area, fetcher, study.crs, shapes)
     log.info("area: %s (%s), working in %s", place.name, place.source, place.crs)
     _check_inside(study, place)
     bbox = place.bbox_4326()
@@ -85,6 +88,43 @@ def build(study: settings.Study, data: Path, fetcher: Fetcher | None = None) -> 
         jobs=jobs,
         sources=sources,
     )
+
+
+def reach_m(study: settings.Study) -> float:
+    """The farthest, in a straight line, a counted walk or ride could start: the
+    longer of the walking and cycling time limits at their default speeds."""
+    speeds = {"walk": WALK_SPEED_MPH, "bike": BICYCLE_SPEED_MPH}
+    return max(
+        study.time_caps_min[m] * 60 * speeds[m] * METERS_PER_MILE / 3600
+        for m in speeds
+        if m in study.time_caps_min
+    )
+
+
+def destination_areas(study: settings.Study) -> gpd.GeoDataFrame:
+    """Each destination's own area (its limiting outline or ``serves``) or, with
+    none, a circle around it as wide as the farthest a counted trip could start."""
+    sites: list[BaseGeometry] = [
+        Point(d.location) for d in study.destinations if d.location is not None
+    ]
+    sites += [g for d in study.destinations if d.boundary_file is not None
+              for g in [outline(d.boundary_file, "EPSG:4326")]]  # fmt: skip
+    crs = study.crs or areas.utm_crs(gpd.GeoDataFrame(geometry=sites, crs=4326))
+    reach = reach_m(study)
+    shapes = []
+    for d in study.destinations:
+        if d.outline is not None and d.outline.limits:
+            shapes.append(outline_shape(d, crs))
+        elif d.serves is not None:
+            shapes.append(outline(d.serves, crs))
+        else:
+            site = (
+                outline(d.boundary_file, crs)
+                if d.boundary_file is not None
+                else gpd.GeoSeries([Point(d.location or (0.0, 0.0))], crs=4326).to_crs(crs).iloc[0]
+            )
+            shapes.append(site.buffer(reach))
+    return gpd.GeoDataFrame(geometry=shapes, crs=crs)
 
 
 def _check_inside(study: settings.Study, place: areas.StudyArea) -> None:

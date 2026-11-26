@@ -125,9 +125,16 @@ def utm_crs(frame: gpd.GeoDataFrame) -> str:
     return f"{zones[0].auth_name}:{zones[0].code}"
 
 
-def resolve(area: Area, fetcher: Fetcher, crs: str | None = None) -> StudyArea:
-    """The study area for a config's ``area`` section."""
-    if area.source == "place":
+def resolve(
+    area: Area, fetcher: Fetcher, crs: str | None = None, shapes: gpd.GeoDataFrame | None = None
+) -> StudyArea:
+    """The study area for a config's ``area`` section; ``shapes`` are the
+    destinations' own areas, for ``source: destinations``."""
+    if area.source == "destinations":
+        if shapes is None or shapes.empty:
+            raise AreaError("source 'destinations' needs the destinations' areas")
+        boundary, name, source = shapes, "the destinations' own areas", "the destinations' areas"
+    elif area.source == "place":
         assert area.place is not None  # the config requires it
         boundary, kind = find_place(area.place, fetcher)
         name, source = area.place, f"Census TIGERweb 2020 {kind}"
