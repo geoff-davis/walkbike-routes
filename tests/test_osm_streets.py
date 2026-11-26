@@ -789,8 +789,10 @@ def test_an_area_from_the_destinations_is_their_areas_and_reach(
     school = layers.outline_shape(study.destinations[0], "EPSG:26914")
     assert shapes.geometry.iloc[0].equals(school)  # its own area, no wider
     centre = layers.outline(tmp_path / "centre.geojson", "EPSG:26914")
-    assert shapes.geometry.iloc[1].contains(centre.buffer(layers.reach_m(study) - 1))
-    assert not shapes.geometry.iloc[1].contains(centre.buffer(layers.reach_m(study) + 1))
+    reach = layers.reach_m(study)
+    assert reach is not None
+    assert shapes.geometry.iloc[1].contains(centre.buffer(reach - 1))
+    assert not shapes.geometry.iloc[1].contains(centre.buffer(reach + 1))
     monkeypatch.setenv("CENSUS_API_KEY", "made-up-key")
     town = layers.build(study, tmp_path / "data", fake.fetcher(tmp_path / "data", []))
     assert len(town.links) and len(town.homes)
@@ -818,3 +820,17 @@ def test_an_area_from_the_destinations_takes_no_place_and_needs_destinations() -
     jobs_only = raw | {"destinations": [], "network_flows": {}}
     with pytest.raises(config.ConfigError, match="'destinations' needs at least one destination"):
         config.parse(jobs_only)
+
+
+def test_a_car_only_area_from_the_destinations_needs_each_to_have_an_area(
+    tmp_path: Path,
+) -> None:
+    study = _from_destinations(tmp_path)
+    cars = replace(study, modes=("car",), time_caps_min={})
+    assert layers.reach_m(cars) is None  # cars have no time limit to reach with
+    served = replace(cars.destinations[1], serves=tmp_path / "centre.geojson")
+    bounded = replace(cars, destinations=(cars.destinations[0], served))
+    shapes = layers.destination_areas(bounded)  # every destination has an area: no reach needed
+    assert shapes.geometry.iloc[1].equals(layers.outline(tmp_path / "centre.geojson", "EPSG:26914"))
+    with pytest.raises(config.ConfigError, match="'centre': has no area of its own"):
+        layers.destination_areas(cars)

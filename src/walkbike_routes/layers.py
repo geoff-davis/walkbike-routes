@@ -90,15 +90,17 @@ def build(study: settings.Study, data: Path, fetcher: Fetcher | None = None) -> 
     )
 
 
-def reach_m(study: settings.Study) -> float:
+def reach_m(study: settings.Study) -> float | None:
     """The farthest, in a straight line, a counted walk or ride could start: the
-    longer of the walking and cycling time limits at their default speeds."""
+    longer of the walking and cycling time limits at their default speeds; None
+    with neither (a study of cars alone, which have no limit)."""
     speeds = {"walk": WALK_SPEED_MPH, "bike": BICYCLE_SPEED_MPH}
-    return max(
+    reaches = [
         study.time_caps_min[m] * 60 * speeds[m] * METERS_PER_MILE / 3600
         for m in speeds
         if m in study.time_caps_min
-    )
+    ]
+    return max(reaches) if reaches else None
 
 
 def destination_areas(study: settings.Study) -> gpd.GeoDataFrame:
@@ -110,7 +112,6 @@ def destination_areas(study: settings.Study) -> gpd.GeoDataFrame:
     sites += [g for d in study.destinations if d.boundary_file is not None
               for g in [outline(d.boundary_file, "EPSG:4326")]]  # fmt: skip
     crs = study.crs or areas.utm_crs(gpd.GeoDataFrame(geometry=sites, crs=4326))
-    reach = reach_m(study)
     shapes = []
     for d in study.destinations:
         if d.outline is not None and d.outline.limits:
@@ -118,6 +119,13 @@ def destination_areas(study: settings.Study) -> gpd.GeoDataFrame:
         elif d.serves is not None:
             shapes.append(outline(d.serves, crs))
         else:
+            reach = reach_m(study)
+            if reach is None:
+                raise settings.ConfigError(
+                    f"destination {d.id!r}: has no area of its own, and with no walking or "
+                    "cycling time limit nothing bounds it; give it an outline or serves, or "
+                    "use area.source place or boundary_file"
+                )
             site = (
                 outline(d.boundary_file, crs)
                 if d.boundary_file is not None
